@@ -1,0 +1,108 @@
+# The whole project for development, with nothing to install but Docker: Postgres, Redis, the libraries, the
+# database tables and the website, which reloads when you save a file.
+#   docker compose up            # first start downloads everything (a few minutes), then http://localhost:3000
+#   docker compose down          # stops it; the database and the libraries are kept for next time
+#   docker compose down -v       # also deletes them, for a fresh start
+#   docker compose run --rm setup                     # after pulling a new library or migration, without restarting
+#   docker compose exec app pnpm check                # any pnpm command, inside the running app
+#   docker compose exec app pnpm test:integration
+# Optional keys (DeepSeek, Stripe, Resend...) go in .env, copied from .env.example. Without .env everything still runs
+# with the defaults below: emails are printed to the log, Whish runs on its simulator, photos stay in Postgres.
+# For the production build of the image, see docker-compose.prod.yml.
+
+# Shared by the services that run our code: the Dockerfile's base stage (Node, pnpm, openssl), the code from this
+# folder, and the libraries in a Docker volume (never the computer's own node_modules, which may be built for Windows
+# or macOS). The database address points at the db service, whatever .env says.
+x-code: &code
+  build:
+    context: .
+    target: base
+  working_dir: /app
+  env_file:
+    - path: .env
+      required: false
+  environment: &code-environment
+    DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+    TEST_DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet_test
+    REDIS_URL: redis://redis:6379
+    BETTER_AUTH_URL: http://localhost:3000
+    # Development-only values, used when .env does not set its own. The live site's are in DigitalOcean.
+    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-development-only-secret-never-used-on-the-live-site}
+    CRON_SECRET: ${CRON_SECRET:-development-only-cron-secret}
+    # No worker until task 5A adds it: everything runs inside the website.
+    JOBS_MODE: inline
+    npm_config_store_dir: /pnpm-store
+  volumes:
+    - .:/app
+    - node-modules:/app/node_modules
+    - pnpm-store:/pnpm-store
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: mabeet
+      POSTGRES_PASSWORD: mabeet
+      POSTGRES_DB: mabeet
+    # Also reachable from the computer (Prisma Studio, a database tool) on port 5433, from this computer only.
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Creates the integration tests' own database on first start.
+      - ./scripts/docker-test-db.sql:/docker-entrypoint-initdb.d/test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mabeet"]
+      interval: 5s
+      retries: 10
+
+  # Rate-limit counters. Nothing in it needs to survive a restart.
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  # Runs once, then stops: installs the libraries from pnpm-lock.yaml (only what changed), generates the Prisma
+  # client, and applies every migration to both databases.
+  setup:
+    <<: *code
+    command:
+      - sh
+      - -c
+      - >-
+        pnpm install --frozen-lockfile --config.confirmModulesPurge=false &&
+        pnpm exec prisma generate &&
+        pnpm exec prisma migrate deploy &&
+        DATABASE_URL="$$TEST_DATABASE_URL" pnpm exec prisma migrate deploy
+    depends_on:
+      db: { condition: service_healthy }
+
+  app:
+    <<: *code
+    # Webpack instead of Turbopack here: it can watch for changes by polling, which a Docker folder shared from
+    # Windows or macOS needs, so saving a file reloads the page.
+    command: ["pnpm", "exec", "next", "dev", "--hostname", "0.0.0.0"]
+    environment:
+      <<: *code-environment
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - node-modules:/app/node_modules
+      - pnpm-store:/pnpm-store
+      - next-cache:/app/.next
+    depends_on:
+      setup: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  db-data:
+  node-modules:
+  pnpm-store:
+  next-cache:

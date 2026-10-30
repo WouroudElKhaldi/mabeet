@@ -1,0 +1,917 @@
+# Project structure
+
+This file shows every folder and file of the reference project (Mabeet). It was made from the repository on
+27 October 2026.
+
+Put new code in the folder whose note matches it. If no folder fits, ask in your pull request before you add a
+folder. Generated folders (`node_modules`, `.next`) and private notes are not listed.
+
+## Where each kind of file goes
+
+| You are writing…                                    | Put it in                                                                                        | Never in                                         |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| A page or an API route                              | `src/app/**` (`page.tsx`, `route.ts`)                                                            | a file with business rules or database calls     |
+| A business rule, a permission check, a transaction  | `src/server/services/<area>-service.ts`                                                          | routes, components, repositories                 |
+| A database query                                    | `src/server/repositories/<area>-repository.ts`                                                   | services (they pass `prisma` or `tx` in), routes |
+| An input check for an API route                     | `src/server/validation/schemas.ts`                                                               | inside the route                                 |
+| A list of allowed values (statuses, methods, plans) | `src/config/*.ts`, checked with `satisfies` against the Prisma enum                              | typed by hand in many places                     |
+| A colour, radius or shadow                          | a token in `src/app/globals.css` (`@theme`)                                                      | a hex colour or `bg-[#...]` in a component       |
+| A part of the screen used in many places            | `src/components/ui/`                                                                             | copied into each screen                          |
+| A small helper (dates, money, slugs)                | `src/lib/`                                                                                       | a service or a component                         |
+| An AI tool                                          | `src/server/ai/team-tools.ts` (owners) or `guest-tools.ts` (guests), calling an existing service | its own database code                            |
+| Slow or must-happen work (AI, email, schedules)     | a job: `defineJob(...)`, its module listed in `src/server/jobs/registry.ts`                      | awaited on the request path                      |
+| Text on screen                                      | `messages/en.json`, `ar.json`, `ar-LB.json` (same key in all three)                              | written inside a component                       |
+| A test                                              | `tests/unit/<area>.test.ts` or `tests/integration/<area>.test.ts`                                | next to the code file                            |
+
+Names:
+
+- File names use `kebab-case`, for example `booking-service.ts`.
+- Components use `PascalCase`, for example `BookingWidget`.
+- Services and repositories export plain functions named after what they do, for example `requestBooking` or
+  `findBookingByReference`.
+- Constants use `UPPER_SNAKE_CASE`, for example `MAX_NIGHTS`.
+
+## What each folder is for
+
+| Folder                            | What goes there                                                                                            |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/`              | The checks that run on every pull request, the deploy, and the scheduled jobs (until the worker runs them) |
+| `docs/`                           | Documents for reviewers: architecture, requirements, data model, database diagram, API contract            |
+| `messages/`                       | All text on screen, in English, Arabic and Lebanese Arabic. Every key must be in all three (a test checks) |
+| `prisma/`                         | The database tables, the migrations (including hand-written database rules), and the demo data             |
+| `prisma/migrations/`              | Never edit a migration after it is merged. Add a new one                                                   |
+| `public/`                         | Fixed files: service worker, icons, images                                                                 |
+| `scripts/`                        | Developer tools: local database, document generators, smoke tests                                          |
+| `src/app/`                        | Pages and API routes (Next.js). They read input, call a service, and answer. No rules, no database         |
+| `src/app/api/`                    | The API. Every route uses route() or tenantRoute() and checks its input with a Zod schema                  |
+| `src/app/(site)/`                 | The public website: home, search, place pages, booking, guest account                                      |
+| `src/app/(auth)/`                 | Sign in, sign up, reset password                                                                           |
+| `src/app/dashboard/[businessId]/` | The owner and staff dashboard, one folder per section. loading.tsx is the loading screen                   |
+| `src/app/admin/`                  | The platform admin area                                                                                    |
+| `src/components/`                 | React components, grouped by area. Client components start with "use client"                               |
+| `src/components/ui/`              | The design system: Button, Field, LabeledControl, FormError, dialogs, skeletons, shared class names        |
+| `src/components/shell/`           | The app frame: side menu, top bar, page header, notification bell, loading screens                         |
+| `src/components/dashboard/`       | Dashboard screens and parts (calendar, editors, charts)                                                    |
+| `src/components/assistant/`       | The AI chat screens: chat panel, guest assistant, owner assistant, action cards                            |
+| `src/config/`                     | Fixed lists and settings used by server and screens (statuses, plans, listing words, brand)                |
+| `src/hooks/`                      | Shared hooks for screens: useAction, useRedirectAction, useStoredChoice                                    |
+| `src/lib/`                        | Small helpers usable anywhere: dates, money format and `MoneyAsNumbers`, API client, tokens, slugs         |
+| `src/server/`                     | Server code only. Screens never import it, except `import type`                                            |
+| `src/server/services/`            | Business rules: permissions, transactions, notifications. One file per area                                |
+| `src/server/repositories/`        | The only code that talks to the database. Every business query filters by businessId                       |
+| `src/server/ai/`                  | The AI: tools, the tool runner, the chat loop, the MCP server, the DeepSeek client                         |
+| `src/server/jobs/`                | Queues and the worker: job definitions, answer-now-or-queue, schedules, `worker.ts` (`pnpm worker`)        |
+| `src/server/auth/`                | Sign-in setup, permissions, TenantContext, AI key checks                                                   |
+| `src/server/http/`                | Route wrappers, error answers, rate limits (Redis), page sign-in helpers                                   |
+| `src/server/validation/`          | The Zod input checks for every API route (schemas.ts)                                                      |
+| `src/server/ical/`                | Calendar files: read (import), build (export), safe download                                               |
+| `src/server/email/`               | Sending emails, and the email template                                                                     |
+| `src/server/payments/`            | The Whish client                                                                                           |
+| `src/server/billing/`             | The Stripe client                                                                                          |
+| `src/server/push/`                | Sending push notifications                                                                                 |
+| `src/server/db/`                  | The Prisma client (money read as numbers), transactions (Tx), database error helpers                       |
+| `tests/unit/`                     | Fast tests with no database                                                                                |
+| `tests/integration/`              | Tests with a real database: services, database rules, races, business isolation                            |
+
+## All files (592)
+
+```
+.env.example
+.gitattributes
+.github/
+  workflows/
+    ci.yml
+    scheduled-jobs.yml
+.dockerignore
+.gitignore
+.prettierignore
+.prettierrc.json
+README.md
+Dockerfile
+docker-compose.prod.yml
+docker-compose.yml
+docs/
+  architecture.md
+  data-model.md
+  erd-ai-mcp.md
+  erd-platform.md
+  erd.md
+  functional-requirements.md
+  non-functional-requirements.md
+  openapi.json
+  requirements-matrix.md
+  team/
+    01-team-plan.md
+    02-architecture-and-features.md
+    03-claude-prompt-guide.md
+    04-test-plan.md
+    05-project-structure.md
+    06-functional-requirements.md
+    07-data-model.md
+    08-design-system-and-pages.md
+    README.md
+eslint.config.mjs
+knip.json
+messages/
+  ar-LB.json
+  ar.json
+  en.json
+next.config.ts
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+postcss.config.mjs
+prisma/
+  migrations/
+    20261022000000_init/
+      migration.sql
+    20261022000100_occupancy_no_overlap/
+      migration.sql
+    20261022000200_site_settings/
+      migration.sql
+    20261022000300_listing_types_and_sessions/
+      migration.sql
+    20261022000400_stored_images/
+      migration.sql
+    20261022000500_rate_limit_windows/
+      migration.sql
+    20261022000600_offering_reviews/
+      migration.sql
+    20261022000700_ai_usage/
+      migration.sql
+    20261022000800_booking_locale/
+      migration.sql
+    20261022000900_plans/
+      migration.sql
+    20261022001000_oauth_mcp/
+      migration.sql
+    20261022001100_push_subscriptions/
+      migration.sql
+    20261022001200_payment_positive_amount/
+      migration.sql
+    20261023000000_online_payments/
+      migration.sql
+    20261023000100_seats_awaiting_payment/
+      migration.sql
+    20261023000200_host_profiles/
+      migration.sql
+    20261023000300_notifications_seen/
+      migration.sql
+    20261023000400_whole_place_and_photo_areas/
+      migration.sql
+    20261023000500_ai_chats/
+      migration.sql
+    20261023000600_manual_plan_payments/
+      migration.sql
+    20261023000700_host_contact/
+      migration.sql
+    20261028000100_job_progress/
+      migration.sql
+    migration_lock.toml
+  schema.prisma
+  seed-history.ts
+  seed-offerings.ts
+  seed.ts
+public/
+  sw.js
+scripts/
+  dev.ts
+  edge-cases.ts
+  erd.ts
+  lib/
+    e2e.ts
+  local-db.ts
+  openapi.ts
+  payments.ts
+  push-keys.ts
+  smoke.ts
+src/
+  app/
+    (auth)/
+      forgot-password/
+        page.tsx
+      layout.tsx
+      oauth/
+        consent/
+          page.tsx
+        workspace/
+          page.tsx
+      reset-password/
+        page.tsx
+      sign-in/
+        page.tsx
+      sign-up/
+        page.tsx
+    (site)/
+      account/
+        activity/
+          page.tsx
+        favorites/
+          page.tsx
+        layout.tsx
+        loading.tsx
+        notifications/
+          page.tsx
+        page.tsx
+        privacy/
+          page.tsx
+      assistant/
+        page.tsx
+      b/
+        [token]/
+          loading.tsx
+          page.tsx
+      host/
+        page.tsx
+      layout.tsx
+      loading.tsx
+      o/
+        [slug]/
+          loading.tsx
+          page.tsx
+          photos/
+            page.tsx
+      p/
+        [slug]/
+          book/
+            loading.tsx
+            page.tsx
+          contact/
+            page.tsx
+          loading.tsx
+          page.tsx
+          photos/
+            page.tsx
+      page.tsx
+      pricing/
+        page.tsx
+      privacy/
+        page.tsx
+      search/
+        page.tsx
+      whish-simulator/
+        pay/
+          [code]/
+            page.tsx
+    .well-known/
+      oauth-authorization-server/
+        api/
+          auth/
+            route.ts
+        route.ts
+      oauth-protected-resource/
+        api/
+          mcp/
+            route.ts
+        route.ts
+    actions/
+      favorites.ts
+      locale.ts
+    admin/
+      appearance/
+        loading.tsx
+        page.tsx
+      categories/
+        loading.tsx
+        page.tsx
+      health/
+        loading.tsx
+        page.tsx
+      hosts/
+        [userId]/
+          loading.tsx
+          page.tsx
+        loading.tsx
+        page.tsx
+      layout.tsx
+      loading.tsx
+      money/
+        loading.tsx
+        page.tsx
+      notifications/
+        loading.tsx
+        page.tsx
+      page.tsx
+      profile/
+        loading.tsx
+        page.tsx
+      users/
+        loading.tsx
+        page.tsx
+    api/
+      admin/
+        businesses/
+          [businessId]/
+            route.ts
+        categories/
+          [slug]/
+            route.ts
+          route.ts
+        notifications/
+          route.ts
+        payouts/
+          [payoutId]/
+            route.ts
+        refunds/
+          [refundId]/
+            route.ts
+        site/
+          route.ts
+      assistant/
+        route.ts
+      auth/
+        [...all]/
+          route.ts
+      cron/
+        expire-holds/
+          route.ts
+        sync-feeds/
+          route.ts
+      ical/
+        [token]/
+          route.ts
+      images/
+        [imageId]/
+          route.ts
+      jobs/
+        [jobId]/
+          route.ts
+      mcp/
+        guest/
+          route.ts
+        route.ts
+      me/
+        bookings/
+          route.ts
+        chats/
+          [chatId]/
+            route.ts
+          route.ts
+        delete/
+          route.ts
+        export/
+          route.ts
+        profile/
+          route.ts
+        push/
+          route.ts
+        reviews/
+          route.ts
+      oauth/
+        workspace/
+          route.ts
+      payments/
+        whish/
+          callback/
+            route.ts
+      public/
+        bookings/
+          [token]/
+            cancel/
+              route.ts
+            checkout/
+              route.ts
+            push/
+              route.ts
+            route.ts
+        experiences/
+          [slug]/
+            bookings/
+              route.ts
+        places/
+          [slug]/
+            bookings/
+              route.ts
+            messages/
+              route.ts
+            rooms/
+              [roomId]/
+                availability/
+                  route.ts
+                quote/
+                  route.ts
+      webhooks/
+        stripe/
+          route.ts
+      whish-simulator/
+        pay/
+          [code]/
+            route.ts
+        payment/
+          collect/
+            status/
+              route.ts
+          whish/
+            refund/
+              route.ts
+            route.ts
+      workspaces/
+        [businessId]/
+          analytics/
+            report/
+              route.ts
+            route.ts
+          assistant/
+            actions/
+              route.ts
+            chats/
+              [chatId]/
+                route.ts
+              route.ts
+            route.ts
+          billing/
+            checkout/
+              route.ts
+            portal/
+              route.ts
+              route.ts
+            whish/
+              route.ts
+          blocks/
+            [blockId]/
+              route.ts
+            route.ts
+          bookings/
+            [bookingId]/
+              [action]/
+                route.ts
+              payments/
+                route.ts
+              route.ts
+            route.ts
+          calendar/
+            route.ts
+          feeds/
+            [feedId]/
+              route.ts
+              sync/
+                route.ts
+            route.ts
+          host-profile/
+            route.ts
+          keys/
+            [keyId]/
+              route.ts
+            route.ts
+          members/
+            [membershipId]/
+              route.ts
+            route.ts
+          notifications/
+            route.ts
+          offerings/
+            [offeringId]/
+              route.ts
+              sessions/
+                route.ts
+            route.ts
+          payouts/
+            route.ts
+          photos/
+            [photoId]/
+              route.ts
+            route.ts
+          reviews/
+            [reviewId]/
+              route.ts
+          roles/
+            [roleId]/
+              route.ts
+            route.ts
+          rooms/
+            [roomId]/
+              prices/
+                route.ts
+              route.ts
+            route.ts
+          session-bookings/
+            [bookingId]/
+              [action]/
+                route.ts
+              payments/
+                route.ts
+          sessions/
+            [sessionId]/
+              route.ts
+          settings/
+            route.ts
+        route.ts
+    apple-icon.tsx
+    dashboard/
+      [businessId]/
+        analytics/
+          loading.tsx
+          page.tsx
+        assistant/
+          loading.tsx
+          page.tsx
+        billing/
+          loading.tsx
+          page.tsx
+        bookings/
+          loading.tsx
+          page.tsx
+        calendar/
+          loading.tsx
+          page.tsx
+        channels/
+          loading.tsx
+          page.tsx
+        keys/
+          loading.tsx
+          page.tsx
+        layout.tsx
+        loading.tsx
+        notifications/
+          loading.tsx
+          page.tsx
+        offerings/
+          loading.tsx
+          page.tsx
+        page.tsx
+        payouts/
+          loading.tsx
+          page.tsx
+        place/
+          loading.tsx
+          page.tsx
+        profile/
+          loading.tsx
+          page.tsx
+        reviews/
+          loading.tsx
+          page.tsx
+        rooms/
+          loading.tsx
+          page.tsx
+        settings/
+          loading.tsx
+          page.tsx
+        team/
+          loading.tsx
+          page.tsx
+      page.tsx
+    error.tsx
+    favicon.ico
+    fonts/
+      archivo-100-900.woff2
+      inter-100-900.woff2
+      kufi-100-900.woff2
+      plex-arabic-400.woff2
+      plex-arabic-500.woff2
+      plex-arabic-600.woff2
+      plex-arabic-700.woff2
+    globals.css
+    home/
+      page.tsx
+    icons/
+      [size]/
+        route.tsx
+    layout.tsx
+    llms.txt/
+      route.ts
+    manifest.ts
+    not-found.tsx
+    offline/
+      page.tsx
+    robots.ts
+    sitemap.ts
+  components/
+    account/
+      account-tabs.tsx
+      auth-form.tsx
+      auth-page.tsx
+      create-workspace-form.tsx
+      oauth-steps.tsx
+      password-forms.tsx
+      privacy-controls.tsx
+      review-form.tsx
+      sign-out-button.tsx
+    assistant/
+      action-card.tsx
+      chat-panel.tsx
+      concierge.tsx
+      rich-text.tsx
+      team-assistant.tsx
+    billing/
+      billing-buttons.tsx
+      plan-cards.tsx
+    booking/
+      booking-widget.tsx
+      guest-cancel-button.tsx
+      guest-details-form.tsx
+      hold-countdown.tsx
+      pay-online.tsx
+      price-breakdown.tsx
+      use-room-calendar.ts
+    brand/
+      app-icon.tsx
+      arch-window.tsx
+      boarding-pass.tsx
+      concierge-band.tsx
+      direct-receipts.tsx
+      postmark.tsx
+    browse/
+      browse.tsx
+      category-bar.tsx
+      filters-dialog.tsx
+      listing-tabs.tsx
+      results-grid.tsx
+      scroll-rail.tsx
+    dashboard/
+      analytics-charts.tsx
+      bar-chart.tsx
+      booking-actions.tsx
+      booking-row.tsx
+      business-status-toggle.tsx
+      calendar-board.tsx
+      calendar-model.ts
+      calendar-side-panel.tsx
+      category-manager.tsx
+      channel-colors.ts
+      close-dates-form.tsx
+      feed-controls.tsx
+      host-profile-form.tsx
+      key-manager.tsx
+      member-controls.tsx
+      nav-items.ts
+      offering-editor.tsx
+      payout-decision.tsx
+      payout-request-form.tsx
+      photo-manager.tsx
+      place-essentials.tsx
+      report-generator.tsx
+      review-controls.tsx
+      role-editor.tsx
+      room-editor.tsx
+      session-booking-row.tsx
+      session-scheduler.tsx
+      settings-form.tsx
+      site-palette-picker.tsx
+      special-prices.tsx
+      stat-tile.tsx
+      workspace-switcher.tsx
+    listing/
+      place-map.tsx
+      review-list.tsx
+      things-to-know.tsx
+    offering/
+      duration.tsx
+      offering-card.tsx
+      session-booking-card.tsx
+    payments/
+      whish-simulator-form.tsx
+    place/
+      amenity.tsx
+      category-icon.tsx
+      contact-host-form.tsx
+      favorite-button.tsx
+      gallery.tsx
+      listing-summary.tsx
+      meet-host.tsx
+      photo-browser.tsx
+      photo-tour.tsx
+      place-art.tsx
+      place-card.tsx
+      place-grid.tsx
+      share-button.tsx
+    pwa/
+      install-button.tsx
+      install-prompt.ts
+      phone-alerts.tsx
+      service-worker.tsx
+    shell/
+      app-shell.tsx
+      back-link.tsx
+      notification-bell.tsx
+      notification-list.tsx
+      page-header.tsx
+      pagination.tsx
+      profile-forms.tsx
+      skeletons.tsx
+    site/
+      header-shell.tsx
+      hero-landscape.tsx
+      search-bar.tsx
+      site-footer.tsx
+      site-header.tsx
+      wordmark.tsx
+    theme/
+      appearance-menu.tsx
+      appearance-provider.tsx
+      appearance-script.tsx
+    ui/
+      button.tsx
+      confirm-dialog.tsx
+      copy-field.tsx
+      date-range-picker.tsx
+      field.tsx
+      form-error.tsx
+      guest-counter.tsx
+      loading-status.tsx
+      rating.tsx
+      sheet-dialog.tsx
+      show-all-dialog.tsx
+      skeleton.tsx
+  config/
+    amenities.ts
+    appearance.ts
+    brand.ts
+    category-icons.ts
+    enums.ts
+    listing.ts
+    plans.ts
+    regions.ts
+  global.d.ts
+  hooks/
+    use-action.ts
+    use-redirect-action.ts
+    use-stored-choice.ts
+  i18n/
+    request.ts
+  lib/
+    api-client.ts
+    auth-client.ts
+    calendar-grid.ts
+    dates.ts
+    format.ts
+    money.ts
+    motion.ts
+    parent-path.ts
+    privacy.ts
+    search-url.ts
+    slug.ts
+    tokens.ts
+    zoned-time.ts
+  server/
+    ai/
+      assistant.ts
+      deepseek.ts
+      guest-tools.ts
+      mcp-server.ts
+      output.ts
+      run-tool.ts
+      team-tools.ts
+      tool.ts
+    auth/
+      better-auth.ts
+      mcp-token.ts
+      permissions.ts
+      tenant-context.ts
+    background.ts
+    billing/
+      stripe.ts
+    db/
+      client.ts
+    email/
+      send.ts
+      templates.ts
+    env.ts
+    errors.ts
+    http/
+      error-i18n.ts
+      page.ts
+      rate-limit.ts
+      route.ts
+      session.ts
+    ical/
+      build-feed.ts
+      parse-feed.ts
+      safe-fetch.ts
+    jobs/
+      ai-jobs.ts
+      cron-jobs.ts
+      progress.ts
+      queue.ts
+      registry.ts
+      worker.ts
+    payments/
+      whish.ts
+    push/
+      send.ts
+    repositories/
+      account-repository.ts
+      activity-repository.ts
+      admin-repository.ts
+      ai-usage-repository.ts
+      analytics-repository.ts
+      api-key-repository.ts
+      billing-repository.ts
+      booking-repository.ts
+      business-repository.ts
+      calendar-repository.ts
+      chat-repository.ts
+      directory-repository.ts
+      favorite-repository.ts
+      filters.ts
+      host-repository.ts
+      job-progress-repository.ts
+      money-repository.ts
+      notification-repository.ts
+      offering-repository.ts
+      payment-repository.ts
+      photo-repository.ts
+      push-repository.ts
+      review-repository.ts
+      room-repository.ts
+      session-repository.ts
+      site-repository.ts
+      team-repository.ts
+      whish-simulator-repository.ts
+    services/
+      account-service.ts
+      admin-service.ts
+      ai-usage-service.ts
+      analytics-service.ts
+      api-key-service.ts
+      assistant-service.ts
+      audit.ts
+      billing-service.ts
+      booking-policy.ts
+      booking-service.ts
+      booking-status.ts
+      calendar-service.ts
+      chat-service.ts
+      constraint-errors.ts
+      contact-service.ts
+      directory-service.ts
+      favorite-service.ts
+      host-service.ts
+      housekeeping-service.ts
+      mcp-oauth-service.ts
+      notification-feed-service.ts
+      notification-service.ts
+      offering-service.ts
+      onboarding-service.ts
+      online-payment-service.ts
+      payment-service.ts
+      payout-service.ts
+      photo-service.ts
+      pricing.ts
+      push-service.ts
+      report-service.ts
+      review-service.ts
+      room-service.ts
+      session-booking-service.ts
+      settings-service.ts
+      site-service.ts
+      team-service.ts
+      whish-simulator-service.ts
+    validation/
+      schemas.ts
+tests/
+  integration/
+    analytics.test.ts
+    billing.test.ts
+    booking-flow.test.ts
+    booking-race.test.ts
+    calendar.test.ts
+    chats.test.ts
+    global-setup.ts
+    guest-cancel.test.ts
+    helpers.ts
+    hosts.test.ts
+    http.ts
+    mcp-isolation.test.ts
+    money.test.ts
+    occupancy-constraint.test.ts
+    place-search.test.ts
+    rate-limit.test.ts
+    reviews-and-prices.test.ts
+    roles.test.ts
+    session-seats.test.ts
+    setup-env.ts
+    tenant-isolation.test.ts
+    whole-place.test.ts
+  unit/
+    ai-output.test.ts
+    ai-usage.test.ts
+    assistant.test.ts
+    background.test.ts
+    concierge-cards.test.ts
+    booking-policy.test.ts
+    booking-status.test.ts
+    dates.test.ts
+    deepseek-stream.test.ts
+    email.test.ts
+    error-i18n.test.ts
+    ical.test.ts
+    jobs.test.ts
+    locale.test.ts
+    mcp-server.test.ts
+    messages.test.ts
+    openapi.test.ts
+    parent-path.test.ts
+    permissions.test.ts
+    photos.test.ts
+    pricing.test.ts
+    regions.test.ts
+    privacy.test.ts
+    push.test.ts
+    send-email.test.ts
+    whish.test.ts
+    zoned-time.test.ts
+tsconfig.json
+vercel.json
+vitest.config.mts
+```

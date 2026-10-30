@@ -1,0 +1,1285 @@
+// Mabeet: direct bookings for guesthouses.
+// Every tenant-owned table carries businessId. Repositories always filter by it.
+// Business data is never deleted: rows get isDeleted = true instead, and reads skip them. Only short-lived
+// technical rows (sign-in sessions, tokens, job progress, push devices) are deleted.
+// Not in this schema: background jobs live in pg-boss's own "pgboss" schema in the same database, and rate-limit
+// counters live in Redis (src/server/http/rate-limit.ts).
+// The no-overlap guarantee lives in a raw SQL migration (see prisma/migrations/*_occupancy_no_overlap).
+// Money is BigInt minor units (cents: 9999 is 99.99) in the record's currency. BigInt because LBP totals outgrow a
+// 32-bit int; src/server/db/client.ts reads it back as a plain number.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identity (Better Auth tables + platform role) ----------
+
+enum PlatformRole {
+  USER
+  SUPER_ADMIN
+}
+
+model User {
+  id                  String       @id
+  name                String
+  email               String       @unique
+  emailVerified       Boolean      @default(false)
+  image               String?
+  phone               String?
+  locale              String       @default("en")
+  platformRole        PlatformRole @default(USER)
+  /// When they last opened their notifications; newer activity shows as unread on the bell.
+  notificationsSeenAt DateTime?
+  /// The email they used, kept when they delete their account; `email` is then freed for a new sign-up.
+  deletedEmail        String?
+  isDeleted           Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  sessions                Session[]
+  accounts                Account[]
+  memberships             Membership[]
+  bookings                Booking[]           @relation("GuestBookings")
+  favorites               Favorite[]
+  reviews                 Review[]
+  activities              ActivityLog[]
+  apiKeys                 ApiKey[]
+  sessionBookings         SessionBooking[]    @relation("GuestSessionBookings")
+  oauthClients            OauthClient[]
+  oauthRefreshTokens      OauthRefreshToken[]
+  oauthAccessTokens       OauthAccessToken[]
+  oauthConsents           OauthConsent[]
+  pushSubscriptions       PushSubscription[]
+  hostProfile             HostProfile?
+  aiChats                 AiChat[]
+  planPayments            PlanPayment[]
+  invitationsSent         Invitation[]        @relation("InvitationsSent")
+  auditLogs               AuditLog[]          @relation("AuditActor")
+  // Who did what: audit fields on the rows they touched. Never cleared, since users are never deleted.
+  siteSettingUpdatedBy    SiteSetting[]       @relation("SiteSettingUpdatedBy")
+  bookingDecidedBy        Booking[]           @relation("BookingDecidedBy")
+  refundDoneBy            Refund[]            @relation("RefundDoneBy")
+  payoutRequestedBy       Payout[]            @relation("PayoutRequestedBy")
+  payoutDecidedBy         Payout[]            @relation("PayoutDecidedBy")
+  sessionBookingDecidedBy SessionBooking[]    @relation("SessionBookingDecidedBy")
+  invitationsTaken        Invitation[]        @relation("InvitationsAccepted")
+}
+
+/// A saved conversation with an assistant: the team assistant in one business, or the guests' concierge
+/// (businessId empty). Temporary chats are never stored. Only the person who had it can open it.
+model AiChat {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId String?
+  business   Business?       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  surface    String
+  title      String
+  isDeleted  Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  messages   AiChatMessage[]
+
+  @@index([userId, surface, businessId, updatedAt])
+}
+
+model AiChatMessage {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      AiChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  /// What the reply showed besides its text, e.g. the concierge's place cards.
+  data      Json?
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([chatId, createdAt])
+}
+
+/// A host's own details, kept for every person who owns a business. Guests only see them when the host turns
+/// `showOnListings` on; platform admins always can.
+/// WhatsApp opens a chat with the host's number; MESSAGE is the Contact host page, which emails the host.
+enum HostContact {
+  WHATSAPP
+  MESSAGE
+  BOTH
+}
+
+model HostProfile {
+  userId         String      @id
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName    String?
+  bio            String?
+  city           String?
+  /// Languages the host speaks, as codes from src/config/listing.ts.
+  languages      String[]
+  hostingSince   Int?
+  showOnListings Boolean     @default(false)
+  /// How guests may reach the host on every one of their listings.
+  contactBy      HostContact @default(BOTH)
+  isDeleted      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Session {
+  id            String   @id
+  expiresAt     DateTime
+  token         String   @unique
+  ipAddress     String?
+  userAgent     String?
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The workspace picked while connecting an AI app over OAuth; its tokens act for this business.
+  mcpBusinessId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  oauthRefreshTokens OauthRefreshToken[]
+  oauthAccessTokens  OauthAccessToken[]
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ---------- Platform ----------
+
+// One row (id "site") of settings the super admin controls for the whole website, such as the colour palette.
+// Visitors only choose light or dark mode and their language.
+model SiteSetting {
+  id          String   @id @default("site")
+  palette     String   @default("cedar")
+  updatedById String?
+  updatedBy   User?    @relation("SiteSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------- Tenancy and dynamic roles ----------
+
+/// What a business pays for. Limits live in src/config/plans.ts; Stripe webhooks keep it in sync.
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+/// What guests book at a place: one of its rooms, or the whole place at once.
+enum BookingUnit {
+  ROOMS
+  WHOLE_PLACE
+}
+
+/// A room guests can book, or the single "whole place" unit a business books as one.
+enum RoomKind {
+  ROOM
+  WHOLE_PLACE
+}
+
+/// Which part of the place a photo shows, for the photo tour.
+enum PhotoArea {
+  LIVING_ROOM
+  KITCHEN
+  DINING
+  BEDROOM
+  BATHROOM
+  EXTERIOR
+  TERRACE
+  GARDEN
+  POOL
+  VIEW
+  OTHER
+}
+
+/// How guests book and pay. There are no deposits: a booking is always paid in full, and every refund of an online
+/// payment is full and automatic.
+enum BookingMode {
+  /// Pays online (full amount), confirmed automatically by the payment webhook.
+  AUTOMATIC
+  /// Pays online (full amount), then the owner confirms or declines.
+  ONLINE_APPROVAL
+  /// No payment through the platform; the owner confirms or declines by hand.
+  OFFLINE
+}
+
+enum BusinessStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Business {
+  id                   String            @id @default(cuid())
+  name                 String
+  slug                 String            @unique
+  description          String?
+  area                 String?
+  /// Which part of Lebanon (a key from src/config/regions.ts), so searching for "North Lebanon" is exact. The host
+  /// picks it, or it is worked out from the town in area.
+  region               String?
+  address              String?
+  latitude             Float?
+  longitude            Float?
+  phone                String?
+  whatsapp             String?
+  timezone             String            @default("Asia/Beirut")
+  currency             String            @default("USD")
+  lbpRate              Int?
+  commissionRateBps    Int               @default(1500) // 15.00%, the platform commission a direct booking saves
+  /// How long the owner has to answer a booking (modes ONLINE_APPROVAL and OFFLINE).
+  holdHours            Int               @default(24)
+  /// How to pay the host directly (Whish number, bank details), shown to guests in OFFLINE mode.
+  paymentInstructions  String?
+  checkInTime          String            @default("14:00")
+  checkOutTime         String            @default("11:00")
+  houseRules           String?
+  bookingUnit          BookingUnit       @default(ROOMS)
+  bookingMode          BookingMode       @default(OFFLINE)
+  /// When the owner accepted "online payments are always refunded in full". The app refuses an online mode
+  /// (AUTOMATIC or ONLINE_APPROVAL) until it is set.
+  onlineTermsAcceptedAt DateTime?
+  listedPublicly       Boolean           @default(false)
+  // Fixed keys from src/config/listing.ts: tags for search filters, accessibility for "Things to know".
+  tags                 String[]
+  accessibility        String[]
+  minGuestAge          Int?
+  status               BusinessStatus    @default(ACTIVE)
+  plan                 Plan              @default(FREE)
+  stripeCustomerId     String?           @unique
+  stripeSubscriptionId String?           @unique
+  /// When the paid plan renews, or ends if it was cancelled.
+  planRenewsAt         DateTime?
+  isDeleted            Boolean           @default(false)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  roles           Role[]
+  memberships     Membership[]
+  rooms           Room[]
+  bookings        Booking[]
+  occupancies     Occupancy[]
+  feeds           CalendarFeed[]
+  payments        Payment[]
+  reviews         Review[]
+  categories      BusinessCategory[]
+  favorites       Favorite[]
+  apiKeys         ApiKey[]
+  mcpAuditLogs    McpAuditLog[]
+  activities      ActivityLog[]
+  photos          Photo[]
+  offerings       Offering[]
+  sessions        OfferingSession[]
+  sessionBookings SessionBooking[]
+  images          StoredImage[]
+  refunds         Refund[]
+  payouts         Payout[]
+  planPayments    PlanPayment[]
+  aiChats         AiChat[]
+  rateOverrides   RateOverride[]
+  invitations     Invitation[]
+  auditLogs       AuditLog[]
+
+  @@index([region])
+  @@index([tags], type: Gin)
+  @@index([accessibility], type: Gin)
+}
+
+// A role is created by an owner or manager and holds a list of permission keys
+// (see src/server/auth/permissions.ts). isOwner marks the undeletable owner role, which holds every permission.
+model Role {
+  id          String       @id @default(cuid())
+  businessId  String
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  permissions String[]
+  isOwner     Boolean      @default(false)
+  isDeleted   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+  invitations Invitation[]
+
+  @@unique([businessId, name])
+  @@index([businessId])
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  REMOVED
+}
+
+model Membership {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId String
+  business   Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  roleId     String
+  role       Role             @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  status     MembershipStatus @default(ACTIVE)
+  isDeleted  Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  apiKeys    ApiKey[]
+
+  @@unique([userId, businessId])
+  @@index([businessId])
+}
+
+/// PENDING until the person accepts; EXPIRED once its link runs out unused; CANCELLED by the team.
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
+  EXPIRED
+}
+
+/// Someone a host asked to join the team. The email carries a link to register (or sign in) and join with the
+/// role chosen here, which the person cannot change. When they accept, the membership is created and the host who
+/// invited them is told.
+model Invitation {
+  id           String           @id @default(cuid())
+  businessId   String
+  business     Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  roleId       String
+  role         Role             @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  invitedById  String
+  invitedBy    User             @relation("InvitationsSent", fields: [invitedById], references: [id], onDelete: Restrict)
+  name         String
+  email        String
+  phone        String
+  /// The language of the invitation email: the one the host was using.
+  locale       String           @default("en")
+  /// The secret in the invitation link.
+  token        String           @unique
+  status       InvitationStatus @default(PENDING)
+  expiresAt    DateTime
+  acceptedById String?
+  acceptedBy   User?            @relation("InvitationsAccepted", fields: [acceptedById], references: [id], onDelete: Restrict)
+  acceptedAt   DateTime?
+  isDeleted    Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([businessId, status])
+  @@index([email])
+}
+
+// ---------- Catalogue ----------
+
+model Room {
+  id            String   @id @default(cuid())
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  capacity      Int      @default(2)
+  bedrooms      Int      @default(1)
+  beds          Int      @default(1)
+  bathrooms     Int      @default(1)
+  baseRateCents BigInt
+  minNights     Int      @default(1)
+  amenities     String[]
+  exportToken   String   @unique
+  /// ROOM, or the one WHOLE_PLACE unit used when the business books as a whole.
+  kind          RoomKind @default(ROOM)
+  /// Bookable and shown. Only the units matching the business's booking unit can actually be booked.
+  active        Boolean  @default(true)
+  isDeleted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  rateOverrides RateOverride[]
+  feeds         CalendarFeed[]
+  bookings      Booking[]
+  occupancies   Occupancy[]
+  reviews       Review[]
+  photos        Photo[]
+
+  @@index([businessId])
+  @@index([amenities], type: Gin)
+}
+
+model Photo {
+  id            String       @id @default(cuid())
+  businessId    String
+  business      Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  roomId        String?
+  room          Room?        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  offeringId    String?
+  offering      Offering?    @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  url           String
+  /// The upload behind the photo; empty for photos linked from elsewhere (the demo's stock pictures).
+  storedImageId String?
+  storedImage   StoredImage? @relation(fields: [storedImageId], references: [id], onDelete: Restrict)
+  alt           String?
+  /// Which part of the place it shows, for the photo tour.
+  area          PhotoArea?
+  position      Int          @default(0)
+  isDeleted     Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  @@index([businessId])
+}
+
+model RateOverride {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  roomId     String
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date
+  rateCents  BigInt
+  isDeleted  Boolean  @default(false)
+
+  @@unique([roomId, date])
+  @@index([businessId])
+}
+
+enum ListingKind {
+  HOME
+  EXPERIENCE
+  SERVICE
+}
+
+/// Categories belong to one listing type: homes, experiences or services each have their own list.
+model Category {
+  slug       String             @id
+  kind       ListingKind        @default(HOME)
+  nameEn     String
+  nameAr     String
+  icon       String
+  position   Int                @default(0)
+  isDeleted  Boolean            @default(false)
+  businesses BusinessCategory[]
+  offerings  Offering[]
+}
+
+model BusinessCategory {
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  categorySlug String
+  category     Category @relation(fields: [categorySlug], references: [slug], onDelete: Cascade)
+  isDeleted    Boolean  @default(false)
+
+  @@id([businessId, categorySlug])
+}
+
+// ---------- Calendar ----------
+
+/// OTHER covers any other platform with an iCal link, such as Vrbo.
+enum FeedSource {
+  AIRBNB
+  BOOKING
+  OTHER
+}
+
+model CalendarFeed {
+  id           String      @id @default(cuid())
+  businessId   String
+  business     Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  roomId       String
+  room         Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  url          String
+  source       FeedSource
+  lastSyncedAt DateTime?
+  lastError    String?
+  isDeleted    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  occupancies  Occupancy[]
+
+  @@index([businessId])
+  @@index([roomId])
+}
+
+enum BookingStatus {
+  HELD
+  /// Accepted (or booked instantly) and waiting for the guest's online payment; the nights stay taken.
+  AWAITING_PAYMENT
+  CONFIRMED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  reference      String        @unique
+  businessId     String
+  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  roomId         String
+  room           Room          @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  /// Booking needs an account, so every booking belongs to the guest who made it.
+  guestUserId    String
+  guestUser      User          @relation("GuestBookings", fields: [guestUserId], references: [id], onDelete: Restrict)
+  guestName      String
+  guestPhone     String
+  guestEmail     String?
+  guestCount     Int
+  guestNote      String?
+  /// The language the guest booked in; their emails are written in it.
+  locale         String        @default("en")
+  checkIn        DateTime      @db.Date
+  checkOut       DateTime      @db.Date
+  totalCents     BigInt
+  currency       String
+  /// Copied from the business when the booking is made, so later changes do not affect it. Paid online (always
+  /// totalCents) when AUTOMATIC or ONLINE_APPROVAL.
+  bookingMode    BookingMode
+  status         BookingStatus @default(HELD)
+  publicToken    String        @unique
+  holdExpiresAt  DateTime?
+  decidedById    String?
+  decidedBy      User?         @relation("BookingDecidedBy", fields: [decidedById], references: [id], onDelete: Restrict)
+  decidedAt      DateTime?
+  cancelReason   String?
+  isDeleted      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  occupancy Occupancy?
+  payments  Payment[]
+  review    Review?
+
+  @@index([businessId, status])
+  @@index([businessId, checkIn])
+  @@index([status, holdExpiresAt])
+  @@index([roomId])
+  @@index([guestUserId])
+}
+
+enum OccupancyKind {
+  DIRECT
+  MANUAL
+  IMPORTED
+}
+
+// One row per taken night range, whatever the source. The exclusion constraint lives here.
+model Occupancy {
+  id          String        @id @default(cuid())
+  businessId  String
+  business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  roomId      String
+  room        Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  checkIn     DateTime      @db.Date
+  checkOut    DateTime      @db.Date
+  kind        OccupancyKind
+  active      Boolean       @default(true)
+  /// Closed dates (MANUAL) keep a note. Imported nights get their source from their CalendarFeed.
+  note        String?
+  conflict    Boolean       @default(false)
+  bookingId   String?       @unique
+  booking     Booking?      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  feedId      String?
+  feed        CalendarFeed? @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  externalUid String?
+  isDeleted   Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([feedId, externalUid])
+  @@index([businessId])
+  @@index([roomId, active])
+}
+
+// ---------- Money ----------
+
+enum PaymentMethod {
+  CASH
+  WHISH
+  OMT
+  BANK_TRANSFER
+  STRIPE
+  CRYPTO
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+model Payment {
+  id                String          @id @default(cuid())
+  businessId        String
+  business          Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  // Exactly one of bookingId / sessionBookingId is set (CHECK constraint in the migration).
+  bookingId         String?
+  booking           Booking?        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sessionBookingId  String?
+  sessionBooking    SessionBooking? @relation(fields: [sessionBookingId], references: [id], onDelete: Cascade)
+  amountCents       BigInt
+  currency          String
+  method            PaymentMethod
+  status            PaymentStatus   @default(PAID)
+  /// The checkout this payment went through: a Stripe Checkout session id, or "whish:<payment id>". Used to look
+  /// the checkout up and settle it, and unique so a checkout is never settled twice.
+  providerRef       String?         @unique
+  note              String?
+  /// The charge that checkout produced (Stripe's payment intent). Only needed to refund a card payment.
+  providerPaymentId String?
+  checkoutUrl       String?
+  paidAt            DateTime?
+  refundedCents     BigInt          @default(0)
+  isDeleted         Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  refunds           Refund[]
+
+  @@index([businessId])
+}
+
+enum RefundStatus {
+  /// Owed to the guest; Mabeet sends it by hand (a partial Whish refund) and marks it done.
+  PENDING
+  DONE
+}
+
+/// Money given back to a guest from an online payment. Reduces what Mabeet owes the host.
+model Refund {
+  id          String       @id @default(cuid())
+  businessId  String
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  paymentId   String
+  payment     Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  amountCents BigInt
+  currency    String
+  status      RefundStatus
+  reason      String
+  providerRef String?
+  doneAt      DateTime?
+  doneById    String?
+  doneBy      User?        @relation("RefundDoneBy", fields: [doneById], references: [id], onDelete: Restrict)
+  isDeleted   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  @@index([businessId])
+  @@index([status])
+}
+
+enum PayoutMethod {
+  BANK_TRANSFER
+  WHISH
+}
+
+enum PayoutStatus {
+  REQUESTED
+  PAID
+  REJECTED
+}
+
+/// A host asks Mabeet to send them what it collected online for them; an admin pays it and marks it.
+model Payout {
+  id            String       @id @default(cuid())
+  businessId    String
+  business      Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  amountCents   BigInt
+  currency      String
+  method        PayoutMethod
+  accountName   String
+  bankName      String?
+  iban          String?
+  whishPhone    String?
+  status        PayoutStatus @default(REQUESTED)
+  requestedById String
+  requestedBy   User         @relation("PayoutRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  reference     String?
+  adminNote     String?
+  decidedById   String?
+  decidedBy     User?        @relation("PayoutDecidedBy", fields: [decidedById], references: [id], onDelete: Restrict)
+  decidedAt     DateTime?
+  isDeleted     Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  @@index([businessId])
+  @@index([status])
+}
+
+/// A host paying for a plan, always instantly: Stripe invoices (card) and Whish monthly payments. This is Mabeet's
+/// revenue. There are no hand payments to approve; a CHECK constraint refuses any new method but STRIPE or WHISH.
+/// Rows from the old hand-paid flow keep their method (BANK_TRANSFER, CASH...) as history.
+model PlanPayment {
+  id          String        @id @default(cuid())
+  businessId  String
+  business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  /// The owner who started the payment; null for Stripe renewals, which arrive by webhook.
+  paidById    String?
+  paidBy      User?         @relation(fields: [paidById], references: [id], onDelete: Restrict)
+  plan        Plan
+  /// Months of the plan this payment buys. A Whish payment buys one; Stripe renews by itself.
+  months      Int           @default(1)
+  amountCents BigInt
+  currency    String
+  method      PaymentMethod
+  status      PaymentStatus
+  providerRef String        @unique
+  checkoutUrl String?
+  paidAt      DateTime?
+  isDeleted   Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  @@index([businessId])
+  @@index([status, paidAt])
+}
+
+/// TEST ONLY: the Whish simulator's own records, written only when WHISH_MODE=simulator (local development, tests,
+/// the demo before Mabeet has Whish keys). With real Whish keys nothing reads or writes it. Never holds real money.
+model WhishSandboxPayment {
+  externalId         String   @id
+  code               String   @unique
+  amount             String
+  currency           String
+  invoice            String?
+  successCallbackUrl String
+  failureCallbackUrl String
+  successRedirectUrl String
+  failureRedirectUrl String
+  /// pending, success, failed or refunded, as Whish reports collectStatus.
+  status             String   @default("pending")
+  payerPhone         String?
+  createdAt          DateTime @default(now())
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  eventId    String
+  payload    Json
+  receivedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+}
+
+// ---------- Guests: favourites, reviews, activity ----------
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, businessId])
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+model Review {
+  id               String          @id @default(cuid())
+  businessId       String
+  business         Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  // Either a stay (room + booking) or an experience or service (offering + session booking);
+  // CHECK review_one_booking keeps exactly one pair.
+  roomId           String?
+  room             Room?           @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  bookingId        String?         @unique
+  booking          Booking?        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  offeringId       String?
+  offering         Offering?       @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  sessionBookingId String?         @unique
+  sessionBooking   SessionBooking? @relation(fields: [sessionBookingId], references: [id], onDelete: Cascade)
+  authorId         String?
+  author           User?           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  rating           Int
+  comment          String
+  ownerReply       String?
+  status           ReviewStatus    @default(PUBLISHED)
+  hiddenReason     String?
+  isDeleted        Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+
+  @@index([businessId, status])
+  @@index([offeringId, status])
+}
+
+/// One person's own timeline: what they did (requests, favourites, reviews) and what happened to them (a host
+/// confirmed or declined their booking, they joined a team). Shown on their account's Activity page. What happens
+/// in a business or on the platform is in AuditLog.
+model ActivityLog {
+  id         String    @id @default(cuid())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  action     String
+  entity     String
+  entityId   String?
+  meta       Json?
+  isDeleted  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([businessId, createdAt])
+}
+
+/// What happened in a business or on the platform, and who did it: team and host actions, guests' requests as the
+/// business sees them, platform admins' actions and the system's own events (payments, calendar clashes). The
+/// business and admin notification bells and the admin audit trail read it. actorId is empty for the system.
+model AuditLog {
+  id         String    @id @default(cuid())
+  actorId    String?
+  actor      User?     @relation("AuditActor", fields: [actorId], references: [id], onDelete: Restrict)
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action     String
+  entity     String
+  entityId   String?
+  meta       Json?
+  isDeleted  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([action, createdAt])
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+}
+
+// ---------- MCP and AI ----------
+
+// A key belongs to one membership, so an AI using it sees exactly what that member is allowed to see.
+model ApiKey {
+  id           String     @id @default(cuid())
+  businessId   String
+  business     Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  membershipId String
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  createdById  String
+  createdBy    User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  name         String
+  prefix       String
+  hash         String     @unique
+  canWrite     Boolean    @default(false)
+  lastUsedAt   DateTime?
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  isDeleted    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@index([businessId])
+}
+
+model McpAuditLog {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  apiKeyId   String?
+  userId     String?
+  channel    String // mcp | chat
+  tool       String
+  outcome    String
+  latencyMs  Int
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, createdAt])
+}
+
+// ---------- Experiences and services ----------
+
+enum PriceUnit {
+  PER_PERSON
+  PER_GROUP
+}
+
+enum ActivityLevel {
+  LIGHT
+  MODERATE
+  CHALLENGING
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+/// Something bookable by the session rather than by the night: a hike, a wine tasting, a transfer, a private chef.
+model Offering {
+  id              String         @id @default(cuid())
+  businessId      String
+  business        Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  kind            ListingKind
+  slug            String         @unique
+  title           String
+  description     String?
+  categorySlug    String?
+  category        Category?      @relation(fields: [categorySlug], references: [slug], onDelete: Restrict)
+  area            String?
+  /// Which part of Lebanon (a key from src/config/regions.ts), so searching for "North Lebanon" is exact. The host
+  /// picks it, or it is worked out from the town in area.
+  region          String?
+  meetingPoint    String?
+  latitude        Float?
+  longitude       Float?
+  durationMinutes Int
+  priceCents      BigInt
+  priceUnit       PriceUnit      @default(PER_PERSON)
+  maxGuests       Int            @default(10)
+  minAge          Int?
+  activityLevel   ActivityLevel?
+  skillLevel      SkillLevel?
+  included        String[]
+  notIncluded     String[]
+  accessibility   String[]
+  languages       String[]
+  tags            String[]
+  active          Boolean        @default(true)
+  isDeleted       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  photos   Photo[]
+  sessions OfferingSession[]
+  bookings SessionBooking[]
+  reviews  Review[]
+
+  @@index([businessId])
+  @@index([kind, active])
+  @@index([region])
+  @@index([tags], type: Gin)
+  @@index([accessibility], type: Gin)
+}
+
+/// One dated run of an offering with a number of seats. The seat guarantee is a trigger in the migration.
+model OfferingSession {
+  id         String           @id @default(cuid())
+  businessId String
+  business   Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  offeringId String
+  offering   Offering         @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  startsAt   DateTime
+  endsAt     DateTime
+  capacity   Int
+  active     Boolean          @default(true)
+  isDeleted  Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  bookings   SessionBooking[]
+
+  @@index([offeringId, startsAt])
+  @@index([businessId, startsAt])
+}
+
+model SessionBooking {
+  id             String          @id @default(cuid())
+  reference      String          @unique
+  publicToken    String          @unique
+  businessId     String
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  offeringId     String
+  offering       Offering        @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  sessionId      String
+  session        OfferingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  /// Booking needs an account, so every booking belongs to the guest who made it.
+  guestUserId    String
+  guestUser      User            @relation("GuestSessionBookings", fields: [guestUserId], references: [id], onDelete: Restrict)
+  guestName      String
+  guestPhone     String
+  guestEmail     String?
+  guestNote      String?
+  /// The language the guest booked in; their emails are written in it.
+  locale         String          @default("en")
+  seats          Int
+  totalCents     BigInt
+  currency       String
+  /// Copied from the business when the booking is made, so later changes do not affect it.
+  bookingMode    BookingMode
+  status         BookingStatus   @default(HELD)
+  holdExpiresAt  DateTime?
+  decidedById    String?
+  decidedBy      User?           @relation("SessionBookingDecidedBy", fields: [decidedById], references: [id], onDelete: Restrict)
+  decidedAt      DateTime?
+  cancelReason   String?
+  isDeleted      Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  payments       Payment[]
+  review         Review?
+
+  @@index([businessId, status])
+  @@index([status, holdExpiresAt])
+  @@index([sessionId])
+  @@index([guestUserId])
+}
+
+/// An uploaded photo, already shrunk and turned into WebP. On the live site the file is in Cloudflare R2 (free tier);
+/// without R2 settings (our computers, tests) its bytes are kept here and served from /api/images/{id}.
+model StoredImage {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  mimeType   String
+  /// Where the file is: under storageKey in the public R2 bucket, or here in bytes when R2 is not set up.
+  bytes      Bytes?
+  storageKey String?
+  size       Int
+  photos     Photo[]
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+}
+
+/// What a queued AI job has written so far, so the person sees it live. The worker writes it a few times a second
+/// and deletes it when the job ends; the finished answer is the job's own output (pg-boss). Leftovers of a crashed
+/// worker are removed by housekeeping.
+model JobProgress {
+  /// pg-boss's job id.
+  jobId     String   @id
+  /// The tool the model is using right now (e.g. "search_places"), or null while it writes the reply.
+  step      String?
+  /// The reply so far.
+  text      String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@index([updatedAt])
+}
+
+/// Tokens and cost of one assistant answer (all its model calls), for the monthly AI budget.
+model AiUsage {
+  id               String   @id @default(cuid())
+  /// "concierge" (guests) or "team" (the dashboard assistant).
+  surface          String
+  businessId       String?
+  promptTokens     Int
+  completionTokens Int
+  /// US dollars × 1,000,000, so tiny costs stay exact integers.
+  costMicroUsd     BigInt
+  isDeleted        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ---------- OAuth for AI apps (Better Auth jwt + @better-auth/oauth-provider) ----------
+// Field names and types follow the plugins' own schema definitions; do not rename them.
+
+/// Signing keys for access tokens (jwt plugin).
+model Jwks {
+  id         String    @id
+  publicKey  String
+  privateKey String
+  createdAt  DateTime
+  expiresAt  DateTime?
+  alg        String?
+  crv        String?
+}
+
+/// An AI app (MCP client) that registered itself to connect.
+model OauthClient {
+  id                               String    @id
+  clientId                         String    @unique
+  clientSecret                     String?
+  clientDiscoveryId                String?
+  disabled                         Boolean?  @default(false)
+  skipConsent                      Boolean?
+  enableEndSession                 Boolean?
+  subjectType                      String?
+  scopes                           String[]
+  clientCredentialsScopes          String[]  @default([])
+  userId                           String?
+  user                             User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                        DateTime?
+  updatedAt                        DateTime?
+  name                             String?
+  uri                              String?
+  icon                             String?
+  contacts                         String[]
+  tos                              String?
+  policy                           String?
+  softwareId                       String?
+  softwareVersion                  String?
+  softwareStatement                String?
+  redirectUris                     String[]
+  postLogoutRedirectUris           String[]
+  backchannelLogoutUri             String?
+  backchannelLogoutSessionRequired Boolean?
+  tokenEndpointAuthMethod          String?
+  applicationType                  String?
+  jwks                             String?
+  jwksUri                          String?
+  grantTypes                       String[]
+  responseTypes                    String[]
+  requirePKCE                      Boolean?
+  dpopBoundAccessTokens            Boolean?  @default(false)
+  referenceId                      String?
+  metadata                         Json?
+
+  resources     OauthClientResource[]
+  refreshTokens OauthRefreshToken[]
+  accessTokens  OauthAccessToken[]
+  consents      OauthConsent[]
+
+  @@index([userId])
+}
+
+/// An API that tokens can be issued for: here, the host MCP server.
+model OauthResource {
+  id                            String    @id
+  identifier                    String    @unique
+  name                          String
+  accessTokenTtl                Int?
+  refreshTokenTtl               Int?
+  signingAlgorithm              String?
+  signingKeyId                  String?
+  allowedScopes                 String[]
+  customClaims                  Json?
+  dpopBoundAccessTokensRequired Boolean?  @default(false)
+  disabled                      Boolean?  @default(false)
+  createdAt                     DateTime?
+  updatedAt                     DateTime?
+  policyVersion                 Int?      @default(1)
+  metadata                      Json?
+
+  clients OauthClientResource[]
+}
+
+model OauthClientResource {
+  id         String        @id
+  clientId   String
+  client     OauthClient   @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  resourceId String
+  resource   OauthResource @relation(fields: [resourceId], references: [identifier], onDelete: Cascade)
+  metadata   Json?
+  createdAt  DateTime?
+
+  @@unique([clientId, resourceId])
+  @@index([clientId])
+  @@index([resourceId])
+}
+
+model OauthRefreshToken {
+  id                      String      @id
+  token                   String      @unique
+  clientId                String
+  client                  OauthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?
+  session                 Session?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String
+  user                    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  expiresAt               DateTime
+  createdAt               DateTime
+  revoked                 DateTime?
+  rotatedAt               DateTime?
+  rotationReplayResponse  String?
+  rotationReplayExpiresAt DateTime?
+  authTime                DateTime?
+  confirmation            Json?
+  scopes                  String[]
+
+  accessTokens OauthAccessToken[]
+
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+}
+
+model OauthAccessToken {
+  id                      String             @id
+  token                   String             @unique
+  clientId                String
+  client                  OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?
+  session                 Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String?
+  user                    User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  refreshId               String?
+  refresh                 OauthRefreshToken? @relation(fields: [refreshId], references: [id], onDelete: Cascade)
+  expiresAt               DateTime
+  createdAt               DateTime
+  revoked                 DateTime?
+  confirmation            Json?
+  scopes                  String[]
+
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@index([refreshId])
+}
+
+/// What a person allowed an AI app to do, per workspace (referenceId is the business id).
+model OauthConsent {
+  id                      String      @id
+  clientId                String
+  client                  OauthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  userId                  String?
+  user                    User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  resources               String[]
+  requestedUserInfoClaims String[]
+  scopes                  String[]
+  createdAt               DateTime
+  updatedAt               DateTime
+
+  @@index([clientId])
+  @@index([userId])
+}
+
+/// Each private_key_jwt assertion id, so it can be used only once.
+model OauthClientAssertion {
+  id        String   @id
+  expiresAt DateTime
+}
+
+/// A phone or browser that receives push notifications. It follows either a signed-in person (every
+/// notification they would get by email) or, for guests without an account, one booking by its private link.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  /// The browser's push address: one device, so one row.
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

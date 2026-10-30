@@ -1,0 +1,90 @@
+# The production shape on one machine: the production build of the website, the job worker, Postgres and Redis,
+# the same image DigitalOcean runs. For working on the code, use docker-compose.yml (`docker compose up`) instead.
+# Settings come from .env (DATABASE_URL and REDIS_URL are overridden to point at the db and redis services).
+#   docker compose -f docker-compose.prod.yml up --build
+#   docker compose -f docker-compose.prod.yml --profile worker up --build   # also the worker, once it exists (task 5A)
+#   docker compose -f docker-compose.prod.yml --profile worker up --scale worker=2   # more workers share the queues
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mabeet
+      POSTGRES_PASSWORD: mabeet
+      POSTGRES_DB: mabeet
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mabeet"]
+      interval: 5s
+      retries: 10
+
+  # Rate-limit counters, shared by every web instance. Nothing in it needs to survive a restart (a lost count only
+  # resets a window), so it keeps no snapshots, and it is never published outside this network.
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--save",
+        "",
+        "--appendonly",
+        "no",
+        "--maxmemory",
+        "64mb",
+        "--maxmemory-policy",
+        "volatile-ttl",
+      ]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+    depends_on:
+      db: { condition: service_healthy }
+
+  web:
+    build:
+      context: .
+      # The public address of the R2 photo bucket, from .env, allowed for <Image> at build time.
+      args:
+        R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+    command: ["pnpm", "start"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+      REDIS_URL: redis://redis:6379
+      JOBS_MODE: queue
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  # Must always run beside the website in production: without it, AI answers, emails and scheduled jobs wait in
+  # the queue. Comes back by itself after a crash or a reboot. Behind a profile until the queues task adds
+  # `pnpm worker`; that task removes the profile.
+  worker:
+    profiles: ["worker"]
+    build: .
+    command: ["pnpm", "worker"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+      JOBS_MODE: queue
+    # Lets in-flight jobs finish on a deploy (the worker waits up to 60s).
+    stop_grace_period: 70s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+volumes:
+  db-data:

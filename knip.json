@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/app/**/{page,layout,route}.{ts,tsx}", "tests/**/*.test.ts", "scripts/*.ts"],
+  "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "scripts/**/*.ts", "prisma/**/*.ts"],
+  "ignoreDependencies": [
+    "eslint-config-next",
+    "eslint-config-prettier",
+    "tailwindcss",
+    "@better-auth/oauth-provider",
+    "@modelcontextprotocol/sdk",
+    "aws4fetch",
+    "better-auth",
+    "clsx",
+    "ical-generator",
+    "ioredis",
+    "lucide-react",
+    "motion",
+    "next-intl",
+    "node-ical",
+    "pg-boss",
+    "sharp",
+    "web-push",
+    "zod",
+    "@types/web-push"
+  ]
+}
