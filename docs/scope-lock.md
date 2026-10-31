@@ -103,7 +103,7 @@ reports, is the last bonus, built only if time is left.
   the first day.
 - Where it will be deployed: DigitalOcean, with Docker, deployed by GitHub Actions only after types, lint and all
   tests pass.
-- Live URL: our name is now **Mabeet** (تفضّل). We have not bought the domain yet. The site will be live by
+- Live URL: our name is now **Mabeet** (مبيت). We have not bought the domain yet. The site will be live by
   Tuesday 3 November at midnight, before Checkpoint 1. When we buy the domain, we point it at the same app; nothing
   else changes.
 
