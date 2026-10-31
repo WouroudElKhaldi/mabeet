@@ -348,26 +348,27 @@ keyboard, every input with a label, and no sideways scroll at 390 pixels.
 
 ## Part 8. Every page and its sections
 
-The id after each page is the task in `01-team-plan.md` that builds it. Sections are listed from top to bottom.
+The id after each page is its requirement in `06-functional-requirements.md`. Sections are listed from top to bottom.
 Changes for the new project (from `06-functional-requirements.md`) are marked **New:**.
 
 ### 8.1 Public site (header and footer from `SiteHeader` and `SiteFooter`)
 
-#### `/` Home (5C)
+#### `/` Home (F1)
 
 1. **Hero:** a two-column band (`lg:grid-cols-[1.1fr_1fr]`). Start side: a `font-poster` title, a short line, and
    the `SearchBar` (where, dates, guests). End side: `ArchWindow` photo with a `BoardingPass` and a `Postmark`.
 2. **Browse:** the `Browse` component without its own search: category bar (`CategoryBar`), tabs for stays,
    experiences and services (`ListingTabs`), and the results grid (`ResultsGrid` of `PlaceCard`s).
 3. **Direct receipts** (`DirectReceipts`): what a guest pays on Airbnb or Booking.com compared with booking direct.
-4. **Travel assistant band** (`ConciergeBand`): an invitation to ask the travel assistant.
+4. **Use it from your AI app** band (F6): one line on asking Claude or ChatGPT for free places, and a `ButtonLink`
+   to `/use-with-ai`. When the travel assistant is built (F6, last bonus), this band invites to it as well (`ConciergeBand`).
 
-#### `/search` Search (5C)
+#### `/search` Search (F1)
 
 `Browse` with its search bar and the filters dialog (`FiltersDialog`: price, categories, amenities,
 accessibility). Filters live in the web address, so a search can be shared. Results as a grid of cards.
 
-#### `/p/[slug]` Place page (2C, full in 6C)
+#### `/p/[slug]` Place page (F2)
 
 1. **Title row:** place name (`text-[1.75rem]`), rating, area, and on the end side `ShareButton` and
    `FavoriteButton`.
@@ -384,6 +385,12 @@ accessibility). Filters live in the web address, so a search can be shared. Resu
    - `ThingsToKnow`: check-in, check-out, house rules, and "Cancellation". Cancellation shows the refund rule only
      ("Online payments are always refunded in full"); there is no free-text cancellation policy to show.
 
+   - **New: "Near your stay"** (F22, under "Where you'll be"): once dates are picked, `NearbySection` shows
+     experiences and services in the same region with a session during those nights, nearest first, as `PlaceCard`s
+     in a row that scrolls sideways inside itself on phones (the page never does). With F23, sponsored offerings and
+     partner places come first, each with a small "Sponsored" label on the card (`bg-accent-soft ring-1 ring-accent-line`, the tokens for highlights); a partner card shows its photo, kind, distance and
+     its link or phone. Empty state: the section is not shown.
+
    End column: the sticky `BookingWidget` (dates, guests, nightly price and total, the Book button).
 
 4. On phones the booking box becomes a bar fixed at the bottom with the price and the button.
@@ -391,11 +398,11 @@ accessibility). Filters live in the web address, so a search can be shared. Resu
 **New:** no deposit and no refund policy in the booking box. It says how this place works in one line (the mode):
 "Pay online, confirmed at once", "Pay online, the host confirms", or "Arrange payment with the host".
 
-#### `/p/[slug]/photos` Photo tour (6C)
+#### `/p/[slug]/photos` Photo tour (F2)
 
 Photos grouped by area and room, with a Back button to the place.
 
-#### `/p/[slug]/book` Book (4C)
+#### `/p/[slug]/book` Book (F4)
 
 Two columns (`lg:grid-cols-[1fr_400px]`). Start: `GuestDetailsForm` (name, phone, email, number of guests, a note).
 End: a `BoardingPass` summary (place, room, dates, nights) with the `PriceBreakdown`.
@@ -403,14 +410,14 @@ End: a `BoardingPass` summary (place, room, dates, nights) with the `PriceBreakd
 **New:** the button is "Book and pay" (modes 1 and 2) or "Send request" (mode 3). There is no deposit line: the total
 is what is paid.
 
-#### `/p/[slug]/contact` Contact host (7C)
+#### `/p/[slug]/contact` Contact host (F2a)
 
 1. Title and the host's usual response time.
 2. "What guests usually ask": getting there, price and availability (the full price is paid; no deposit), the
    refund rule, house rules.
 3. "Still have questions?": `ContactHostForm` and the WhatsApp button, depending on the host's choice.
 
-#### `/b/[token]` The guest's booking page (4C; the pay buttons are 4A)
+#### `/b/[token]` The guest's booking page (F4; the pay buttons F4a)
 
 1. **Title** (`font-poster`) and a numbered step bar (sent, paid, confirmed) with check marks for done steps.
 2. **Pay** (online modes, while not paid): "Pay {amount}", the `HoldCountdown` (10 minutes), and `PayOnline`
@@ -420,32 +427,51 @@ is what is paid.
 5. **Phone alerts** (`PhoneAlerts`) to follow this booking.
 6. `GuestCancelButton` ("Cancel my booking").
 7. The `BoardingPass` with the booking details and a `Postmark`.
+8. **New: "Near your stay"** (F22): the same `NearbySection` as the place page, for the booking's nights. Not shown
+   for a cancelled, declined or expired booking.
 
 **New:** no "Deposit: {amount}" line; the amount is always the full total. A cancelled paid booking says "Refunded
 in full".
 
-#### `/o/[slug]` Experience or service (B2, bonus)
+#### `/o/[slug]` Experience or service (F8, bonus)
 
 Like the place page: title row, gallery, summary, what is included, `ThingsToKnow`, "Where you meet" map,
 `MeetHost`, reviews, and the `SessionBookingCard` (pick a session and seats) on the end side. `ThingsToKnow`'s
 "Cancellation" is the same refund rule as the place page (an experience has no "cancel up to N hours" setting).
 The card shows the total, which is what is paid: no deposit line.
 
-#### `/assistant` Travel assistant (B3, bonus)
+#### `/use-with-ai` Use Mabeet from your AI app (F6)
 
-The `Concierge` chat with idea tickets to start, place cards under answers, and a section "Use it from Claude or
-ChatGPT" with the guest MCP address in a `CopyField`.
+A reading page like `/privacy` (`mx-auto max-w-5xl px-4 pt-6 sm:px-6`), linked from `SiteFooter` and the home page band:
 
-#### `/pricing` Plans (B1, bonus)
+1. **Title** (`font-poster`) and one line: "Ask Claude, ChatGPT or any AI app for a place that is free on your
+   dates."
+2. **What MCP is:** a short paragraph. MCP is a standard way for an AI app to use another service's tools; ours lets
+   your AI app search Mabeet's places, check dates and prices.
+3. **Why use it:** three short points: plan the trip in the app you already talk to; real availability and prices,
+   not guesses; the answer links straight to the place's booking page.
+4. **The address:** the guest MCP address (`/api/mcp/guest` on our domain) in a `CopyField`.
+5. **How to connect:** numbered steps for Claude and for ChatGPT (add a custom connector, paste the address), then an
+   example question to try.
+6. **What it can and cannot do:** it only reads public places, dates and prices. It never books and never sees your
+   account: you book and pay on Mabeet. A `ButtonLink` to `/search`.
+
+No sign-in, no chat on this page. Every text in the three message files.
+
+#### `/assistant` Travel assistant (F6, last bonus)
+
+The `Concierge` chat with idea tickets to start, place cards under answers, and a link to `/use-with-ai`.
+
+#### `/pricing` Plans (F15, bonus)
 
 `PlanCards`: Free, Pro, Business with their limits and the button for each.
 
-#### `/privacy`, `/offline`, not found and error pages (1B; privacy 2B)
+#### `/privacy`, `/offline`, not found and error pages (the privacy page: F17)
 
 Plain reading pages. The privacy page also holds the payment policy (online refunds are always full; offline
 payments are between the host and the guest). `/offline` shows `HeroLandscape` and "You're offline".
 
-### 8.2 Sign in and accounts (2B)
+### 8.2 Sign in and accounts (F17)
 
 All use `AuthPage` (a narrow centred card, `max-w-md`) with `AuthForm`:
 
@@ -454,10 +480,10 @@ All use `AuthPage` (a narrow centred card, `max-w-md`) with `AuthForm`:
 - `/forgot-password` and `/reset-password`: one field each.
 - `/home`: no screen; it sends owners to their dashboard and guests to the home page.
 - `/host`: "Create your workspace" (`CreateWorkspaceForm`: the place's name and area).
-- `/oauth/consent` and `/oauth/workspace` (B4): "Allow {app} to connect?" and "Which workspace?" when Claude or
+- `/oauth/consent` and `/oauth/workspace` (F14): "Allow {app} to connect?" and "Which workspace?" when Claude or
   ChatGPT connects.
 
-### 8.3 Guest account (4C; notifications 7B; favourites and reviews B6)
+### 8.3 Guest account (F4; notifications F14a; favourites and reviews F5)
 
 Tabs at the top (`AccountTabs`):
 
@@ -470,28 +496,28 @@ Tabs at the top (`AccountTabs`):
 
 ### 8.4 Host dashboard (`AppShell`, every page starts with `PageHeader`)
 
-| Page                       | Task       | Sections, top to bottom                                                                                                                                                                                                                                                                                                                                         |
-| -------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dashboard` All my places | 8B         | `PageHeader` "All my places"; one card per place: arrivals today, requests waiting, money                                                                                                                                                                                                                                                                       |
-| `/dashboard/[id]` Today    | 8B         | 4 `StatTile`s (occupancy, direct revenue, commission saved, nights sold); the savings panel (revenue, commission saved, plan fees, kept); requests waiting (`BookingRow`s, waiting first); nights by month (`BarChart`) and channels (`ShareBar`) side by side                                                                                                  |
-| `/analytics`               | 8B         | Filters (period, one place or all); `StatTile`s; nights, revenue, channels and requests charts; a per-place table; the AI report (`ReportGenerator`, W)                                                                                                                                                                                                         |
-| `/bookings`                | 4B         | Stays and experience sessions, waiting ones first. Each `BookingRow` shows the guest, room, dates, total, status and countdown, with `BookingActions` on the row: Confirm and Decline (modes 2 and 3), Cancel (every mode), each with `useConfirm`. There is no separate booking page.                                                                          |
-| `/calendar`                | 5B         | `CalendarBoard`: month, week and rooms views; the side panel for the chosen day; `CloseDatesForm`. A platform booking that clashes with ours has a red outline and a note in the side panel; it is never cancelled from here                                                                                                                                    |
-| `/channels`                | 6A         | Each room's export link (`CopyField`); connected Airbnb, Booking.com or other links with last sync and error (`FeedButtons`: Sync now, Remove); `AddFeedForm`                                                                                                                                                                                                   |
-| `/place` Your place        | 3B, 9B     | `PlaceEssentials` (description, rules, photos by area), whole place or by room, `PhotoManager`                                                                                                                                                                                                                                                                  |
-| `/rooms`                   | 3B         | Each room in a `RoomEditor` with `PhotoManager` and `SpecialPrices`; "Add a room"                                                                                                                                                                                                                                                                               |
-| `/offerings`               | B2 (bonus) | `OfferingEditor`, `PhotoManager`, `SessionScheduler`. No cancellation-hours field                                                                                                                                                                                                                                                                               |
-| `/reviews`                 | B6 (bonus) | Average rating; each review with `ReviewControls` (reply, hide with a reason)                                                                                                                                                                                                                                                                                   |
-| `/payouts`                 | 8A         | `StatTile`s (available, upcoming, paid out); `PayoutRequestForm`; payout history; online payments                                                                                                                                                                                                                                                               |
-| `/billing`                 | B1 (bonus) | Current plan, `PlanCards`, `UpgradeButton`, `WhishPlanButton`                                                                                                                                                                                                                                                                                                   |
-| `/team`                    | 6B         | Members (`MemberControls`, `AddMemberForm`) and roles (`RoleEditor`)                                                                                                                                                                                                                                                                                            |
-| `/assistant`               | 9A         | `TeamAssistant`: New chat, History, Temporary chat; the chat; `ActionCard`s under replies                                                                                                                                                                                                                                                                       |
-| `/keys`                    | B4         | `KeyManager` (create, list, revoke keys; how to connect Claude, Cursor or Codex) and the audit list                                                                                                                                                                                                                                                             |
-| `/settings`                | 3C         | `SettingsForm`: contact, currency, commission rate, owner's answer time, listed or not, house rules, and how guests pay you directly (`paymentInstructions`, for offline mode). No cancellation policy field: the refund rule is the only one. **New:** the booking mode (3 choices as large radio cards) and accepting the payment policy for the online modes |
-| `/profile`                 | 7C         | `ProfileForm`, `HostProfileForm` (bio, city, languages, how guests reach you, show or hide; no phone or WhatsApp: guests use the business's numbers), `PasswordForm`                                                                                                                                                                                            |
-| `/notifications`           | 7B         | `PhoneAlerts`, `NotificationList`, `Pagination`. Includes calendar clashes (new and cleared), linking to `/calendar`                                                                                                                                                                                                                                            |
+| Page                       | Feature     | Sections, top to bottom                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard` All my places | F12         | `PageHeader` "All my places"; one card per place: arrivals today, requests waiting, money                                                                                                                                                                                                                                                                       |
+| `/dashboard/[id]` Today    | F12         | 4 `StatTile`s (occupancy, direct revenue, commission saved, nights sold); the savings panel (revenue, commission saved, plan fees, kept); requests waiting (`BookingRow`s, waiting first); nights by month (`BarChart`) and channels (`ShareBar`) side by side                                                                                                  |
+| `/analytics`               | F12         | Filters (period, one place or all); `StatTile`s; nights, revenue, channels and requests charts; a per-place table; the AI report (`ReportGenerator`, W)                                                                                                                                                                                                         |
+| `/bookings`                | F9          | Stays and experience sessions, waiting ones first. Each `BookingRow` shows the guest, room, dates, total, status and countdown, with `BookingActions` on the row: Confirm and Decline (modes 2 and 3), Cancel (every mode), each with `useConfirm`. There is no separate booking page.                                                                          |
+| `/calendar`                | F10         | `CalendarBoard`: month, week and rooms views; the side panel for the chosen day; `CloseDatesForm`. A platform booking that clashes with ours has a red outline and a note in the side panel; it is never cancelled from here                                                                                                                                    |
+| `/channels`                | F10         | Each room's export link (`CopyField`); connected Airbnb, Booking.com or other links with last sync and error (`FeedButtons`: Sync now, Remove); `AddFeedForm`                                                                                                                                                                                                   |
+| `/place` Your place        | F7, F3      | `PlaceEssentials` (description, rules, photos by area), whole place or by room, `PhotoManager`                                                                                                                                                                                                                                                                  |
+| `/rooms`                   | F7          | Each room in a `RoomEditor` with `PhotoManager` and `SpecialPrices`; "Add a room"                                                                                                                                                                                                                                                                               |
+| `/offerings`               | F8 (bonus)  | `OfferingEditor`, `PhotoManager`, `SessionScheduler`. No cancellation-hours field                                                                                                                                                                                                                                                                               |
+| `/reviews`                 | F5 (bonus)  | Average rating; each review with `ReviewControls` (reply, hide with a reason)                                                                                                                                                                                                                                                                                   |
+| `/payouts`                 | F12a        | `StatTile`s (available, upcoming, paid out); `PayoutRequestForm`; payout history; online payments                                                                                                                                                                                                                                                               |
+| `/billing`                 | F15 (bonus) | Current plan, `PlanCards`, `UpgradeButton`, `WhishPlanButton`                                                                                                                                                                                                                                                                                                   |
+| `/team`                    | F13         | Members (`MemberControls`, `AddMemberForm`) and roles (`RoleEditor`)                                                                                                                                                                                                                                                                                            |
+| `/assistant`               | F14 (bonus) | `TeamAssistant`: New chat, History, Temporary chat; the chat; `ActionCard`s under replies                                                                                                                                                                                                                                                                       |
+| `/keys`                    | F14 (bonus) | `KeyManager` (create, list, revoke keys; how to connect Claude, Cursor or Codex) and the audit list                                                                                                                                                                                                                                                             |
+| `/settings`                | F9a         | `SettingsForm`: contact, currency, commission rate, owner's answer time, listed or not, house rules, and how guests pay you directly (`paymentInstructions`, for offline mode). No cancellation policy field: the refund rule is the only one. **New:** the booking mode (3 choices as large radio cards) and accepting the payment policy for the online modes |
+| `/profile`                 | F2a         | `ProfileForm`, `HostProfileForm` (bio, city, languages, how guests reach you, show or hide; no phone or WhatsApp: guests use the business's numbers), `PasswordForm`                                                                                                                                                                                            |
+| `/notifications`           | F14a        | `PhoneAlerts`, `NotificationList`, `Pagination`. Includes calendar clashes (new and cleared), linking to `/calendar`                                                                                                                                                                                                                                            |
 
-### 8.5 Platform admin (`AppShell` in admin mode) (B9, bonus; the money page 8A)
+### 8.5 Platform admin (`AppShell` in admin mode) (F16, bonus; the money page F16a)
 
 | Page                                       | Sections                                                                                                                                                                              |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -499,12 +525,13 @@ Tabs at the top (`AccountTabs`):
 | `/admin/hosts` and `/admin/hosts/[userId]` | All hosts; one host's profile and their businesses with `BusinessStatusToggle` and "Open"                                                                                             |
 | `/admin/users`                             | All users                                                                                                                                                                             |
 | `/admin/categories`                        | `CategoryManager`                                                                                                                                                                     |
+| `/admin/partners` (F23)                    | Partner places (`PartnerEditor`: name, kind, region, map pin, photo, link, phone; remove and bring back), and sponsored dates for a partner or a platform experience or service       |
 | `/admin/appearance`                        | `SitePalettePicker`: the 5 palettes, light and dark preview                                                                                                                           |
 | `/admin/health`                            | Calendar sync health and AI spending                                                                                                                                                  |
-| `/admin/money` (8A)                        | Earned from plans (all, this month, card, Whish), revenue by month, payouts to send (`PayoutDecision`), what is owed to hosts, refunds to send by hand (`RefundSent`), recent payouts |
+| `/admin/money` (F16a)                      | Earned from plans (all, this month, card, Whish), revenue by month, payouts to send (`PayoutDecision`), what is owed to hosts, refunds to send by hand (`RefundSent`), recent payouts |
 | `/admin/notifications`, `/admin/profile`   | Same as the dashboard's                                                                                                                                                               |
 
-### 8.6 Whish simulator (4A)
+### 8.6 Whish simulator (F4a)
 
 `/whish-simulator/pay/[code]`: the page our Whish simulator shows instead of Whish's: the amount and "Pay" or
 "Cancel" (`WhishSimulatorForm`). It looks plain on purpose, like a payment provider's page.

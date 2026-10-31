@@ -1,6 +1,6 @@
 # Architecture
 
-How Tafaddal is put together, and why. What it does is in the
+How Mabeet is put together, and why. What it does is in the
 [functional requirements](functional-requirements.md). Where each guarantee is tested is in the
 [requirements matrix](requirements-matrix.md).
 
@@ -123,7 +123,7 @@ any time before it starts: DECLINED, EXPIRED (no answer / no payment) or CANCELL
 
 | `kind`     | Comes from                                                              | `active` while                          |
 | ---------- | ----------------------------------------------------------------------- | --------------------------------------- |
-| `DIRECT`   | A Tafaddal booking (one row per booking)                                | `HELD`, `AWAITING_PAYMENT`, `CONFIRMED` |
+| `DIRECT`   | A Mabeet booking (one row per booking)                                  | `HELD`, `AWAITING_PAYMENT`, `CONFIRMED` |
 | `MANUAL`   | A host closing nights: maintenance, a phone booking, Kazderni           | until the host removes it               |
 | `IMPORTED` | An event read from an Airbnb or Booking.com calendar link (or any iCal) | until it leaves the platform feed       |
 
@@ -217,10 +217,10 @@ record lastSyncedAt and lastError on the feed
 - **Disappeared events.** Deactivated, not deleted. The nights free up.
 - **A failing feed** (404, timeout, bad file) changes nothing that was already imported. The error is stored on
   the feed and shown to the host, and admins see sync health across the platform.
-- **Conflicts.** If Airbnb has a stay over nights Tafaddal already gave a guest, the imported row is flagged and
+- **Conflicts.** If Airbnb has a stay over nights Mabeet already gave a guest, the imported row is flagged and
   shown to the host. Nothing is cancelled automatically: a person decides.
 - **Why imported rows are outside the constraint.** Airbnb and Booking.com can contain overlapping stays
-  themselves, and Tafaddal can't refuse what already happened on another platform. Direct requests are still
+  themselves, and Mabeet can't refuse what already happened on another platform. Direct requests are still
   checked against imported nights in code, under the room lock, and feeds are re-read before a host confirms.
 
 ### Export
@@ -233,11 +233,11 @@ The feed carries no guest names or contacts, and no imported events (echoing Air
 would make loops). An unknown token answers `404`. Event UIDs (`{occupancyId}@se-next-stays`) never change,
 because the platforms track exported events by UID.
 
-### What Tafaddal can and cannot promise
+### What Mabeet can and cannot promise
 
-- **Can:** no two Tafaddal-controlled active occupancies overlap (constraint), and no direct request is accepted
+- **Can:** no two Mabeet-controlled active occupancies overlap (constraint), and no direct request is accepted
   over a night already imported (code, under the room lock).
-- **Cannot:** that Airbnb or Booking.com never sell a night Tafaddal just sold. They read our export link on
+- **Cannot:** that Airbnb or Booking.com never sell a night Mabeet just sold. They read our export link on
   their own schedule, often every few hours. Until then a platform booking can land on the same night. The next
   sync flags it for the host.
 
@@ -360,8 +360,8 @@ live.
 
 ## Payments
 
-Tafaddal takes **no commission or fee on bookings**. Guests either pay the host directly (recorded by the host) or
-online into Tafaddal's own Whish or Stripe account, and Tafaddal owes every cent of that to the host. Tafaddal's income
+Mabeet takes **no commission or fee on bookings**. Guests either pay the host directly (recorded by the host) or
+online into Mabeet's own Whish or Stripe account, and Mabeet owes every cent of that to the host. Mabeet's income
 is plan payments only (`PlanPayment`).
 
 ```
@@ -390,13 +390,13 @@ guest ──POST /api/public/bookings/{token}/checkout──▶ Payment (PENDING
   so a cancellation before then can still be refunded from it. A host asks for up to the available amount; the
   business row is locked while the balance is checked, so parallel requests can't overspend (20 at once → 1,
   tested). An admin sends the money and marks it sent with the transfer reference. Payouts go to an IBAN or a
-  Whish number; Tafaddal never asks for card numbers.
+  Whish number; Mabeet never asks for card numbers.
 - **Plans**: Stripe subscriptions as before, with each paid invoice (`invoice.paid`) recorded as revenue. Or one
   month at a time with Whish; a month that runs out without a new payment returns the business to Free. Plans are
   only ever paid instantly: there is no paying by hand and no approval step, and a CHECK constraint refuses any new
   plan payment that is not Stripe or Whish. Plan limits (rooms, experiences, members, AI) are checked in the
   services that create those things.
-- **Whish simulator.** Until Tafaddal has Whish keys, `WHISH_MODE=simulator` serves Whish's own API from inside the
+- **Whish simulator.** Until Mabeet has Whish keys, `WHISH_MODE=simulator` serves Whish's own API from inside the
   app (`/api/whish-simulator/*`) with a payment page that follows Whish's sandbox rules (phone `96170123456`,
   OTP `111111`, wrong OTP = failed attempt, link stays payable). The real client runs unchanged against it;
   `WHISH_MODE=sandbox` points it at Whish.
@@ -410,7 +410,7 @@ guest ──POST /api/public/bookings/{token}/checkout──▶ Payment (PENDING
 | Web Push (FCM, Mozilla, Apple) | Phone notifications           | Off without VAPID keys. Failures are logged, bookings unaffected      |
 | Stripe (test mode)             | Plans; guests paying by card  | Card payment is hidden. Webhooks are signature-checked and idempotent |
 | Whish Pay (simulator for now)  | Guests paying; plans by Whish | Whish is hidden. Pending payments are re-checked by the scheduled job |
-| DeepSeek                       | AI chat and assistant         | AI shows a friendly error. Everything else works                      |
+| DeepSeek (last bonus)          | Our own AI chats and reports  | AI shows a friendly error. Everything else works                      |
 | PostgreSQL (`pgboss` schema)   | Job queues for the worker     | Same database as everything else: if it is down, so is the site       |
 
 ## AI and MCP
@@ -419,29 +419,32 @@ AI is an extra way in, not a separate system. Every AI tool (`src/server/ai/*-to
 call to an existing service with the caller's `TenantContext`. So the AI has exactly the permissions of the
 person behind it, isolation included.
 
-- **Owner/staff MCP** (`/api/mcp`): API key or OAuth token → membership → `TenantContext`. Read-only keys see no
-  write tools. `list_places` shows the person's places, and every place-specific tool takes an optional `place`,
-  resolved as described in the isolation section. Tools cover bookings, calendar, rooms, sessions, reviews,
-  booking setup, analytics, payouts (owners) and the notification feed. Every call is logged in `McpAuditLog`.
-- **Dashboard assistant**: same tools, same context, from the signed-in session. It can act on orders ("cancel
-  booking SN-7KX3P9", "close the Arched room from 12 to 15 November"), but never on its own: a tool that changes
-  data is not run during the chat. Its input is checked against the tool's schema and comes back as a proposal;
-  the member sees a card with the exact action and details (not the model's wording) and presses Confirm, which
-  runs the same tool, service and permission checks through `POST /api/workspaces/{businessId}/assistant/actions`.
-  In MCP clients (Claude, Cursor, Codex), write tools carry `destructiveHint`, so the client asks the person
-  first, and read-only keys never see them. Chats are saved per person, or kept unsaved and never stored. Analytics reports are written by the same model from the numbers the Analytics
-  page shows.
-- **Guest travel assistant and guest MCP** (`/api/mcp/guest`): read-only search tools over public data. They never see
-  guests' contact details.
-- **Cost**: a monthly budget in `AiUsage`. Admins are warned at 80%, and AI pauses at 100%.
+We build it in this order. First the MCP (the first AI bonus): the person's own AI app brings the model, so it needs
+none of ours. Then a few host actions through the MCP. Our own model (DeepSeek) is the last bonus.
+
+- **Owner/staff MCP** (`/api/mcp`): API key or OAuth token → membership → `TenantContext`. `list_places` shows the
+  person's places, and every place-specific tool takes an optional `place`, resolved as described in the isolation
+  section. The first version only reads and reports: free rooms, bookings, revenue, the commission saved and the
+  numbers for a report over a period (the person's AI app writes the report); every key is read-only. Then a
+  few write tools, only for the roles that allow them: cancel a booking, close or reopen dates, confirm or decline a
+  request. They carry `destructiveHint`, so the client asks the person first, and read-only keys never see them.
+  Every call is logged in `McpAuditLog`.
+- **Guest MCP** (`/api/mcp/guest`): read-only search tools over public data: places, dates and prices. It never
+  books and never sees guests' contact details. The page `/use-with-ai` explains it to guests and shows its address.
+- **Our own model, last bonus:** a dashboard assistant on the same tools and context, from the
+  signed-in session. A tool that changes data is not run during the chat: its checked input comes back as a
+  proposal, the member sees a card with the exact action and details (not the model's wording) and presses Confirm,
+  which runs the same tool, service and permission checks. Also a travel assistant on the website and written
+  analytics reports. Chats are saved per person, or kept unsaved and never stored. A monthly budget in `AiUsage`:
+  admins are warned at 80%, and our model pauses at 100%.
 
 **One tool runner for every surface.** `createToolRunner` (`src/server/ai/run-tool.ts`) validates a tool's
 input, runs it with the caller's context, turns failures into safe messages and reports each call to a listener.
-The DeepSeek chat loop (`assistant.ts`) and the MCP server (`mcp-server.ts`) both use it, so they behave the same.
+The MCP server (`mcp-server.ts`) uses it, and so will the DeepSeek chat loop (`assistant.ts`), so they behave the same.
 What the model sees (`toolPayload`) has every amount already formatted (`totalCents` + `currency` becomes
 `total: "$140"`), so the model copies money and never converts cents.
 
-**Every answer has a stated format, checked on the way back** (`src/server/ai/output.ts`). Chat prompts carry
+**Every answer of our own model has a stated format, checked on the way back** (`src/server/ai/output.ts`). Chat prompts carry
 `REPLY_FORMAT` (a small markdown subset: bold, lists, tables; no HTML, headings, code or links), and `shapeReply`
 enforces it before a reply leaves the server; `RichText` renders exactly that subset and never HTML. Structured
 answers go through `askForJson`: the Zod schema is sent to the model as JSON Schema, the answer is parsed and

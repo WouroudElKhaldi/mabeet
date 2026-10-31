@@ -124,39 +124,59 @@ submission (Friday 13 November).
 - **F2 (experiences).** An experience page shows its sessions and how many spots are left.
 - **F5. Keep an account.** Trips, favourites, an activity history, and one review per stay, written only after
   check-out by the guest who actually stayed.
-- **F6. Ask the travel assistant (big bonus).** Describe a trip in English, Arabic or Arabizi, and get places that are
-  really free on those dates. The search takes a town or a region (`src/config/regions.ts`), bedrooms, bathrooms,
-  beds, amenities (a jacuzzi included), tags and accessibility, and shows each matching room's layout.
-- **F6a. Book through the AI (last bonus).** The guest's AI (on the website or through the guest MCP in Claude or
-  ChatGPT) can make the booking after the guest says yes. It never pays: it gives the booking's link, and the
-  guest (signed in) pays there, so the 10-minute payment window and every booking rule stay the same.
+- **F6. Ask your AI app about places (big bonus, the first AI bonus).** Through the guest MCP, from Claude, ChatGPT
+  or any MCP app, with no sign-in, a guest describes a trip and gets places that are really free on those dates. The
+  search takes a town or a region (`src/config/regions.ts`), bedrooms, bathrooms, beds, amenities (a jacuzzi
+  included), tags and accessibility, and shows each matching room's layout. It is always read-only: it searches,
+  checks dates and prices, and links to the booking page. It never books. A page on the website ("Use Mabeet from
+  your AI app") explains what MCP is, why a guest would use it and how to connect, and shows the guest MCP address
+  to copy.
+- **F22. Things to do near your stay (bonus).** On a place's page, once the guest picks dates, and on the booking's
+  page: experiences and services in the same region with a session during the guest's nights, nearest first, each
+  linking to its own page.
+- **F6 (the travel assistant on the website, last bonus).** The same search and the same read-only tools, answered
+  by our own model (DeepSeek) in a chat on the website, in English, Arabic or Arabizi.
 
 ### Hosts and their staff
 
 - **F8. List experiences and services.** Hikes, tastings, transfers and the like, with repeating sessions and a
   number of seats. The database includes them from the start.
-- **F12 (AI report).** The AI writes a report from the same numbers.
-- **F14. Use AI safely (big bonus).** An assistant in the dashboard, and personal keys or an OAuth sign-in to
-  connect Claude, ChatGPT, Cursor, Codex or any MCP app. One key reaches every place the person works in; they name
-  the place they mean. In each place, the AI sees exactly what that person's role there allows, and a read-only key
-  stays read-only everywhere. The AI can also carry out orders ("cancel booking SN-7KX3P9", "close the Arched room
-  from 12 to 15 November"), but never on its own: in the dashboard the person confirms a card that shows the exact
-  action, and in the AI apps the app asks before any change. Chats are saved, or kept unsaved and never stored.
-- **F14b. Never stuck waiting on the AI (bonus, with F6 and F14).** A short question is answered straight away. A
+- **F14. Connect an AI app (big bonus, the first AI bonus).** Personal keys or an OAuth sign-in to connect Claude,
+  ChatGPT, Cursor, Codex or any MCP app (the host MCP). One key reaches every place the person works in; they name
+  the place they mean. In each place, the AI sees exactly what that person's role there allows. The person's own AI
+  app brings the model, so this needs none of ours.
+  - **First version: read and report only.** Free rooms, bookings, revenue, the commission saved, and the numbers
+    for a report over a period (from the same figures as the analytics page; the person's AI app writes the report).
+    No tool changes data.
+  - **Then, a few actions (bonus after the first version).** Only what the person's role allows: cancel a booking
+    (with the full automatic refund), close or reopen dates, and confirm or decline a request waiting for the owner.
+    The same services and checks as the dashboard buttons. They are marked as changing data, so the AI app asks the
+    person before each one, and a read-only key never sees them. Marking a guest as arrived needs a new booking
+    state first, from the database keeper.
+- **F12 (AI report in the dashboard, last bonus).** Our own model (DeepSeek) writes a report from the same numbers.
+- **F14 (the assistant in the dashboard, last bonus).** A chat in the dashboard answered by our own model (DeepSeek).
+  It can carry out the same actions, but never on its own: the person confirms a card that shows the exact action.
+  Chats are saved, or kept unsaved and never stored.
+- **F14b. Never stuck waiting on the AI (last bonus, with the website travel assistant and the dashboard
+  assistant).** A short question is answered straight away. A
   long one, a long conversation, an AI report, or any question while others are being answered goes in line for
   the worker: the screen says what it is doing ("Searching what's free…"), then shows the answer word by word. The website and other
   people's requests are never held up by it. Built with queues (pg-boss) and a worker process; see
   `02-architecture-and-features.md`, "B. Queues and the worker".
 - **F15. Choose a plan (bonus).** Free, Pro or Business, each with its limits (rooms, experiences, team members,
   AI). Paid instantly, by card through Stripe (a subscription, turned on as soon as Stripe confirms it) or with
-  Whish (a month at a time). There is no paying by hand and nothing waits for an admin's approval. Plans are the
-  platform's only income: no commission or fee on bookings, on any plan.
+  Whish (a month at a time). There is no paying by hand and nothing waits for an admin's approval. Plans and
+  sponsored listings (F23) are the platform's only income: no commission or fee on bookings, on any plan.
 
 ### Platform admins
 
 - **F16. Run the platform.** Platform numbers, every host with all their businesses, suspend or reactivate a
   business, open any business's dashboard to help (logged under the admin's own name), manage categories, set the
   site's colour palette, watch calendar sync health and AI spending. Every action is logged.
+- **F23. Featured partners and sponsored listings (bonus).** Admins add partner places that are not on the platform
+  (restaurants, supermarkets, parks, museums and the like) with their region and map pin, and can sponsor a partner
+  or an experience or service of the platform for a set of dates. Guests see them in "Things to do near your stay"
+  (F22): sponsored ones first, always marked "Sponsored". Every change is logged.
 - **F16a. Run the money.** What the platform earned from plans (all time, this month, by month, card or Whish),
   what it holds for each host, payout requests to send and mark as sent, and refunds that failed and must be sent by
   hand. Plans are paid instantly, so there are no plan payments to approve.
@@ -180,3 +200,5 @@ submission (Friday 13 November).
   real API is used. Switching to real Whish needs only the keys. Cards use Stripe's real test mode.
 - Automatic payouts to owners (an admin sends each one and marks it sent).
 - In-app chat, automatic pricing, native mobile apps (the website installs as an app instead).
+- Booking through an AI (the website assistant or the guest MCP). The guest's AI only searches and links to the
+  booking page; the guest always books and pays on our site.

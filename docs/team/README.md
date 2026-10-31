@@ -7,7 +7,7 @@ Read them in this order before your first task:
 
 | File                                                               | What it tells you                                    |
 | ------------------------------------------------------------------ | ---------------------------------------------------- |
-| [01-team-plan.md](01-team-plan.md)                                 | Every task in order, three at a time, and the dates  |
+| [01-work-split.md](01-work-split.md)                               | Who owns which files, and the order for Checkpoint 1 |
 | [02-architecture-and-features.md](02-architecture-and-features.md) | How each feature works and how the code is built     |
 | [03-claude-prompt-guide.md](03-claude-prompt-guide.md)             | The rules for Claude, and how to ask Claude for work |
 | [04-test-plan.md](04-test-plan.md)                                 | Which tests to write, who writes them, and how       |
@@ -16,17 +16,96 @@ Read them in this order before your first task:
 | [07-data-model.md](07-data-model.md)                               | What changes in the database for the new project     |
 | [08-design-system-and-pages.md](08-design-system-and-pages.md)     | Colours, fonts, spacing, components, and every page  |
 
-These files describe a **reference project**: the first version of Tafaddal, in the `se-next-stays` repository. Its code already
+These files describe a **reference project**: the first version of Mabeet, in the `se-next-stays` repository. Its code already
 follows every rule written here. So when a file says "copy the style of `booking-service.ts`", that file (in the
 reference project, until we have written ours) is the example. We are building it again as a team, in this
-repository, following `01-team-plan.md`.
+repository. The files name features by their requirement id in `06` (`F3`, `F22`), never by person.
 
-Who does what is written **only** in `01-team-plan.md`. The other files name tasks by their id (`3A`, `9C`, `B4`),
-never by person.
-
-Claude Code also has these files as **skills** (in `.claude/skills/`): when you ask for a task, Claude loads the
-plan, the architecture, the design system or the test plan by itself. `CLAUDE.md` is copied from Part 1 of
+Claude Code also has these files as **skills** (in `.claude/skills/`): when you ask for a feature, Claude loads the
+architecture, the design system or the test plan by itself. `CLAUDE.md` is copied from Part 1 of
 `03-claude-prompt-guide.md`; change both together.
+
+---
+
+## How we work
+
+### Who builds what
+
+Who owns which files, and the order until Checkpoint 1, is in `01-work-split.md`. Omar owns the deployment and the
+live site, and Fatima gives the pitch. Before you start something, say on Discord what you take and which files you will change. Never
+change a file someone else is working on; ask them instead, or write what you need in your pull request.
+
+The order: the must-haves of `06` Part A first (the core flow of `docs/scope-lock.md`, section 5, before anything
+else), then the bonuses in the order of `docs/scope-lock.md`, section 9. The dates are in `docs/scope-lock.md`,
+section 12.
+
+### Backend first, then the screens
+
+Each feature is built by one person, from the database to the screen, in two pull requests:
+
+1. **The API** (`feat/<feature>-api`): repositories, the service, the routes with their Zod schemas, the route in
+   `docs/openapi.json` (then `pnpm docs`), and the unit and integration tests. Before asking for a review, run the
+   routes by hand in Postman or Swagger (`04` Part 2, "Checking an API by hand"). Merged first.
+2. **The screens** (`feat/<feature>-screens`): the pages and components on the merged routes, with `api` from
+   `src/lib/api-client.ts`, every text in the three message files, the `loading.tsx` and the empty state.
+
+The shared bases come before any feature, so nobody writes their own: the server base (`env`, errors, the database
+client and `runInTransaction`, the route wrapper, sign-in), the design system and its components
+(`src/components/ui`, the frames, `api-client.ts`, the hooks), and the value lists, permissions and languages
+(`src/config`, `permissions.ts`, `messages/*`).
+
+### All or nothing
+
+A change with several steps either happens completely or not at all: if step 2 fails, step 1 is undone, we fix the
+cause and run it again from step 1. Every database step goes in one `runInTransaction`; outside services (Stripe,
+Whish, R2, email) are called after the commit; a failed migration is marked rolled back, fixed and run again; a
+merged pull request is undone with `git revert`. The exact rules: `02` Part 3, "All or nothing: when one step fails".
+
+### Shared files
+
+Many features change these. Add your lines in the block for your feature, keep the existing order, and pull `main`
+every morning so conflicts stay small:
+
+- `src/server/validation/schemas.ts` (the Zod input checks)
+- `messages/en.json`, `messages/ar.json`, `messages/ar-LB.json` (one block per area, same keys in all three)
+- `src/components/dashboard/nav-items.ts` (one line per dashboard page)
+- `docs/openapi.json`: a route you add or change is written there, matching its Zod schema, then `pnpm docs` (which
+  also writes `docs/openapi.yaml`). Once `scripts/openapi.ts` exists, it generates the file from the schemas instead
+- `knip.json`: the first change that imports a library removes it from `ignoreDependencies`
+
+### The database keeper
+
+`prisma/schema.prisma` and `prisma/migrations/` are complete for every feature except the partner tables
+(`07-data-model.md`, section 5). A database change goes through **one person**, the database keeper: write what you
+need in your pull request or on Discord, and it comes in its own small pull request first. Never edit a merged
+migration; add a new one.
+
+Database keeper: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+### GitHub
+
+- **Nobody pushes to `main`.** Every change is a pull request with all checks green, one approval, the branch up to
+  date with `main`, and every comment answered. A merge to `main` updates the live site by itself.
+- **One branch per pull request:** `<type>/<feature>-<short-name>`, for example `feat/F7-api`, `feat/F7-screens`,
+  `fix/F9-confirm-button`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+- **Small pull requests, opened early:** one thing each, under about 400 changed lines; a draft after the first
+  commit; commit messages say what changed for the user ("Guests see taken nights greyed out").
+- **Every pull request says:** what it changes (for the user), the feature (`F7`, …), how to check it (steps and
+  the demo account; for an API, what you ran in Postman or Swagger), screenshots at 390 px in English and Arabic for
+  any screen, and the checklist: `pnpm check` passes, the feature's integration tests pass, every new text is in the
+  three message files, files are in the right folders (`05`), no database change (or it came from the database
+  keeper), the documents that describe the change are updated.
+- **Reviews**, within half a day: the layers, permissions in the service, a Zod check on every input, all or nothing
+  for changes with several steps, no repeated code or hand-typed value lists, tokens only, text in every language,
+  the tests from `04`. Each comment is **must fix** or **suggestion**.
+- **Merging:** **Squash and merge**, then delete the branch. If `main` changed: `git pull --rebase origin main`, run
+  the checks again, `git push --force-with-lease`.
+- **Undoing a merged change:** every pull request is one commit on `main`, so `git switch -c fix/<feature>-revert`,
+  `git revert <the commit>`, and open it as a pull request. A migration is never deleted: a new migration undoes it.
+  On your own branch, start a step again with `git restore` or `git reset`; never rewrite `main`.
+- **Never put secrets in the repository:** no keys, passwords or tokens in code, commits, screenshots or Discord.
+  Yours go in `.env`; live ones in DigitalOcean's settings and GitHub secrets. A secret pushed by mistake is
+  replaced, not just deleted.
 
 ---
 

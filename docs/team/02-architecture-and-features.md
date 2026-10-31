@@ -1,6 +1,6 @@
 # Architecture and features
 
-This file explains how the product works and how its code is built. It describes the reference project (`se-next-stays`, the first version of Tafaddal),
+This file explains how the product works and how its code is built. It describes the reference project (`se-next-stays`, the first version of Mabeet),
 with the changes we decided for the new project: the three booking modes, full refunds and DigitalOcean hosting
 (`06-functional-requirements.md` and `07-data-model.md`). When this file and those two disagree, those two win.
 
@@ -38,7 +38,7 @@ Our product gives the host one booking page, one calendar, and a database that r
 
 ### Who uses it
 
-- **Guests:** browse, book, pay, cancel with a private link, and ask the guest's AI assistant.
+- **Guests:** browse, book, pay, cancel with a private link, and ask their own AI app about places (read-only).
 - **Owners:** can do everything in their business, including money, settings and the team.
 - **Staff:** can only do what their role allows. For example, "Front desk" handles bookings and closed dates, but
   cannot see money or settings.
@@ -56,7 +56,6 @@ Our product gives the host one booking page, one calendar, and a database that r
    calendars again. The owner confirms.
 5. The guest's page shows "confirmed". The night is now closed on Airbnb and Booking.com too, through our calendar
    link.
-6. The owner asks the AI assistant to change something, or for a number. The owner confirms any change on a card.
 
 ---
 
@@ -75,7 +74,9 @@ Our product gives the host one booking page, one calendar, and a database that r
   Whish.
 - **next-intl:** English, Arabic and Lebanese Arabic. Arabic is right-to-left.
 - **Tailwind CSS 4:** styling, using design tokens only.
-- **DeepSeek:** the AI model. Changing to another AI provider means changing one file.
+- **MCP:** how AI apps (Claude, ChatGPT, Cursor, Codex) use our tools. The model runs in the person's own app.
+- **DeepSeek:** our own AI model, for the last bonuses only (the dashboard assistant, the website travel
+  assistant, the AI report). Changing to another AI provider means changing one file.
 - **Vitest:** unit tests (no database) and integration tests (real database).
 - **DigitalOcean with Docker:** hosting for the website and the PostgreSQL database. One Docker image runs twice: as
   the website (`pnpm start`) and as the job worker (`pnpm worker`). Real emails are sent with Resend from our own
@@ -181,6 +182,42 @@ await runInTransaction(async (tx) => {
 
 Only services import `prisma`. ESLint stops `@prisma/client` from being used outside repositories, except for types
 (`import type`).
+
+### All or nothing: when one step fails
+
+A change that touches several rows, tables or features either happens completely or not at all. If step 2 fails,
+step 1 is undone at once; we fix the cause and run the whole change again from step 1.
+
+1. **Every database step of one change goes in one `runInTransaction`.** If anything inside throws (a check, a
+   database refusal, a bug), Postgres undoes every write before it, and the error reaches the person as a clear
+   message. Never save step 1 in one transaction and step 2 in another. Never catch an error inside the transaction
+   to carry on: let it throw. The only catching is `overlapAsConflict` and `duplicateAsConflict`, which turn the
+   refusal into a clear error and still throw.
+2. **Checks first, writes after.** A service checks the permission, then everything it can check (the input, the
+   status, the plan's limits), and only then writes. Most failures stop before anything is written.
+3. **Emails and push are jobs sent after the commit** (`defineJob` on the `notify` queue). A change that is rolled
+   back never sends anything. A job that fails is retried, and every job handler can run twice safely.
+4. **Outside services cannot be undone by Postgres** (Stripe, Whish, R2), so:
+   - **Money:** our row is written first, inside the transaction (a payment waiting, a refund to send), and the call
+     to Stripe or Whish comes after the commit. If the call fails, the row stays, the scheduled job checks it again,
+     and a refund that keeps failing shows on the admin's money page to send by hand. Webhooks and callbacks can come
+     twice: each one is applied once (the payment's provider reference is unique).
+   - **Uploads:** the photo is uploaded to R2, then its row is saved. If the save fails, the service deletes the
+     uploaded file again before throwing, so no file is left without its row.
+   - Never call an outside service inside `runInTransaction`: it would hold the room's lock while waiting, and the
+     call could not be undone anyway.
+5. **Calls that must follow a commit** (`recheckImportClashes`, `inBackground` writes) run only after
+   `runInTransaction` returns, so they never see a change that was rolled back.
+6. **Migrations** (only the database keeper): one migration does one change. Before it is merged, it runs on a fresh
+   database (`pnpm db:deploy` and the integration tests in CI) and on a copy of the live data. The live database is
+   backed up before every deploy that runs a migration. If a migration fails on a database: restore it if anything
+   was half applied, mark it with `pnpm exec prisma migrate resolve --rolled-back <migration>`, fix the cause in a new
+   pull request, and deploy again. A merged migration is never edited; a new migration undoes it.
+7. **Code:** every pull request is one squashed commit, so a merged change is undone with one `git revert`
+   (`docs/team/README.md`, "Undoing a merged change").
+
+Every service that writes in several steps has an integration test that makes a later step fail and checks that
+nothing of the earlier steps stayed in the database (`04` Part 2).
 
 ---
 
@@ -520,6 +557,10 @@ site's colour palette. Code: `admin-service.ts`, `src/app/admin/**`.
 
 The AI is another way into the same app, not a separate system.
 
+The order we build it in: first the MCP (the first AI bonus), where the person's own AI app brings the model and calls our
+tools. The guest MCP is always read-only and never books. The host MCP's first version only reads and reports; a few
+host actions come after it. Our own model (`deepseek.ts`, `assistant.ts`, `output.ts`) is the last bonus, so `tool.ts`, `run-tool.ts`, `team-tools.ts`, `guest-tools.ts` and `mcp-server.ts` must never need it.
+
 - Every AI **tool** is a Zod input check plus a call to an existing service, with the caller's `TenantContext`.
 - So the AI has exactly the same rights as the person behind it, and it can never see another business.
 - Tools never take a `businessId`. The business always comes from the key, token or session.
@@ -541,7 +582,7 @@ The files:
 - `mcp-server.ts`: `handleMcpRequest` answers one MCP request. It only offers the tools the caller may use. It marks
   tools as "read only" or "changes data".
 
-### A. AI: the owner's assistant (in the dashboard)
+### A. AI: the owner's assistant (in the dashboard, last bonus)
 
 Page: `/dashboard/{id}/assistant`.
 
@@ -562,24 +603,34 @@ Code: `assistant-service.ts`, `chat-service.ts`, `team-tools.ts`, `components/as
 
 Route: `POST /api/mcp`.
 
-- The person connects with a personal API key (made on the "Connect AI" page, read-only or with write access, with
-  an end date), or by signing in with OAuth and choosing a business.
-- Read-only keys never see the tools that change data.
-- Tools that change data are marked, so the AI app asks the person before running them.
+- The person connects with a personal API key (made on the "Connect AI" page, with an end date), or by signing in
+  with OAuth and choosing a business.
+- **First version: read and report only.** Free rooms, bookings, revenue, the commission saved, and the numbers
+  for a report over a period (`getBusinessReport`, the same figures as the analytics page). The person's AI app
+  writes the report. Every key is read-only.
+- **Then: a few actions**, only what the person's role allows: `cancel_booking` (full automatic refund),
+  `close_dates` and `reopen_dates`, `confirm_booking` and `decline_booking`. Each calls the same service as the
+  dashboard button. Keys can then have write access; read-only keys never see these tools. They are marked as
+  changing data, so the AI app asks the person before running them. Marking a guest as arrived needs a new booking
+  state from the database keeper first.
 - Every tool can take an optional `place`, to work in another of the person's businesses (`resolvePlaceContext`). It
   only allows places the person belongs to. If a name fits several places, it refuses.
 - Every call is logged in `McpAuditLog`. The key's "last used" time is updated after the answer (`touchKey`).
 
 ### A. AI: the guest's assistant and guest MCP
 
-- On the website: `/assistant`, `POST /api/assistant`.
-- For AI apps: `POST /api/mcp/guest` (public).
+- For AI apps: `POST /api/mcp/guest` (public), built first.
+- On the website: `/assistant`, `POST /api/assistant`, answered by our own model (last bonus).
 
 Both use the read-only `GUEST_TOOLS`: search places, check availability, get a place, search experiences, get an
-experience. They only see public data. They give a link to the booking page. They never book.
+experience. They only see public data. They give a link to the booking page. They never book: booking through
+an AI is cut.
 
 The place cards under a reply are built from the tool results, not from the model's words. So the model cannot
 invent a place.
+
+The page `/use-with-ai` (built with the guest MCP) tells guests what MCP is, why and how to connect Claude or ChatGPT, and shows the guest
+MCP address in a `CopyField`. It has no chat. `SiteFooter` and the home page link to it.
 
 ### A. AI: the format of every answer
 
@@ -688,8 +739,8 @@ Two kinds, by how much they matter:
 
 Free, Pro and Business plans (`src/config/plans.ts`), with limits on rooms, experiences, members and AI. Hosts pay
 **instantly only**: by card (Stripe subscription) or by Whish (one month at a time). There is no paying by hand, no
-receipt upload and no admin approval; do not build one. Plan payments are the platform's only income. Code:
-`billing-service.ts`.
+receipt upload and no admin approval; do not build one. Plan payments and sponsored listings ("F. Featured
+partners and sponsored listings") are the platform's only income. Code: `billing-service.ts`.
 
 ### B. Bookings: the statuses
 
@@ -886,6 +937,20 @@ Code: `offering-service.ts`, `session-booking-service.ts`.
 
 Signed-in guests can save places. Code: `favorite-service.ts`, `src/app/actions/favorites.ts`.
 
+### F. Featured partners and sponsored listings
+
+Bonus (F23), built on "N. Near your stay".
+
+- **Partner places** are places near guesthouses that are not on the platform: restaurants, supermarkets, parks,
+  museums. Their kinds are a list in `src/config/partner-kinds.ts`. Platform admins add them at `/admin/partners`
+  with a region, a map pin, a photo, a link and a phone. They are never booked through us.
+- **Sponsored listings:** an admin can sponsor a partner place, or an experience or service of the platform, for a
+  set of dates (`partner-service.ts`; only platform admins). While sponsored, it comes first in "Near your stay" and
+  always shows a "Sponsored" label. A guest never sees a sponsored item without that label.
+- Partners are soft-deleted like every business table, and every admin change is logged.
+- This needs tables that do not exist yet: the database keeper adds them first (`07`, "Waiting for the database
+  keeper").
+
 ### H. Host profile
 
 The owner's own profile (name, bio, city, languages, years hosting, how guests may contact them). It shows on their
@@ -929,6 +994,18 @@ platform admins.
 - An admin sends it by hand from the platform's Whish or Stripe account, and marks it sent with the transfer
   reference.
 - The business row is locked, so two requests cannot spend the same money.
+
+### N. Near your stay (things to do nearby)
+
+Bonus (F22), needs experiences and services (F8).
+
+- On a place's page, once the guest picks dates, and on the guest's booking page, `NearbySection` shows experiences
+  and services in the same region with a session during the guest's nights, nearest first (from the map pins).
+- `listNearbyOfferings(placeId, range, now = new Date())` in `offering-service.ts` reads only public, active,
+  not-deleted offerings and sessions with free seats; route `GET /api/public/places/{slug}/nearby?checkIn=&checkOut=`.
+- It uses the region (`src/config/regions.ts`), the map pin and the `OfferingSession` dates that already exist; no
+  database change.
+- With F23, sponsored offerings and partner places come first ("F. Featured partners and sponsored listings").
 
 ### N. Notifications
 
@@ -1121,7 +1198,7 @@ once even with several workers. The routes need `Authorization: Bearer $CRON_SEC
 
 **Optional (each one turns a feature on):**
 
-- `DEEPSEEK_API_KEY`: the AI. `AI_MONTHLY_BUDGET_USD`: the AI budget.
+- `DEEPSEEK_API_KEY`: our own AI model (last bonus). `AI_MONTHLY_BUDGET_USD`: its budget. The MCP needs neither.
 - `RESEND_API_KEY` and `EMAIL_FROM`: emails.
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_BUSINESS`: card payments.
 - `WHISH_MODE` (`simulator` by default), `WHISH_CHANNEL`, `WHISH_SECRET`, `WHISH_WEBSITE_URL`: real Whish.
@@ -1154,7 +1231,7 @@ once even with several workers. The routes need `Authorization: Bearer $CRON_SEC
 7. Does the screen use tokens and `components/ui/`, with loading, empty and error states, at phone width?
 8. Is every new text in all language files?
 9. Are the tests from `04-test-plan.md` written and passing?
-10. Does `pnpm check` pass? Is a new or changed route written in `docs/openapi.json` (generated by `scripts/openapi.ts` from task 11C), then
+10. Does `pnpm check` pass? Is a new or changed route written in `docs/openapi.json` (generated by `scripts/openapi.ts` once it exists), then
     `pnpm docs`?
 
 ---
@@ -1165,7 +1242,7 @@ A contract is the exact way to call a function: its name, what it takes in, and 
 functions other features call. They do not change without a pull request announced on Discord. Build your feature
 against these exact shapes, even before the function is merged.
 
-### The booking engine (`src/server/services/booking-service.ts`, task 3A, merged Monday 2 November)
+### The booking engine (`src/server/services/booking-service.ts`)
 
 ```ts
 interface BookingRequest {
@@ -1204,7 +1281,7 @@ getBookingForGuest(publicToken: string, guestUserId: string): Promise<(Booking &
 // recheckImportClashes(businessId, roomId) after it commits, so platform clash flags are right at once.
 ```
 
-### Tenancy (`src/server/auth/tenant-context.ts`, `src/server/http/*`, task 2A, merged Sunday 1 November)
+### Tenancy (`src/server/auth/tenant-context.ts`, `src/server/http/*`)
 
 ```ts
 can(ctx: TenantContext, permission: Permission): boolean
@@ -1218,7 +1295,7 @@ requirePageTenant(businessId: string): Promise<TenantContext>          // pages:
 requirePageAccess(businessId: string, anyOf: Permission[]): Promise<TenantContext>
 ```
 
-### Permissions and roles (`src/server/auth/permissions.ts`, task 1C, merged Saturday 31 October)
+### Permissions and roles (`src/server/auth/permissions.ts`)
 
 ```ts
 type Permission = "rooms.read" | "rooms.manage" | ... | "ai.use"   // the full list is in Part 5

@@ -1,4 +1,4 @@
-# Tafaddal · تفضّل
+# Mabeet · تفضّل
 
 Direct bookings for Lebanese guesthouses and B&Bs: guests book on the host's own page, paid online in full or
 arranged with the host, with one calendar that stays in sync with Booking.com and Airbnb. Hosts stop paying the 15 to
@@ -8,13 +8,15 @@ arranged with the host, with one calendar that stays in sync with Booking.com an
 > nights). A test sends 20 requests for the last free room at the same moment, and exactly one gets it.
 
 This repository is the team rebuild for Demo Day (Saturday 21 November). It starts from the setup only: the tools, the
-whole database, and the documents. Every feature is a task in [docs/team/01-team-plan.md](docs/team/01-team-plan.md).
+whole database, and the documents. Every feature is written in [docs/team/06-functional-requirements.md](docs/team/06-functional-requirements.md),
+and how we work together in [docs/team/README.md](docs/team/README.md).
 
 ## Who it's for
 
-- **Guests** find a stay, book it, pay online (Whish or a card) or arrange it with the host, and follow the booking.
+- **Guests** find a stay, book it, pay online (Whish or a card) or arrange it with the host, follow the booking,
+  see things to do near their stay, and can ask their own AI app (Claude, ChatGPT) about places through our MCP.
 - **Hosts** run rooms or a whole place, one shared calendar, bookings and decisions, analytics with the commission
-  saved, payouts and their team, and an AI assistant that carries out orders only after they confirm.
+  saved, payouts and their team, and can connect their own AI app (MCP) to read their bookings and figures.
 - **Staff** see and do only what their role allows, on the screens and through the AI.
 - **Platform admins** send payouts, watch the platform, and can suspend a business.
 
@@ -29,12 +31,12 @@ English, Arabic and Lebanese Arabic, right to left included, designed for phones
 | **Offline**               | Arranged with the host, not through us  | The owner confirms or declines  |
 
 Online payments are always for the full amount (no deposits) and every refund is full and automatic. Unpaid bookings
-end after 10 minutes and free the room. Tafaddal takes no commission: it earns only from host plans.
+end after 10 minutes and free the room. Mabeet takes no commission: it earns only from host plans and sponsored listings.
 
 ## Tools
 
 Next.js 16 (App Router) · TypeScript (strict) · Tailwind 4 · Prisma 6 and PostgreSQL 17 · Redis (rate limits) ·
-Better Auth · Zod 4 · next-intl · pg-boss (queues and the worker) · DeepSeek (AI) · MCP · Stripe (test mode) and Whish
+Better Auth · Zod 4 · next-intl · pg-boss (queues and the worker) · MCP · DeepSeek (AI, last bonus) · Stripe (test mode) and Whish
 (built-in simulator until merchant keys) · Resend (email) · Web Push · iCal import and export · Vitest and Playwright ·
 Docker on DigitalOcean, deployed by GitHub Actions.
 
@@ -116,8 +118,7 @@ cannot express (the no-overlap `EXCLUDE` constraint, the seat triggers, the CHEC
 
 | Document                                                                                                  | What it says                                         |
 | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| [docs/team/README.md](docs/team/README.md)                                                                | Start here: the reading order and the glossary       |
-| [docs/team/01-team-plan.md](docs/team/01-team-plan.md)                                                    | Every task in order, three at a time, and the dates  |
+| [docs/team/README.md](docs/team/README.md)                                                                | Start here: how we work, reading order, glossary     |
 | [docs/scope-lock.md](docs/scope-lock.md)                                                                  | The scope locked with Sami: core flow, cut list      |
 | [Demo-ready standard (PDF)](docs/Ready%20for%20Business%20Demo-Ready%20Standard%20and%20Scope%20Lock.pdf) | What "demo-ready" means                              |
 | [docs/functional-requirements.md](docs/functional-requirements.md)                                        | What it does (must have and bonus)                   |
@@ -132,7 +133,7 @@ cannot express (the no-overlap `EXCLUDE` constraint, the seat triggers, the CHEC
 ## Working with Claude
 
 Claude Code reads [CLAUDE.md](CLAUDE.md) in every session, and loads the skills in `.claude/skills/` when the work
-needs them: `tafaddal-task` (do a task from the plan by its id), `tafaddal-architecture`, `tafaddal-screens`,
-`tafaddal-database`, `tafaddal-tests`, `tafaddal-review` and `tafaddal-scope`. Ask for one task per conversation, for
-example: "Do task 3B from the team plan." The prompt template is in
+needs them: `tafaddal-task` (build a feature by its requirement id), `tafaddal-architecture`, `tafaddal-screens`,
+`tafaddal-database`, `tafaddal-tests`, `tafaddal-review` and `tafaddal-scope`. Ask for one feature per conversation, for
+example: "Build rooms, prices and photos (F7), the API first." The prompt template is in
 [docs/team/03-claude-prompt-guide.md](docs/team/03-claude-prompt-guide.md).

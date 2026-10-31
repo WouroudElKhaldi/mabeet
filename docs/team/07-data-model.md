@@ -222,3 +222,21 @@ read by `GET /api/jobs/{jobId}`, deleted when the job ends.
    gone from the reference; do not bring them back.
 7. Nothing to migrate for the queues: pg-boss creates its `pgboss` schema when the worker first starts.
 8. Add `JobProgress` (live text of queued AI answers).
+
+## 5. Waiting for the database keeper
+
+Approved by Sami after the scope was locked. Not in `prisma/schema.prisma` yet: the database keeper adds them in a
+new migration before featured partners (F23) are built. "Near your stay" (F22) needs no change: it reads `Offering.region`, the
+map pin and the `OfferingSession` dates that exist.
+
+1. `PartnerKind` enum (restaurant, supermarket, park, museum, and the like), matched by `src/config/partner-kinds.ts`
+   with `satisfies`.
+2. `PartnerPlace`: a place near guesthouses that is not on the platform. Name, kind, region (a key of
+   `src/config/regions.ts`), area, map pin, photo, website link, phone, `isDeleted`, created and updated times. Not
+   tied to a business: platform admins manage it. Indexed by region.
+3. `Sponsorship`: the dates during which a partner place, or an experience or service (`Offering`), is sponsored.
+   Exactly one of `partnerPlaceId` and `offeringId` (a `CHECK`), `startsOn` and `endsOn` as dates with `endsOn` after
+   `startsOn` (a `CHECK`), who created it, `isDeleted`. Indexed by dates.
+4. How a sponsor pays is not decided yet. If it is paid through the platform, it is paid instantly with Stripe or
+   Whish like plans, and its money is `BigInt` minor units with a line in `moneyAsNumbers`.
+5. After the migration: `pnpm exec prisma generate`, `pnpm docs`, and update `docs/erd-explained.md`.

@@ -1,9 +1,9 @@
 ---
 name: tafaddal-screens
-description: Build or change a Tafaddal page, screen or component - the fixed design system (tokens, five palettes, light and dark), shared components, the four states of every screen, phones first, English and Arabic right-to-left. Use before touching any page under src/app or anything in src/components.
+description: Build or change a Mabeet page, screen or component - the fixed design system (tokens, five palettes, light and dark), shared components, the four states of every screen, phones first, English and Arabic right-to-left. Use before touching any page under src/app or anything in src/components.
 ---
 
-# Tafaddal screens
+# Mabeet screens
 
 1. Open `docs/team/08-design-system-and-pages.md`. Read Part 1 (the rules), the colours, fonts and spacing you use,
    Part 6 (the shared components), Part 7 (the four states: loading, empty, error, filled), and the page's own entry

@@ -1,6 +1,6 @@
 # Project structure
 
-This file shows every folder and file of the reference project (`se-next-stays`, the first version of Tafaddal). It was made from the repository on
+This file shows every folder and file of the reference project (`se-next-stays`, the first version of Mabeet). It was made from the repository on
 27 October 2026.
 
 Put new code in the folder whose note matches it. If no folder fits, ask in your pull request before you add a
@@ -101,7 +101,6 @@ docs/
   openapi.json
   requirements-matrix.md
   team/
-    01-team-plan.md
     02-architecture-and-features.md
     03-claude-prompt-guide.md
     04-test-plan.md
@@ -249,6 +248,8 @@ src/
         page.tsx
       search/
         page.tsx
+      use-with-ai/
+        page.tsx
       whish-simulator/
         pay/
           [code]/
@@ -292,6 +293,9 @@ src/
         loading.tsx
         page.tsx
       page.tsx
+      partners/
+        loading.tsx
+        page.tsx
       profile/
         loading.tsx
         page.tsx
@@ -308,6 +312,10 @@ src/
             route.ts
           route.ts
         notifications/
+          route.ts
+        partners/
+          [partnerId]/
+            route.ts
           route.ts
         payouts/
           [payoutId]/
@@ -383,6 +391,8 @@ src/
             bookings/
               route.ts
             messages/
+              route.ts
+            nearby/
               route.ts
             rooms/
               [roomId]/
@@ -636,6 +646,7 @@ src/
       member-controls.tsx
       nav-items.ts
       offering-editor.tsx
+      partner-editor.tsx
       payout-decision.tsx
       payout-request-form.tsx
       photo-manager.tsx
@@ -692,6 +703,7 @@ src/
     site/
       header-shell.tsx
       hero-landscape.tsx
+      nearby-section.tsx
       search-bar.tsx
       site-footer.tsx
       site-header.tsx
@@ -720,6 +732,7 @@ src/
     category-icons.ts
     enums.ts
     listing.ts
+    partner-kinds.ts
     plans.ts
     regions.ts
   global.d.ts
@@ -809,6 +822,7 @@ src/
       money-repository.ts
       notification-repository.ts
       offering-repository.ts
+      partner-repository.ts
       payment-repository.ts
       photo-repository.ts
       push-repository.ts
@@ -844,6 +858,7 @@ src/
       offering-service.ts
       onboarding-service.ts
       online-payment-service.ts
+      partner-service.ts
       payment-service.ts
       payout-service.ts
       photo-service.ts
@@ -874,7 +889,9 @@ tests/
     http.ts
     mcp-isolation.test.ts
     money.test.ts
+    nearby.test.ts
     occupancy-constraint.test.ts
+    partners.test.ts
     place-search.test.ts
     rate-limit.test.ts
     reviews-and-prices.test.ts

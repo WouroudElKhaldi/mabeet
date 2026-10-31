@@ -28,7 +28,7 @@ erDiagram
   SessionBooking ||--o{ Payment : "paid by"
   Payment ||--o{ Refund : "given back"
   Business ||--o{ Payout : "paid out to"
-  Business ||--o{ PlanPayment : "pays Tafaddal for its plan"
+  Business ||--o{ PlanPayment : "pays Mabeet for its plan"
   Booking ||--o| Review : "reviewed once"
   User ||--o{ Booking : "guest of"
   User ||--o{ Favorite : saves
@@ -78,18 +78,18 @@ has the full picture.
 
 **Money, trust and AI**
 
-| Table         | In plain words                                                                                                                               |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Payment`     | Money for a booking: recorded by the host (Whish, OMT, bank, cash), or paid online through Tafaddal (`online`), which Tafaddal owes the host |
-| `Refund`      | Money given back to a guest from an online payment; `PENDING` when an admin must send it by hand                                             |
-| `Payout`      | A host asking Tafaddal to send what it holds for them, to an IBAN or a Whish number                                                          |
-| `PlanPayment` | A host paying for a plan (a Stripe invoice or a Whish month). Tafaddal's only revenue                                                        |
-| `Review`      | One review per stay, only by the guest who stayed                                                                                            |
-| `Favorite`    | A place a guest saved                                                                                                                        |
-| `ActivityLog` | Who did what and when, for the activity feeds and admin actions                                                                              |
-| `ApiKey`      | An AI key tied to one team member; only a hash is stored                                                                                     |
-| `McpAuditLog` | Every tool call an AI made, so owners can see what it looked at                                                                              |
-| `AiUsage`     | AI spending per month, for the budget cap                                                                                                    |
+| Table         | In plain words                                                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `Payment`     | Money for a booking: recorded by the host (Whish, OMT, bank, cash), or paid online through Mabeet (`online`), which Mabeet owes the host |
+| `Refund`      | Money given back to a guest from an online payment; `PENDING` when an admin must send it by hand                                         |
+| `Payout`      | A host asking Mabeet to send what it holds for them, to an IBAN or a Whish number                                                        |
+| `PlanPayment` | A host paying for a plan (a Stripe invoice or a Whish month). Mabeet's only revenue                                                      |
+| `Review`      | One review per stay, only by the guest who stayed                                                                                        |
+| `Favorite`    | A place a guest saved                                                                                                                    |
+| `ActivityLog` | Who did what and when, for the activity feeds and admin actions                                                                          |
+| `ApiKey`      | An AI key tied to one team member; only a hash is stored                                                                                 |
+| `McpAuditLog` | Every tool call an AI made, so owners can see what it looked at                                                                          |
+| `AiUsage`     | AI spending per month, for the budget cap                                                                                                |
 
 `WhishSandboxPayment` is the Whish simulator's own state, used only while `WHISH_MODE=simulator`.
 `PushSubscription` holds the phones and browsers that turned on notifications, each following a person or one

@@ -1,12 +1,12 @@
-# Scope: Tafaddal
+# Scope: Mabeet
 
 ## 1. Team
 
 - Members: Wouroud El Khaldi, Fatima Salami, Omar Antar.
 - Who owns what: **still to be decided together.** We split the work into rounds of three tasks built at the same
   time, one per person, each task built by one person from the database to the screen (frontend, backend, AI and
-  tests). We choose who takes each task at our team meeting after this call, and record it in our team plan
-  (`docs/team/01-team-plan.md`). The pitch is done by Fatima.
+  tests). We split the tasks among ourselves; Omar owns the deployment and the live site. The pitch is done by
+  Fatima.
 
 ## 2. Product in one sentence
 
@@ -23,7 +23,7 @@ the 15 to 18% platform commission on direct guests, stop losing requests in DMs,
   guesthouse owners, for example Beit El Qamar and Beyt El Jabal in Deir el Qamar, and Casadar Guesthouse in Annaya.
   We already messaged some of them on Instagram: some replied that they already have their own booking system, and
   the others have not replied yet. We are now contacting the rest on WhatsApp. We also spoke with the owner of
-  several chalets who is not listed on Airbnb or Booking.com, and he showed interest in using Tafaddal.
+  several chalets who is not listed on Airbnb or Booking.com, and he showed interest in using Mabeet.
 
 ## 4. The problem today
 
@@ -52,9 +52,6 @@ Live on stage, two phones: the guest's and the owner's (both already signed in).
    Airbnb calendar, and the owner confirms.
 6. The guest's confirmation page shows "confirmed", and the night is now closed on Airbnb and Booking.com too,
    through our calendar link.
-7. The owner tells the AI assistant "Close the Arched room from 12 to 15 November", checks the action card and
-   confirms, then asks "How much commission did direct bookings save me this month?" and gets the answer with the
-   figures it was computed from.
 
 How the platform handles money (shown on one screen, not run live):
 
@@ -67,45 +64,46 @@ How the platform handles money (shown on one screen, not run live):
   expires and the guest is refunded in full.
 - The owner sees what is owed to them and requests a payout to their Whish number or bank account (IBAN). A
   platform admin sends it by hand and marks it paid.
-- The platform takes no commission; it earns only from host plans. Offline payments are between the owner and the
+- The platform takes no commission; it earns only from host plans and sponsored listings. Offline payments are between the owner and the
   guest (written in the payment policy).
 
 ## 6. Where the AI fits
 
-Two AIs, both calling the same services and permission checks as the website, so they can never do more than the
-person behind them:
+The AI is not part of the core flow on stage. It is a bonus, and the first one we build is MCP: the person's own AI
+app (Claude, ChatGPT, Cursor, Codex or any MCP client) connects to our tools. Both MCPs call the same services and
+permission checks as the website, so they can never do more than the person behind them:
 
-- **Guests:** a travel assistant on the website and a public guest MCP (for Claude, ChatGPT or any MCP client). They
-  search places and check dates and prices. Read-only: they link to the booking page and never book.
-- **Owners and staff:** an assistant in the dashboard and a host MCP (Claude, Cursor, Codex or any MCP client,
-  connected with a personal key or by signing in). They answer questions (free rooms, bookings, revenue, commission
-  saved) and carry out orders like "cancel booking SN-7KX3P9" or "for Dar Al Sindiyan, close the Arched room from
-  12 to 15 November".
+- **Guests:** a public guest MCP. It searches places and checks dates and prices. Always read-only: it links to the
+  booking page and never books. A page on the website explains what MCP is, why and how to use it, and shows the
+  guest MCP address to copy.
+- **Owners and staff:** a host MCP, connected with a personal key or by signing in. The first version only reads
+  and reports: free rooms, bookings, revenue, commission saved, and the numbers for a report over a period. After
+  it, a few actions the person's role allows: cancel a booking, close or reopen dates, confirm or decline a request.
 
-- What the model does in this flow: understands the owner's question or order and chooses which of our tools to
-  call, with which details. It decides nothing about the business itself: the tools do the work.
-- What goes in, what comes out: the question plus the tool results from our database go in. A short answer comes
-  out, every figure on screen comes from tool data, and an order comes out as a proposed action.
-- How you check the output before the user sees it: every tool's input is validated with a schema, and runs the
-  same permission and tenant checks as the dashboard. In the dashboard, a change is never made straight away: the
-  owner sees a card with the exact action and its validated details (not the model's wording) and presses Confirm
-  or Cancel. In Claude, Cursor or Codex, write tools are marked as changing data, so the app asks the person first,
-  and read-only keys never see them. Text written by guests is marked as data, never instructions. Every tool call
-  is logged.
-- What happens when the model is wrong or slow: a wrong order fails the tool's own checks (unknown booking, dates
-  already taken, a room name that fits two rooms) and the owner sees why. A 45-second timeout, then a clear
-  message; the rest of the app keeps working. When the model fails, the figures are shown straight from the tools.
-  A monthly spend cap and rate limits on every AI route.
+- What the model does: understands the person's question and chooses which of our tools to call, with which
+  details. The model runs in the person's AI app, not on our servers. It decides nothing about the business itself:
+  the tools do the work.
+- What goes in, what comes out: the tool's checked input goes in; our database's figures come out, already
+  formatted, from the same services as the dashboard.
+- How we check the output: every tool's input is validated with a schema, and runs the same permission and tenant
+  checks as the dashboard. A key or token reaches only the businesses its person belongs to. Write tools are marked
+  as changing data, so the AI app asks the person first, and read-only keys never see them. Text written by guests
+  is marked as data, never instructions. Every tool call is logged, and every MCP route is rate limited.
+- What happens when the model is wrong: a wrong call fails the tool's own checks (unknown booking, dates already
+  taken, a room name that fits two rooms) and the person sees why.
+
+Our own model (DeepSeek), for a travel assistant on the website, an assistant in the dashboard and written AI
+reports, is the last bonus, built only if time is left.
 
 ## 7. Tech stack and hosting
 
 - Stack: Next.js 16 (route handlers in TypeScript), Prisma and PostgreSQL (an EXCLUDE constraint refuses
-  overlapping stays), Better Auth (owner and staff roles), Zod validation on every route, DeepSeek for the AI, iCal
+  overlapping stays), Better Auth (owner and staff roles), Zod validation on every route, MCP for AI apps, iCal
   import and export, Whish (simulator until merchant keys) and Stripe test mode, Tailwind, English and Arabic from
   the first day.
 - Where it will be deployed: DigitalOcean, with Docker, deployed by GitHub Actions only after types, lint and all
   tests pass.
-- Live URL: our name is now **Tafaddal** (تفضّل). We have not bought the domain yet. The site will be live by
+- Live URL: our name is now **Mabeet** (تفضّل). We have not bought the domain yet. The site will be live by
   Tuesday 3 November at midnight, before Checkpoint 1. When we buy the domain, we point it at the same app; nothing
   else changes.
 
@@ -115,25 +113,21 @@ person behind them:
 2. The second guest for the same room night is refused (zero double bookings).
 3. Airbnb and Booking.com nights block the booking page, and our bookings close the night on their side.
 4. The dashboard shows direct bookings and commission saved.
-5. The owner's AI assistant carries out an order after the owner confirms it, and answers a business question with
-   checked figures, falling back cleanly when the model fails.
 
 ## 9. Cut list (not building before Demo Day)
 
 Not building at all: bookings from Airbnb or Booking.com inside our system (we only import their taken nights to
 block the calendar), recording payments made outside the platform (offline mode is between the owner and the
 guest), Kazderni (no API or calendar link), automatic payouts, automatic pricing,
-in-app chat, a native app.
+in-app chat, a native app, booking through an AI (the guest's AI only searches and links to the booking page).
 
-Bonus, built after the must-haves work: host plans paid instantly with Stripe or Whish; experiences and services; the
-guest travel assistant; the AI assistant and MCP for Claude, Cursor and Codex; AI reports; reviews and favourites; push
-notifications; installing the app; the admin area; and last, booking through the guest's AI and MCP (the AI
-makes the booking after the guest says yes, and the guest pays on the booking's own page).
-
-The owner's AI assistant counts as a bonus for the challenge, but we build it before Checkpoint 2 and show it on stage
-(step 7 of section 5, item 5 of section 8). The core flow (steps 1 to 6) never depends on it, so if the model is
-slow or down on stage, the booking demo still works and the assistant shows the figures without the model. MCP for
-Claude, Cursor and Codex stays a true bonus.
+Bonus, built after the must-haves work, in this order: the host and guest MCP, read-only (Claude, ChatGPT, Cursor,
+Codex); host plans paid instantly with Stripe or Whish; experiences and services; things to do near your stay
+(experiences and services in the same area during the guest's nights); reviews and favourites; push notifications;
+installing the app; the admin area; featured partners and sponsored listings (restaurants, supermarkets, parks,
+museums and sponsored experiences, shown near the guest's stay and marked "Sponsored"); a few host actions through
+the MCP (cancel a booking, close or reopen dates, confirm or decline a request); and last, our own model (DeepSeek): the assistant in the dashboard, the
+travel assistant on the website, AI reports, and answers shown word by word.
 
 ## 10. The outcome number
 
@@ -144,22 +138,22 @@ $3,450 a year**, with zero double bookings. The dashboard computes this from the
 
 ## 11. Biggest risk
 
-- What could stop the demo from working: venue Wi-Fi; the AI being slow on stage; Airbnb refreshing our calendar
-  slowly (often every few hours); no real host numbers by Demo Day.
-- Your plan if it happens: phone hotspot as backup; the AI fallback that shows the figures without the model; a
-  prepared, already-synced demo calendar plus "Sync now" on screen; the backup video; a clearly labelled seeded
+- What could stop the demo from working: venue Wi-Fi; Airbnb refreshing our calendar slowly (often every few
+  hours); no real host numbers by Demo Day.
+- Your plan if it happens: phone hotspot as backup; a prepared, already-synced demo calendar plus "Sync now" on screen; the backup video; a clearly labelled seeded
   pilot if no host joins in time.
 
 ## 12. Checkpoint plan
 
 ### Checkpoint 1, Tue 3 Nov: core flow working and deployed
 
-- What will work by then: steps 1 to 7 of section 5 on the public URL, on two phones, in English and Arabic: the
+- What will work by then: steps 1 to 6 of section 5 on the public URL, on two phones, in English and Arabic: the
   owner adding a guesthouse with rooms, prices and photos (stored in Cloudflare R2), booking with the three modes,
   online payment with Whish (simulator) and Stripe (test mode) confirmed by webhook, the 10-minute payment window,
   full automatic refunds, the owner's decisions, closed dates, sign-in.
-- Who owns each part: still to be decided at our team meeting. The work is rounds 1 to 4 of our team plan, twelve
-  tasks, three at a time, each merged by the date shown:
+- Who owns each part: we split it among ourselves, each person building their features backend and screens; Omar
+  owns the deployment and the live site. The work, in order, three things at a time, each built backend first (its
+  API, tested in Postman or Swagger and by integration tests, then its screens):
   - Round 1 (Sat 31 Oct): the server base and sign-in engine; the design system and app frame; English and Arabic,
     the value lists and the permissions.
   - Round 2 (Sun 1 Nov): tenancy (each business sees only its own data); sign-in, accounts and creating a place;
@@ -178,15 +172,12 @@ $3,450 a year**, with zero double bookings. The dashboard computes this from the
 
 - What you will add after Checkpoint 1: calendar sync with Airbnb and Booking.com, the calendar board, search, the
   full place page, contact host and the host profile, emails, notifications, team and roles, payouts, analytics with
-  commission saved, realistic Lebanese demo data, the owner's AI assistant with the confirm card and its fallback
-  (needed for step 7 of section 5 and item 5 of section 8), the whole place and the place's details, empty and wrong-input states
+  commission saved, realistic Lebanese demo data, the whole place and the place's details, empty and wrong-input states
   on every screen, back buttons, and browser tests of the core flow. Then, only if time allows, the bonuses in the
-  order of section 9: plans, experiences, the travel assistant, MCP, AI reports, reviews and favourites, push, installing
-  the app, the admin area, and booking through the guest's AI.
-- Who owns each part: still to be decided at our team meeting. The work is rounds 5 to 10 of our team plan, one
-  round a day from Wed 4 Nov, three tasks at a time, with the AI assistant over Sun 8 and Mon 9 Nov and Tue 10 Nov
-  for proving it on stage (isolation tests, the AI with a scripted model, the demo script).
-- When your 3-minute demo script draft will be ready: Tuesday 10 November (task 10C), rehearsed by the three of us
+  order of section 9, starting with the host and guest MCP.
+- Who owns each part: we split it among ourselves, three things at a time from Wed 4 Nov, with Tue 10 Nov for
+  proving it on stage (isolation tests, the demo script).
+- When your 3-minute demo script draft will be ready: Tuesday 10 November, rehearsed by the three of us
   on the live URL that evening, and final on Thursday 12 November.
 
 ### Submission, Fri 13 Nov: polished and recorded

@@ -284,6 +284,8 @@ Settings for the whole site, like the color theme. It has no links.
 
 ## 🤖 The site's own AI assistant
 
+These tables wait for the last bonuses (our own model). The MCP does not use them.
+
 ### 1. AiChat
 
 One conversation with the AI assistant, with a title.

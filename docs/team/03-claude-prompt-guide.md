@@ -43,8 +43,9 @@ At the start of every session, read `README.md` and every Markdown file in `docs
 fully, not only the titles. They explain the whole project: what it does, how it is built, who works on what, and
 how to test it. They are the source of truth. If the code and a document disagree, say so. Do not guess.
 
-- `docs/team/01-team-plan.md`: the tasks in order, three at a time, their owners, the dates, and how we use GitHub.
-  Each task lists the files it owns: never create or change a file another task of the same round owns.
+- `docs/team/README.md`: how we work together: the database keeper, backend first, the shared files, and how we
+  use GitHub. Who builds what is decided by the team outside these documents: never create or change a file that
+  someone else is working on.
 - `docs/team/02-architecture-and-features.md`: how each feature works and how the code is built.
 - `docs/team/03-claude-prompt-guide.md`: how tasks are written for you, and how to report.
 - `docs/team/04-test-plan.md`: which tests each feature needs, and how to write them.
@@ -85,7 +86,7 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
 - Repositories (`src/server/repositories/<area>-repository.ts`) are the only code that queries the database. The
   first argument is `db: Db` (or `tx: Tx` inside a transaction). Every business query filters by `businessId`. No
   permission checks. No decisions.
-- Only the database keeper (named in `docs/team/01-team-plan.md`) changes `prisma/schema.prisma` and
+- Only the database keeper (named in `docs/team/README.md`) changes `prisma/schema.prisma` and
   `prisma/migrations/`. If the task needs a database change, stop and
   say so.
 
@@ -117,6 +118,13 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
   (decisions, cancellations, expiries, closed dates) calls `recheckImportClashes(businessId, roomId)` after it
   commits.
 - Nights are ISO dates, or `DateRange { checkIn, checkOut }` from `src/lib/dates.ts`. The check-out night is free.
+- All or nothing: every database step of one change goes in one `runInTransaction`, and nothing inside catches an
+  error to carry on, so a failed step undoes the steps before it. Never call Stripe, Whish, R2 or email inside the
+  transaction: write our row first, call after the commit, and undo an upload whose row was not saved. Each such
+  service has an integration test that makes a later step fail and finds nothing left (`02` Part 3, "All or
+  nothing").
+- A feature is built backend first: its API pull request (routes, `docs/openapi.json`, tests, checked by hand in
+  Postman or Swagger) is merged before its screens pull request (`docs/team/README.md`).
 - Small side writes (logs, usage, "last used") go in `inBackground(label, work)` from `src/server/background.ts`.
   Slow or must-happen work (AI answers, emails, push, scheduled jobs) is a job: `defineJob(queue, kind, handler)`,
   with its module listed in `src/server/jobs/registry.ts`. Job data holds ids and plain values only, never a
@@ -171,7 +179,7 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
 
 ## Rules for the database
 
-- Only the database keeper (named in `docs/team/01-team-plan.md`) changes `prisma/schema.prisma` and
+- Only the database keeper (named in `docs/team/README.md`) changes `prisma/schema.prisma` and
   `prisma/migrations/`. If your task needs a database change, stop
   and say exactly what you need.
 - Nothing is deleted: business tables have `isDeleted`. Delete with an update, filter `isDeleted: false` in every
@@ -200,8 +208,8 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
 1. Run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm knip`, `pnpm test`, and the integration tests for the
    feature (`pnpm exec vitest run --project integration tests/integration/<file>.test.ts`). Run them one at a time.
    Never run them next to `pnpm dev` on a small computer.
-2. If you added or changed an API route, write it in `docs/openapi.json` to match its Zod schema (from task 11C,
-   add it to `scripts/openapi.ts`, which generates the file) and run `pnpm docs` (it also writes `docs/openapi.yaml`).
+2. If you added or changed an API route, write it in `docs/openapi.json` to match its Zod schema (once
+   `scripts/openapi.ts` exists, add it there instead: it generates the file) and run `pnpm docs` (it also writes `docs/openapi.yaml`).
 3. Every new text is in `messages/en.json`, `ar.json` and `ar-LB.json` (Lebanese Arabic, spoken style). A key you
    stopped using is removed from all three.
 4. If you changed how something works (a rule, a flow, a table, a setting), update the matching file in
@@ -226,7 +234,8 @@ hour of review. Copy it for every task.
 
 ```
 ## Task
-<Task id and title from 01-team-plan.md, for example "3B. Rooms, prices and closed dates">
+<The feature and its requirement ids from 06-functional-requirements.md, for example "Rooms, prices and
+closed dates (F7, F11)">
 
 ## Goal
 <One or two sentences: what a guest or host can do when this is finished.>
@@ -316,7 +325,7 @@ check results makes the report honest and easy to review.
 
 ```
 ## Task
-3B. Rooms, prices and closed dates
+Rooms, prices and closed dates (F7, F11)
 
 ## Goal
 An owner can add, edit and turn off rooms (name, capacity, beds, base price, minimum nights, amenities) from a phone,
@@ -403,7 +412,7 @@ Write a plan first and show me. Then build, and check the screen at 390 px after
 
 ```
 ## Task
-10A. Prove business isolation
+Prove business isolation (NFR business isolation)
 
 ## Goal
 Prove that a member of business A cannot read or change anything of business B through the real API routes.
@@ -430,7 +439,7 @@ back).
 
 ```
 ## Task
-fix: the Confirm button stays after confirming (4B)
+fix: the Confirm button stays after confirming (F9)
 
 ## What happens
 1. Sign in as the owner, open a waiting request, press Confirm, and accept the dialog.
