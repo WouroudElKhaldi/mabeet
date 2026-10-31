@@ -55,7 +55,9 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mabeet_test
+      # The tests refuse to run unless their database differs from DATABASE_URL and ends in _test, so no real data
+      # can be touched. They only ever connect to TEST_DATABASE_URL; DATABASE_URL is never opened here.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mabeet
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mabeet_test
       BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
       BETTER_AUTH_URL: http://localhost:3000
@@ -70,9 +72,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prisma generate
-      # Every migration must build the database from empty, with its hand-written rules (EXCLUDE, CHECK, triggers).
-      - run: pnpm exec prisma migrate deploy
-      # Overlap constraint, seat trigger, race tests, tenant isolation over HTTP and MCP.
+      # The tests' global setup first applies every migration to the empty test database, so each one must build it
+      # from empty with its hand-written rules (EXCLUDE, CHECK, triggers). Then: overlap constraint, seat trigger,
+      # race tests, tenant isolation over HTTP and MCP.
       - run: pnpm test:integration
 
   # The deploy to DigitalOcean (only a push to main that passed both jobs above, never development) comes with the
