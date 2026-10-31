@@ -9,13 +9,13 @@ services:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_USER: mabeet
-      POSTGRES_PASSWORD: mabeet
-      POSTGRES_DB: mabeet
+      POSTGRES_USER: tafaddal
+      POSTGRES_PASSWORD: tafaddal
+      POSTGRES_DB: tafaddal
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mabeet"]
+      test: ["CMD-SHELL", "pg_isready -U tafaddal"]
       interval: 5s
       retries: 10
 
@@ -46,7 +46,7 @@ services:
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+      DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal
     depends_on:
       db: { condition: service_healthy }
 
@@ -60,7 +60,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+      DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal
       REDIS_URL: redis://redis:6379
       JOBS_MODE: queue
     ports:
@@ -79,7 +79,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+      DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal
       JOBS_MODE: queue
     # Lets in-flight jobs finish on a deploy (the worker waits up to 60s).
     stop_grace_period: 70s

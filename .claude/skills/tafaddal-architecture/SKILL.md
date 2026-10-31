@@ -1,9 +1,9 @@
 ---
-name: mabeet-architecture
-description: How Mabeet's code is built - the four layers (routes, services, repositories, database), tenantRoute and TenantContext, errors, Zod checks, jobs, the booking engine and the contracts other tasks call. Use before writing or changing any server code, API route or service.
+name: tafaddal-architecture
+description: How Tafaddal's code is built - the four layers (routes, services, repositories, database), tenantRoute and TenantContext, errors, Zod checks, jobs, the booking engine and the contracts other tasks call. Use before writing or changing any server code, API route or service.
 ---
 
-# Mabeet architecture
+# Tafaddal architecture
 
 Read before writing server code:
 

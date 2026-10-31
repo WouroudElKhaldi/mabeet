@@ -1,12 +1,12 @@
 # Architecture
 
-How Mabeet is put together, and why. What it does is in the
+How Tafaddal is put together, and why. What it does is in the
 [functional requirements](functional-requirements.md). Where each guarantee is tested is in the
 [requirements matrix](requirements-matrix.md).
 
 ## Overview
 
-One Next.js 15 app in TypeScript. PostgreSQL through Prisma. Better Auth for sign-in. Zod for every input.
+One Next.js 16 app in TypeScript. PostgreSQL through Prisma. Better Auth for sign-in. Zod for every input.
 
 Next.js serves the pages, the JSON API, the iCal feeds and the MCP endpoints from one codebase and one deploy.
 Slow and retryable work (AI answers and reports, emails and push, scheduled housekeeping) runs in a **worker**
@@ -123,7 +123,7 @@ any time before it starts: DECLINED, EXPIRED (no answer / no payment) or CANCELL
 
 | `kind`     | Comes from                                                              | `active` while                          |
 | ---------- | ----------------------------------------------------------------------- | --------------------------------------- |
-| `DIRECT`   | A Mabeet booking (one row per booking)                                  | `HELD`, `AWAITING_PAYMENT`, `CONFIRMED` |
+| `DIRECT`   | A Tafaddal booking (one row per booking)                                | `HELD`, `AWAITING_PAYMENT`, `CONFIRMED` |
 | `MANUAL`   | A host closing nights: maintenance, a phone booking, Kazderni           | until the host removes it               |
 | `IMPORTED` | An event read from an Airbnb or Booking.com calendar link (or any iCal) | until it leaves the platform feed       |
 
@@ -217,10 +217,10 @@ record lastSyncedAt and lastError on the feed
 - **Disappeared events.** Deactivated, not deleted. The nights free up.
 - **A failing feed** (404, timeout, bad file) changes nothing that was already imported. The error is stored on
   the feed and shown to the host, and admins see sync health across the platform.
-- **Conflicts.** If Airbnb has a stay over nights Mabeet already gave a guest, the imported row is flagged and
+- **Conflicts.** If Airbnb has a stay over nights Tafaddal already gave a guest, the imported row is flagged and
   shown to the host. Nothing is cancelled automatically: a person decides.
 - **Why imported rows are outside the constraint.** Airbnb and Booking.com can contain overlapping stays
-  themselves, and Mabeet can't refuse what already happened on another platform. Direct requests are still
+  themselves, and Tafaddal can't refuse what already happened on another platform. Direct requests are still
   checked against imported nights in code, under the room lock, and feeds are re-read before a host confirms.
 
 ### Export
@@ -233,11 +233,11 @@ The feed carries no guest names or contacts, and no imported events (echoing Air
 would make loops). An unknown token answers `404`. Event UIDs (`{occupancyId}@se-next-stays`) never change,
 because the platforms track exported events by UID.
 
-### What Mabeet can and cannot promise
+### What Tafaddal can and cannot promise
 
-- **Can:** no two Mabeet-controlled active occupancies overlap (constraint), and no direct request is accepted
+- **Can:** no two Tafaddal-controlled active occupancies overlap (constraint), and no direct request is accepted
   over a night already imported (code, under the room lock).
-- **Cannot:** that Airbnb or Booking.com never sell a night Mabeet just sold. They read our export link on
+- **Cannot:** that Airbnb or Booking.com never sell a night Tafaddal just sold. They read our export link on
   their own schedule, often every few hours. Until then a platform booking can land on the same night. The next
   sync flags it for the host.
 
@@ -263,16 +263,16 @@ windows. Without `REDIS_URL` (local development, tests) the counts live in the p
                                                      · done (result) · failed (safe message)
 ```
 
-| Queue    | Jobs                                                      | At once per worker | Retries                       | Kept after finishing |
-| -------- | --------------------------------------------------------- | ------------------ | ----------------------------- | -------------------- |
-| `ai`     | Concierge answer, team assistant answer, analytics report | 4                  | 1, after 5 s                  | 1 hour               |
-| `notify` | Every booking, payment, refund and Contact host notice    | 8                  | 4, backing off from 30 s      | 1 day                |
-| `cron`   | Calendar sync (every 15 min), housekeeping (every 5 min)  | 1                  | none: the next run comes soon | 1 day                |
+| Queue    | Jobs                                                             | At once per worker | Retries                       | Kept after finishing |
+| -------- | ---------------------------------------------------------------- | ------------------ | ----------------------------- | -------------------- |
+| `ai`     | Travel assistant answer, team assistant answer, analytics report | 4                  | 1, after 5 s                  | 1 hour               |
+| `notify` | Every booking, payment, refund and Contact host notice           | 8                  | 4, backing off from 30 s      | 1 day                |
+| `cron`   | Calendar sync (every 15 min), housekeeping (every 5 min)         | 1                  | none: the next run comes soon | 1 day                |
 
 **Answer now, or queue.** AI routes call `runOrQueue` (`src/server/jobs/queue.ts`) with an estimate, in seconds,
 worked out from the input before the model is called (`src/server/jobs/ai-jobs.ts`):
 
-- Concierge: 15 s (two or three DeepSeek calls: search, maybe search again, then reply; 6–20 s measured), plus
+- Travel assistant: 15 s (two or three DeepSeek calls: search, maybe search again, then reply; 6–20 s measured), plus
   1 s for every 1,500 characters of the conversation sent.
 - Team assistant: 20 s (it often needs a round more), plus the same per character.
 - Report: 25 s + 4 s per topic + 1 s per 90 days. It writes up to 2,000 tokens whatever the input.
@@ -298,14 +298,14 @@ is shown as it is written:
 4. `GET /api/jobs/{jobId}` returns it while the job runs; `api.run(url, body, onProgress)` polls every 0.5 s and
    the chat panel shows "Searching what's free…", then the reply growing word by word.
 
-Measured on a real concierge question: first words at 2.3 s, search status at 2.9 s, full answer at 6.2 s. A
+Measured on a real travel assistant question: first words at 2.3 s, search status at 2.9 s, full answer at 6.2 s. A
 report shows "Writing the report…" (it is one JSON answer, nothing to show word by word).
 
 **Safety.** A route checks the rate limit, the permission, the plan and the AI budget **before** queueing, so a
 refusal is immediate. The job carries who asked (user and business ids), never a permission set: the worker looks
 the member up again, so someone removed from a team while their question waited gets no answer. Only the person
 who asked can read a job (`GET /api/jobs/{jobId}`); for anyone else it is "not found". A visitor's anonymous
-concierge job is reachable only through its random UUID. Errors the user caused (no permission, over budget) are
+travel assistant job is reachable only through its random UUID. Errors the user caused (no permission, over budget) are
 stored as safe messages and not retried. Any other failure is retried, and the client then sees only a generic
 "busy, try again" message, never the stored stack trace.
 
@@ -360,8 +360,8 @@ live.
 
 ## Payments
 
-Mabeet takes **no commission or fee on bookings**. Guests either pay the host directly (recorded by the host) or
-online into Mabeet's own Whish or Stripe account, and Mabeet owes every cent of that to the host. Mabeet's income
+Tafaddal takes **no commission or fee on bookings**. Guests either pay the host directly (recorded by the host) or
+online into Tafaddal's own Whish or Stripe account, and Tafaddal owes every cent of that to the host. Tafaddal's income
 is plan payments only (`PlanPayment`).
 
 ```
@@ -390,13 +390,13 @@ guest ──POST /api/public/bookings/{token}/checkout──▶ Payment (PENDING
   so a cancellation before then can still be refunded from it. A host asks for up to the available amount; the
   business row is locked while the balance is checked, so parallel requests can't overspend (20 at once → 1,
   tested). An admin sends the money and marks it sent with the transfer reference. Payouts go to an IBAN or a
-  Whish number; Mabeet never asks for card numbers.
+  Whish number; Tafaddal never asks for card numbers.
 - **Plans**: Stripe subscriptions as before, with each paid invoice (`invoice.paid`) recorded as revenue. Or one
   month at a time with Whish; a month that runs out without a new payment returns the business to Free. Plans are
   only ever paid instantly: there is no paying by hand and no approval step, and a CHECK constraint refuses any new
   plan payment that is not Stripe or Whish. Plan limits (rooms, experiences, members, AI) are checked in the
   services that create those things.
-- **Whish simulator.** Until Mabeet has Whish keys, `WHISH_MODE=simulator` serves Whish's own API from inside the
+- **Whish simulator.** Until Tafaddal has Whish keys, `WHISH_MODE=simulator` serves Whish's own API from inside the
   app (`/api/whish-simulator/*`) with a payment page that follows Whish's sandbox rules (phone `96170123456`,
   OTP `111111`, wrong OTP = failed attempt, link stays payable). The real client runs unchanged against it;
   `WHISH_MODE=sandbox` points it at Whish.
@@ -431,7 +431,7 @@ person behind it, isolation included.
   In MCP clients (Claude, Cursor, Codex), write tools carry `destructiveHint`, so the client asks the person
   first, and read-only keys never see them. Chats are saved per person, or kept unsaved and never stored. Analytics reports are written by the same model from the numbers the Analytics
   page shows.
-- **Guest concierge and guest MCP** (`/api/mcp/guest`): read-only search tools over public data. They never see
+- **Guest travel assistant and guest MCP** (`/api/mcp/guest`): read-only search tools over public data. They never see
   guests' contact details.
 - **Cost**: a monthly budget in `AiUsage`. Admins are warned at 80%, and AI pauses at 100%.
 

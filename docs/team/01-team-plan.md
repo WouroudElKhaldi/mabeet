@@ -117,6 +117,11 @@ first. Never edit a merged migration; add a new one.
 
 Database keeper: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
+### The pitch
+
+**Fatima gives the pitch** on Demo Day and at each rehearsal. The three-minute story (task 10C) and the backup video
+(task 11C) are prepared with her, whoever owns those tasks.
+
 ### Reviews
 
 Every pull request is reviewed by one of the other two before it is merged. A review checks the code against
@@ -128,7 +133,7 @@ Every pull request is reviewed by one of the other two before it is merged. A re
 
 Already in the repository, so everyone starts from the same working project on Friday evening:
 
-- Next.js 15 (App Router) with Tailwind 4, TypeScript in strict mode, pnpm, the `@/` path shortcut.
+- Next.js 16 (App Router) with Tailwind 4, TypeScript in strict mode, pnpm, the `@/` path shortcut.
 - Every library we will use, at the reference project's exact versions (`package.json`, `pnpm-lock.yaml`), plus
   Playwright for the browser tests and `yaml` for the API contract.
 - ESLint with the two layer rules, Prettier (with Tailwind class order), knip, and Vitest with `unit` and
@@ -160,7 +165,7 @@ that list in the same pull request. By Checkpoint 2 the list holds only the thre
 With Docker (nothing else to install):
 
 ```bash
-git clone <repository url> mabeet && cd mabeet
+git clone <repository url> tafaddal && cd tafaddal
 docker compose up                      # first time: a few minutes. Then http://localhost:3000
 docker compose exec app pnpm check     # must pass before every pull request
 ```
@@ -191,10 +196,10 @@ Fill the `Owner` column in the meeting. "Due" means merged into `main`.
 |                                    | 2B Sign in, accounts, creating a place, closing an account | F17                             | Sun 1 Nov, 12:00    |       |
 |                                    | 2C Demo data and the public place page (read)              | F2 (basic), F3 (prices)         | Sun 1 Nov, 12:00    |       |
 | **3. Booking engine and setup**    | 3A The booking engine with the three modes                 | F3, F9, NFR no double bookings  | Mon 2 Nov, 12:00    |       |
-|                                    | 3B Rooms, prices and closed dates                          | F7, F11                         | Mon 2 Nov, 12:00    |       |
+|                                    | 3B Rooms, prices and photos                                | F7                              | Mon 2 Nov, 12:00    |       |
 |                                    | 3C Settings and the booking mode, and going live           | F9a, NFR quality                | Mon 2 Nov, 12:00    |       |
 | **4. Money and decisions**         | 4A Online payments and full automatic refunds              | F4a, F4b, NFR money             | Tue 3 Nov, 12:00    |       |
-|                                    | 4B The owner's bookings and decisions                      | F9, NFR privacy                 | Tue 3 Nov, 12:00    |       |
+|                                    | 4B The owner's bookings, decisions and closed dates        | F9, F11, NFR privacy            | Tue 3 Nov, 12:00    |       |
 |                                    | 4C The guest's booking journey and "My trips"              | F3, F4                          | Tue 3 Nov, 12:00    |       |
 | **Checkpoint 1**                   | Everyone: the core flow on two phones on the live URL      | Demo-ready 1, 2                 | Tue 3 Nov, evening  | all   |
 | **5. Calendar and search**         | 5A Queues and the worker                                   | F14b (base), NFR reliability    | Wed 4 Nov           |       |
@@ -210,7 +215,7 @@ Fill the `Owner` column in the meeting. "Due" means merged into `main`.
 |                                    | 8B Analytics and the commission saved                      | F12, must-work 4                | Sat 7 Nov           |       |
 |                                    | 8C The demo story: months of realistic data                | Demo-ready 3                    | Sat 7 Nov           |       |
 | **9. AI and finishing must-haves** | 9A The owner's AI assistant with the confirm card          | F14 (dashboard), must-work 5    | Mon 9 Nov           |       |
-|                                    | 9B The whole place, "Your place" and photos                | F3 (whole place), F7            | Mon 9 Nov           |       |
+|                                    | 9B The whole place and "Your place"                        | F3 (whole place), F7            | Mon 9 Nov           |       |
 |                                    | 9C Browser tests, calm states and Back buttons             | F21, demo-ready 1               | Mon 9 Nov           |       |
 | **10. Demo-ready**                 | 10A Prove business isolation and roles everywhere          | NFR isolation, least privilege  | Tue 10 Nov          |       |
 |                                    | 10B The AI on stage: scripted tests and fallbacks          | Demo-ready 4                    | Tue 10 Nov          |       |
@@ -223,7 +228,7 @@ Fill the `Owner` column in the meeting. "Due" means merged into `main`.
 
 **About the AI assistant.** For Sami, "the AI assistant and MCP" is a bonus (the scope's cut list says so). We
 build the owner's assistant in the dashboard anyway, before Checkpoint 2, because we show it on stage (the scope's
-core flow step 6 and "must work on stage" item 5): an order carried out after the owner confirms, a business
+core flow step 7 and "must work on stage" item 5): an order carried out after the owner confirms, a business
 question answered with checked figures, and a clean fallback. So in this plan the **dashboard assistant is a
 must-have (task 9A)**, scheduled after every other must-have so it never delays the core flow, and connecting
 Claude, Cursor or Codex (MCP) stays a bonus (B4).
@@ -480,8 +485,8 @@ the place. 2B and 2C only use 1A to 1C; 2B's "Create your place" sends the owner
 
 Sunday 1 November, 12:00 → merged by Monday 2 November, 12:00.
 
-Why together: everything a booking depends on. 3A is the engine, 3B is what is for rent (rooms, prices, closed
-nights), 3C is how the place wants to be booked (the mode) and the live site that Checkpoint 1 needs.
+Why together: everything a booking depends on. 3A is the engine, 3B is what is for rent (rooms, prices,
+photos), 3C is how the place wants to be booked (the mode) and the live site that Checkpoint 1 needs.
 
 #### 3A. The booking engine with the three modes
 
@@ -515,32 +520,42 @@ nights), 3C is how the place wants to be booked (the mode) and the live site tha
 - **Not in this task:** payments (4A), the screens (4B, 4C), the whole place (9B), clash flags (6A adds
   `recheckImportClashes` and the calls to it).
 
-#### 3B. Rooms, prices and closed dates
+#### 3B. Rooms, prices and photos
 
 - **Owner:** \_\_\_\_\_\_\_\_\_\_\_\_
 - **When:** Sunday 12:00 → Monday 12:00.
-- **Requirements:** F7 (rooms and prices), F11 (closing dates by hand).
-- **Needs:** 2A. Closed dates use `lockActiveRoom` and `overlapAsConflict` from 3A: build rooms and prices first, and
-  closed dates last, after 3A merges (Monday morning).
+- **Requirements:** F7 (rooms, prices and photos). Step 1 of the core flow: the owner adds their guesthouse with
+  rooms, prices and photos.
+- **Needs:** 2A. Photos go to Cloudflare R2 once 3C has set up the bucket; until then, and always on our computers
+  and in tests, they are kept in Postgres, so nothing waits for 3C.
 - **Owns:** `src/server/repositories/room-repository.ts`, `src/server/services/room-service.ts`,
   `src/app/api/workspaces/[businessId]/rooms/**`, `src/app/dashboard/[businessId]/rooms/**`,
-  `src/components/dashboard/room-editor.tsx`, `special-prices.tsx`, `close-dates-form.tsx`, the blocks part of
-  `src/server/services/calendar-service.ts` and `src/server/repositories/calendar-repository.ts` (`addBlock`,
-  `removeBlock`), `src/app/api/workspaces/[businessId]/blocks/**`.
+  `src/components/dashboard/room-editor.tsx`, `special-prices.tsx`, `photo-manager.tsx`,
+  `src/server/services/photo-service.ts`, `src/server/repositories/photo-repository.ts`,
+  `src/app/api/workspaces/[businessId]/photos/**`, `src/app/api/images/[imageId]/route.ts`,
+  `src/app/dashboard/[businessId]/place/page.tsx` (the place's photos only; 9B adds the rest of "Your place").
 - **Build, in this order:**
   1. Rooms: list, add, edit (name, kind, guests, beds, bedrooms, bathrooms, amenities, base price), soft delete; the
      plan's room limit; `findRoomByNameOrId` (the AI uses it later). Needs `rooms.manage`.
   2. Special prices for given nights (`RateOverride`, upsert on room and date, at most 366 nights).
-  3. The rooms page with `room-editor.tsx` and `special-prices.tsx`, phone first.
-  4. Closed dates: `addBlock` (a `MANUAL` occupancy with a note, refused if the nights are taken) and `removeBlock`,
-     their routes, and `close-dates-form.tsx` on each room. Needs `calendar.manage`.
-- **Gives the others:** rooms for every screen, `addBlock` / `removeBlock` for the calendar board (5B) and the AI's
-  "close the Arched room from 12 to 15 November" (9A).
-- **Tests:** `tests/integration/rooms.test.ts`, the prices part of `tests/integration/reviews-and-prices.test.ts`, the
-  blocks part of `tests/integration/calendar.test.ts`.
-- **Done when:** an owner adds and edits rooms, sets a special price, and closes and reopens dates from a phone, and
-  the guest's booking box shows those nights as taken.
-- **Not in this task:** the place's own details and photos (9B), the calendar board (5B).
+  3. Photos: upload JPEG, PNG or WebP up to 2.5 MB (the type comes from the file's own bytes, not its name), shrunk on
+     our server with `sharp` to at most 1600 pixels wide and turned into WebP; stored in Cloudflare R2 on the live
+     site (uploaded with `aws4fetch`, served from `R2_PUBLIC_URL`, free tier) and in Postgres
+     (`StoredImage.bytes`, served from `/api/images/{id}`) when the R2 settings are empty. Ordered, with alt
+     text; room photos on each room, and the place's own photos grouped by area. Removing a photo marks it deleted.
+     See `02` "P. Photos".
+  4. The rooms page: each room in `room-editor.tsx` with `photo-manager.tsx` and `special-prices.tsx`, and
+     "Add a room"; the place's photos page with the same `photo-manager.tsx`. Phone first.
+  5. The guest's place page (2C) shows the uploaded photos: `getPlace` already returns each `Photo.url`.
+- **Gives the others:** rooms and photos for every screen, `photo-manager.tsx` for "Your place" (9B) and
+  experiences (B2).
+- **Tests:** `tests/integration/rooms.test.ts`, the prices part of `tests/integration/reviews-and-prices.test.ts`,
+  `tests/unit/photos.test.ts` (a file that is not an image is refused whatever its name; a big photo is shrunk;
+  without R2 settings the bytes are kept in Postgres).
+- **Done when:** an owner adds a room with its price and photos, and the place's photos, from a phone, and the guest
+  sees them on the place page; the live site stores them in R2.
+- **Not in this task:** closed dates (4B), the place's other details and the whole place (9B), the calendar board
+  (5B).
 
 #### 3C. Settings and the booking mode, and going live
 
@@ -619,16 +634,19 @@ after 4C merges.
 - **Done when:** those tests pass, and a guest pays with the Whish simulator and with a Stripe test card on a phone.
 - **Not in this task:** payouts (8A), plans (B1).
 
-#### 4B. The owner's bookings and decisions
+#### 4B. The owner's bookings, decisions and closed dates
 
 - **Owner:** \_\_\_\_\_\_\_\_\_\_\_\_
 - **When:** Monday 12:00 → Tuesday 12:00.
-- **Requirements:** F9, NFR privacy (staff without `guests.contact` see hidden contacts).
-- **Needs:** 2A, 3A.
+- **Requirements:** F9, F11 (closing dates by hand), NFR privacy (staff without `guests.contact` see hidden contacts).
+- **Needs:** 2A, 3A, 3B.
 - **Owns:** the list and read part of `booking-service.ts` (`listBookings`, `getBooking`, `getBookingByReference`,
   `presentForStaff`; 3A owns the rest of the file, so add them in their own section),
   `src/app/api/workspaces/[businessId]/bookings/**`, `src/app/dashboard/[businessId]/bookings/**`,
-  `src/components/dashboard/booking-row.tsx`, `booking-actions.tsx`, `src/components/booking/hold-countdown.tsx`.
+  `src/components/dashboard/booking-row.tsx`, `booking-actions.tsx`, `src/components/booking/hold-countdown.tsx`,
+  `src/components/dashboard/close-dates-form.tsx`, the blocks part of `src/server/services/calendar-service.ts` and
+  `src/server/repositories/calendar-repository.ts` (`addBlock`, `removeBlock`),
+  `src/app/api/workspaces/[businessId]/blocks/**`.
 - **Build, in this order:**
   1. The bookings list: waiting bookings first, then upcoming, then past; filters by status and room; each row shows
      the guest, the room, the nights, the total, the mode, whether it is paid, and the countdown to the payment window
@@ -638,11 +656,18 @@ after 4C merges.
      each with an "are you sure?" step (`useConfirm`), calling `confirmBooking`, `declineBooking`, `cancelBooking`.
      A decline or cancel of a paid booking says the guest is refunded in full.
   4. `POST .../bookings/[bookingId]/[action]`.
-- **Gives the others:** the screen the owner uses on stage (step 4 of the core flow).
+  5. Closed dates: `addBlock` (a `MANUAL` occupancy with a note, in `runInTransaction` with `lockActiveRoom`,
+     refused with `overlapAsConflict` if the nights are taken) and `removeBlock`, their routes, and
+     `close-dates-form.tsx` on each room (shown on 3B's rooms page with one line there, announced on Discord).
+     Needs `calendar.manage`.
+- **Gives the others:** the screen the owner uses on stage (step 5 of the core flow); `addBlock` and `removeBlock`
+  for the calendar board (5B) and the AI's "close the Arched room from 12 to 15 November" (9A).
 - **Tests:** `tests/integration/booking-actions.test.ts` (each action through the route; 403 without
-  `bookings.decide`; hidden contacts for staff without `guests.contact`).
-- **Done when:** the test passes, and an owner confirms, declines and cancels from a phone.
-- **Not in this task:** the notification that a request arrived (7A, 7B).
+  `bookings.decide`; hidden contacts for staff without `guests.contact`), the blocks part of
+  `tests/integration/calendar.test.ts`.
+- **Done when:** the tests pass, and an owner confirms, declines and cancels, and closes and reopens dates, from a
+  phone; the guest's booking box shows closed nights as taken.
+- **Not in this task:** the notification that a request arrived (7A, 7B), the calendar board (5B).
 
 #### 4C. The guest's booking journey and "My trips"
 
@@ -673,8 +698,9 @@ after 4C merges.
 
 #### Checkpoint 1 (Tuesday 3 November, afternoon and evening): everyone
 
-On the public URL, on two phones (the guest's and the owner's, both signed in), in English and Arabic, run steps 1 to 5
-of the core flow in `docs/scope-lock.md` three times: once in each booking mode. Write every problem on Discord; each
+On the public URL, on two phones (the guest's and the owner's, both signed in), in English and Arabic, run steps 1 to 6
+of the core flow in `docs/scope-lock.md` three times: once in each booking mode. Step 1 is the owner creating a
+guesthouse with rooms, prices and photos (2B, 3B, 3C). Write every problem on Discord; each
 of us fixes the ones in our own tasks. Then post the Checkpoint 1 standup.
 
 ---
@@ -718,7 +744,7 @@ find a free place.
 - **Owner:** \_\_\_\_\_\_\_\_\_\_\_\_
 - **When:** Wednesday.
 - **Requirements:** F10 (the one view).
-- **Needs:** 3B (blocks), 2C (`getTakenNights`). The demo data has an Airbnb stay, so imported nights show before
+- **Needs:** 4B (blocks), 2C (`getTakenNights`). The demo data has an Airbnb stay, so imported nights show before
   6A.
 - **Owns:** `getCalendarBoard` in `calendar-service.ts` and `calendar-repository.ts` (in its own section),
   `src/app/api/workspaces/[businessId]/calendar/route.ts`, `src/app/dashboard/[businessId]/calendar/**`,
@@ -726,7 +752,7 @@ find a free place.
   `channel-colors.ts`.
 - **Build, in this order:** the month view first (every room, direct bookings, closed dates, Airbnb and Booking.com
   nights, each in its channel colour), then the week view, then the rooms view; a panel for the chosen day (who
-  arrives, who leaves, what is closed, with links to the booking); closing dates from the panel with 3B's form. A clash
+  arrives, who leaves, what is closed, with links to the booking); closing dates from the panel with 4B's form. A clash
   (an imported stay with `conflict = true`) has a red outline. No drag and drop.
 - **Tests:** the board part of `tests/integration/calendar.test.ts`.
 - **Done when:** an owner sees every taken night of the demo data in the three views on a phone, and closes dates from
@@ -749,7 +775,7 @@ find a free place.
 - **Tests:** an integration test that a place taken on the chosen nights is not shown, and the region search
   ("North Lebanon", "الشمال") part of `tests/integration/place-search.test.ts`.
 - **Done when:** a guest finds a free place for given dates from the home page on a phone, in English and Arabic.
-- **Not in this task:** the concierge (B3), experiences in search (B2).
+- **Not in this task:** the travel assistant (B3), experiences in search (B2).
 
 ---
 
@@ -766,7 +792,7 @@ search (5C) leads to.
 - **Owner:** \_\_\_\_\_\_\_\_\_\_\_\_
 - **When:** Thursday.
 - **Requirements:** F10 (sync), must work on stage 3.
-- **Needs:** 5A (the cron queue), 3A, 3B.
+- **Needs:** 5A (the cron queue), 3A, 4B.
 - **Owns:** `src/server/ical/*` (`safe-fetch.ts`, `parse-feed.ts`, `build-feed.ts`), the sync part of
   `calendar-service.ts` and `calendar-repository.ts` (in its own section), `src/app/api/workspaces/[businessId]/feeds/**`,
   `src/app/api/ical/[token]/route.ts`, `src/app/api/cron/sync-feeds/route.ts`,
@@ -776,11 +802,11 @@ search (5C) leads to.
      into nights, time zones respected), `build-feed.ts` (our export, never with guest details).
   2. `addFeed`, `removeFeed`, `syncFeed`, `syncFeedNow`, `getChannelSetup`, `refreshRoomFeeds`, `syncDueFeeds`,
      `buildRoomExport`. Imported nights are `IMPORTED` occupancies: they block, but they are not bookings.
-  3. Calendar sync every 15 minutes in `cron-jobs.ts`; `refreshRoomFeeds` before the owner confirms (step 4 of the
+  3. Calendar sync every 15 minutes in `cron-jobs.ts`; `refreshRoomFeeds` before the owner confirms (step 5 of the
      core flow re-reads Airbnb).
   4. Clashes: a platform booking over nights we sold is saved as an active row with `conflict = true`, never
      cancelled or moved. `recheckImportClashes(businessId, roomId)` sets or clears the flags; call it after every
-     decision, guest cancel, expiry and closed date (in 3A's and 3B's code, one line each, announced on Discord).
+     decision, guest cancel, expiry and closed date (in 3A's and 4B's code, one line each, announced on Discord).
      `notifyImportConflict` tells the hosts once (bell entry; 7A adds the email and push).
   5. The channels screen: each room's export link with a copy button, a form to connect an Airbnb, Booking.com or
      other link, the last sync time and error, and "Sync now".
@@ -968,7 +994,7 @@ core flow can never silently break.
 
 - **Owner:** \_\_\_\_\_\_\_\_\_\_\_\_
 - **When:** Sunday and Monday.
-- **Requirements:** F14 (the dashboard assistant), must work on stage 5, demo-ready 4. Core flow step 6.
+- **Requirements:** F14 (the dashboard assistant), must work on stage 5, demo-ready 4. Core flow step 7.
 - **Needs:** 5A (the `ai` queue), 3A, 3B, 4B, 8B (the services its tools call).
 - **Owns:** `src/server/ai/tool.ts`, `run-tool.ts`, `deepseek.ts`, `assistant.ts`, `output.ts`, `team-tools.ts`,
   `src/server/services/assistant-service.ts`, `chat-service.ts`, `ai-usage-service.ts`,
@@ -992,31 +1018,26 @@ core flow can never silently break.
 - **Done when:** the owner says "Close the Arched room from 12 to 15 November", checks the card and confirms, and the
   calendar shows it; asks "How much commission did direct bookings save me this month?" and gets the figure with the
   numbers it came from; and with `DEEPSEEK_API_KEY` emptied, gets the figures with a calm message instead.
-- **Not in this task:** MCP (B4), the concierge (B3), the AI report (B5), streaming (B10).
+- **Not in this task:** MCP (B4), the travel assistant (B3), the AI report (B5), streaming (B10).
 
-#### 9B. The whole place, "Your place" and photos
+#### 9B. The whole place and "Your place"
 
 - **Owner:** \_\_\_\_\_\_\_\_\_\_\_\_
 - **When:** Sunday and Monday.
-- **Requirements:** F3 (renting the whole place), F7 (the place's own details and photos).
-- **Needs:** 3A, 3B.
+- **Requirements:** F3 (renting the whole place), F7 (the place's own details).
+- **Needs:** 3A, 3B (photos).
 - **Owns:** the whole-place part of `booking-service.ts` and `booking-repository.ts` (in its own section),
-  `src/server/services/photo-service.ts`, `src/server/repositories/photo-repository.ts`,
-  `src/app/api/workspaces/[businessId]/photos/**`, `src/app/api/images/[imageId]/route.ts`,
-  `src/app/dashboard/[businessId]/place/**`, `src/components/dashboard/place-essentials.tsx`, `photo-manager.tsx`.
+  `src/app/dashboard/[businessId]/place/**` (adds to 3B's page), `src/components/dashboard/place-essentials.tsx`.
 - **Build, in this order:**
   1. "Your place": description, area and region, address and map pin, house rules, tags, accessibility, minimum
-     age, and whether it is rented by room or as a whole place.
+     age, and whether it is rented by room or as a whole place, above 3B's photos on the same page.
   2. The whole place: booked whole, never room by room; the whole place and its rooms block each other; switching
      keeps every booking, and only nights those bookings don't use can be booked the new way; a room stay running when
      the host switches keeps the whole place closed until it checks out; bookings at one place take turns.
-  3. Photos: upload (typed by their own bytes, shrunk and turned into WebP with `sharp`), grouped by area, ordered;
-     stored in Cloudflare R2 on the live site (free tier: shrink to at most 1600 pixels wide, WebP, upload with
-     `aws4fetch`, served from `R2_PUBLIC_URL`), and in Postgres (`StoredImage.bytes`, served from `/api/images/{id}`)
-     when the R2 settings are empty, on our computers and in tests. See `02` "P. Photos".
-- **Tests:** `tests/integration/whole-place.test.ts`, `tests/unit/photos.test.ts`.
-- **Done when:** the tests pass, and an owner switches a demo place to "whole place" and a guest books it whole.
-- **Not in this task:** reviews (B6). Room photos are part of this task's photo manager, not of 3B's room editor.
+- **Tests:** `tests/integration/whole-place.test.ts`.
+- **Done when:** the test passes, and an owner fills "Your place", switches a demo place to "whole place", and a guest
+  books it whole.
+- **Not in this task:** photos (3B), reviews (B6).
 
 #### 9C. Browser tests, calm states and Back buttons
 
@@ -1102,7 +1123,7 @@ its tables already in the database. Any bonus not merged by Tuesday 10 November 
 | --- | ---------------------------------------------------------- | ------------ | ---------- | ----- |
 | B1  | Host plans paid instantly with Stripe or Whish             | F15          | 4A         |       |
 | B2  | Experiences and services, with sessions and seats          | F8, F2       | 3A, 4A     |       |
-| B3  | The guest's trip concierge                                 | F6           | 5C, 9A     |       |
+| B3  | The guest's travel assistant                               | F6           | 5C, 9A     |       |
 | B4  | Connecting Claude, Cursor or Codex (host MCP, keys, OAuth) | F14          | 9A         |       |
 | B5  | The AI report                                              | F12          | 8B, 9A     |       |
 | B6  | Reviews and favourites                                     | F5           | 4C         |       |
@@ -1118,7 +1139,7 @@ its tables already in the database. Any bonus not merged by Tuesday 10 November 
 - **B2. Experiences and services.** Hikes, tastings, transfers with repeating sessions and seats; their page with
   spots left; booking seats with the same three modes (the seat trigger refuses overbooking).
   `offering-service.ts`, `session-booking-service.ts`. Test: `tests/integration/session-seats.test.ts`.
-- **B3. The concierge.** A trip in English, Arabic or Arabizi → places really free on those dates; region, bedrooms,
+- **B3. The travel assistant.** A trip in English, Arabic or Arabizi → places really free on those dates; region, bedrooms,
   bathrooms, beds, amenities (a jacuzzi), tags; read-only, it links to the booking page. `guest-tools.ts`,
   `askConcierge`, `/api/assistant`, `/api/me/chats`, `concierge.tsx`. Tests: `place-search.test.ts`,
   `concierge-cards.test.ts`.

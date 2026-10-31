@@ -1,9 +1,9 @@
 ---
-name: mabeet-review
-description: Review a Mabeet pull request or a branch's changes against the team's rules, before a teammate reviews it. Use when asked to review, check a pull request, or say whether something is ready to merge.
+name: tafaddal-review
+description: Review a Tafaddal pull request or a branch's changes against the team's rules, before a teammate reviews it. Use when asked to review, check a pull request, or say whether something is ready to merge.
 ---
 
-# Reviewing a Mabeet pull request
+# Reviewing a Tafaddal pull request
 
 1. Find the task id in the branch name or the pull request (`feat/4B-...`) and read its entry in
    `docs/team/01-team-plan.md`: did it build what **Build** says, only in the files it **Owns**, and nothing from

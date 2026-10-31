@@ -1,6 +1,6 @@
 # Architecture and features
 
-This file explains how the product works and how its code is built. It describes the reference project (Mabeet),
+This file explains how the product works and how its code is built. It describes the reference project (`se-next-stays`, the first version of Tafaddal),
 with the changes we decided for the new project: the three booking modes, full refunds and DigitalOcean hosting
 (`06-functional-requirements.md` and `07-data-model.md`). When this file and those two disagree, those two win.
 
@@ -64,7 +64,7 @@ Our product gives the host one booking page, one calendar, and a database that r
 
 ### The tools, and why
 
-- **Next.js 15 (App Router) with TypeScript in strict mode:** pages, the API, the calendar links and the MCP server,
+- **Next.js 16 (App Router) with TypeScript in strict mode:** pages, the API, the calendar links and the MCP server,
   all in one project and one deploy.
 - **PostgreSQL with Prisma 6:** the database, with typed queries and migrations. Postgres also gives us database
   rules that Prisma cannot write, such as the rule against overlapping nights. We write those rules by hand in SQL
@@ -586,7 +586,7 @@ invent a place.
 Rule: **we always tell the model the exact format we expect, and we always check what comes back before anyone sees
 it.** Code: `src/server/ai/output.ts`.
 
-- **Chat replies** (owner assistant and guest concierge):
+- **Chat replies** (owner assistant and guest travel assistant):
   - `REPLY_FORMAT` is added to every system prompt by `runAssistant`: short sentences, `**bold**` for key figures,
     `- ` lists, a markdown table for three or more rows of the same kind, and no headings, HTML, code or links.
   - `shapeReply(text)` brings every reply into that format before it leaves the server: it drops code fences and
@@ -659,7 +659,7 @@ Two kinds, by how much they matter:
 ```
 
 - **Three queues** (`QUEUES` in `src/server/jobs/queue.ts`):
-  - `ai`: concierge answers, team assistant answers, reports. 4 at once per worker. Retried once.
+  - `ai`: travel assistant answers, team assistant answers, reports. 4 at once per worker. Retried once.
   - `notify`: every booking, payment, refund and Contact host notice. 8 at once. Retried 4 times, waiting longer
     each time.
   - `cron`: calendar sync every 15 minutes and housekeeping every 5 minutes, on the worker's own schedule.
@@ -869,7 +869,7 @@ Shared pieces:
 - Each email is in the reader's language.
 - Without an API key, emails are printed in the log.
 - Addresses on reserved test domains (`.test`, `.example`, `.invalid`, `.localhost`) are never sent to, because they
-  can never receive email. The demo accounts (`host@mabeet.test`) use them.
+  can never receive email. The demo accounts (`host@tafaddal.test`) use them.
 - Emails only reach other people's inboxes after the sending domain is verified on Resend.
 
 ### E. Experiences and services

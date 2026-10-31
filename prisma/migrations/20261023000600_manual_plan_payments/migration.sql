@@ -1,4 +1,4 @@
--- Paying for a plan by hand: Mabeet's payment details, and hosts' requests with a receipt.
+-- Paying for a plan by hand: Tafaddal's payment details, and hosts' requests with a receipt.
 ALTER TYPE "PaymentMethod" ADD VALUE 'CRYPTO';
 
 CREATE TYPE "PlanRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED');

@@ -1,9 +1,9 @@
 ---
-name: mabeet-scope
-description: What Mabeet must and must not do - the functional and non-functional requirements, the scope locked with Sami, the cut list, the core flow shown on stage and the demo-ready standard. Use when deciding whether something is in scope, what a requirement means, or what matters most for Demo Day.
+name: tafaddal-scope
+description: What Tafaddal must and must not do - the functional and non-functional requirements, the scope locked with Sami, the cut list, the core flow shown on stage and the demo-ready standard. Use when deciding whether something is in scope, what a requirement means, or what matters most for Demo Day.
 ---
 
-# Mabeet scope
+# Tafaddal scope
 
 Read:
 

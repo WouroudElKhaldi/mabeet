@@ -1,4 +1,4 @@
--- Online payments through Mabeet (Whish and Stripe), instant booking, refunds, payouts to hosts and plan revenue.
+-- Online payments through Tafaddal (Whish and Stripe), instant booking, refunds, payouts to hosts and plan revenue.
 
 -- CreateEnum
 CREATE TYPE "BookingMode" AS ENUM ('REQUEST', 'INSTANT');

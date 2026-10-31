@@ -1,9 +1,9 @@
 ---
-name: mabeet-tests
-description: Write Mabeet tests - unit, integration (real Postgres), race tests, database rule tests and Playwright end-to-end tests, and which tests each feature needs. Use when writing or fixing any test, or when a task's "Tests" line names test files.
+name: tafaddal-tests
+description: Write Tafaddal tests - unit, integration (real Postgres), race tests, database rule tests and Playwright end-to-end tests, and which tests each feature needs. Use when writing or fixing any test, or when a task's "Tests" line names test files.
 ---
 
-# Mabeet tests
+# Tafaddal tests
 
 Read `docs/team/04-test-plan.md`: Part 2 (how to write each kind), the rows for your feature in Part 3, Part 4 for
 end-to-end tests, and Part 6 (the minimum at each checkpoint).

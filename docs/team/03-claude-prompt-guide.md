@@ -31,7 +31,7 @@ This file gives you two tools:
 ```markdown
 # Rules for Claude
 
-You work on a direct-booking website for Lebanese guesthouses. Tools: Next.js 15 (App Router), TypeScript in strict
+You work on a direct-booking website for Lebanese guesthouses. Tools: Next.js 16 (App Router), TypeScript in strict
 mode, Prisma with PostgreSQL, Better Auth, Zod 4, next-intl, Tailwind 4, Vitest.
 
 Follow these rules exactly. If a rule and your habit are different, follow the rule. If something is not covered,

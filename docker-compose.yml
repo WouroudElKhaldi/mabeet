@@ -22,8 +22,8 @@ x-code: &code
     - path: .env
       required: false
   environment: &code-environment
-    DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
-    TEST_DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet_test
+    DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal
+    TEST_DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal_test
     REDIS_URL: redis://redis:6379
     BETTER_AUTH_URL: http://localhost:3000
     # Development-only values, used when .env does not set its own. The live site's are in DigitalOcean.
@@ -41,9 +41,9 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_USER: mabeet
-      POSTGRES_PASSWORD: mabeet
-      POSTGRES_DB: mabeet
+      POSTGRES_USER: tafaddal
+      POSTGRES_PASSWORD: tafaddal
+      POSTGRES_DB: tafaddal
     # Also reachable from the computer (Prisma Studio, a database tool) on port 5433, from this computer only.
     ports:
       - "127.0.0.1:5433:5432"
@@ -52,7 +52,7 @@ services:
       # Creates the integration tests' own database on first start.
       - ./scripts/docker-test-db.sql:/docker-entrypoint-initdb.d/test-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mabeet"]
+      test: ["CMD-SHELL", "pg_isready -U tafaddal"]
       interval: 5s
       retries: 10
 
@@ -84,9 +84,9 @@ services:
 
   app:
     <<: *code
-    # Webpack instead of Turbopack here: it can watch for changes by polling, which a Docker folder shared from
-    # Windows or macOS needs, so saving a file reloads the page.
-    command: ["pnpm", "exec", "next", "dev", "--hostname", "0.0.0.0"]
+    # Webpack instead of Turbopack (Next.js 16's default) here: it can watch for changes by polling, which a Docker
+    # folder shared from Windows or macOS needs, so saving a file reloads the page.
+    command: ["pnpm", "exec", "next", "dev", "--webpack", "--hostname", "0.0.0.0"]
     environment:
       <<: *code-environment
       WATCHPACK_POLLING: "true"

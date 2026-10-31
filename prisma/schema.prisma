@@ -1,4 +1,4 @@
-// Mabeet: direct bookings for guesthouses.
+// Tafaddal: direct bookings for guesthouses.
 // Every tenant-owned table carries businessId. Repositories always filter by it.
 // Business data is never deleted: rows get isDeleted = true instead, and reads skip them. Only short-lived
 // technical rows (sign-in sessions, tokens, job progress, push devices) are deleted.
@@ -664,12 +664,12 @@ model Payment {
 }
 
 enum RefundStatus {
-  /// Owed to the guest; Mabeet sends it by hand (a partial Whish refund) and marks it done.
+  /// Owed to the guest; Tafaddal sends it by hand (a partial Whish refund) and marks it done.
   PENDING
   DONE
 }
 
-/// Money given back to a guest from an online payment. Reduces what Mabeet owes the host.
+/// Money given back to a guest from an online payment. Reduces what Tafaddal owes the host.
 model Refund {
   id          String       @id @default(cuid())
   businessId  String
@@ -702,7 +702,7 @@ enum PayoutStatus {
   REJECTED
 }
 
-/// A host asks Mabeet to send them what it collected online for them; an admin pays it and marks it.
+/// A host asks Tafaddal to send them what it collected online for them; an admin pays it and marks it.
 model Payout {
   id            String       @id @default(cuid())
   businessId    String
@@ -729,7 +729,7 @@ model Payout {
   @@index([status])
 }
 
-/// A host paying for a plan, always instantly: Stripe invoices (card) and Whish monthly payments. This is Mabeet's
+/// A host paying for a plan, always instantly: Stripe invoices (card) and Whish monthly payments. This is Tafaddal's
 /// revenue. There are no hand payments to approve; a CHECK constraint refuses any new method but STRIPE or WHISH.
 /// Rows from the old hand-paid flow keep their method (BANK_TRANSFER, CASH...) as history.
 model PlanPayment {
@@ -757,7 +757,7 @@ model PlanPayment {
 }
 
 /// TEST ONLY: the Whish simulator's own records, written only when WHISH_MODE=simulator (local development, tests,
-/// the demo before Mabeet has Whish keys). With real Whish keys nothing reads or writes it. Never holds real money.
+/// the demo before Tafaddal has Whish keys). With real Whish keys nothing reads or writes it. Never holds real money.
 model WhishSandboxPayment {
   externalId         String   @id
   code               String   @unique

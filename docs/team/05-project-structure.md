@@ -1,6 +1,6 @@
 # Project structure
 
-This file shows every folder and file of the reference project (Mabeet). It was made from the repository on
+This file shows every folder and file of the reference project (`se-next-stays`, the first version of Tafaddal). It was made from the repository on
 27 October 2026.
 
 Put new code in the folder whose note matches it. If no folder fits, ask in your pull request before you add a

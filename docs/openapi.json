@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Mabeet API",
+    "title": "Tafaddal API",
     "version": "1.0.0",
     "description": "Direct bookings for Lebanese guesthouses, experiences and services. Every workspace route resolves the business from the URL and the caller's membership, never from the request body."
   },
@@ -1178,7 +1178,7 @@
     "/api/assistant": {
       "post": {
         "tags": ["AI"],
-        "summary": "Trip concierge chat (DeepSeek, read-only tools). 200 with the answer, or 202 { jobId } when queued: follow GET /api/jobs/{jobId}",
+        "summary": "Travel assistant chat (DeepSeek, read-only tools). 200 with the answer, or 202 { jobId } when queued: follow GET /api/jobs/{jobId}",
         "description": "No sign-in.",
         "security": [],
         "parameters": [],
@@ -8286,7 +8286,7 @@
     "/api/me/chats": {
       "get": {
         "tags": ["AI"],
-        "summary": "The signed-in guest's saved concierge chats",
+        "summary": "The signed-in guest's saved travel assistant chats",
         "description": "Signed-in user.",
         "security": [
           {
@@ -8344,7 +8344,7 @@
     "/api/me/chats/{chatId}": {
       "get": {
         "tags": ["AI"],
-        "summary": "One of the guest's own saved concierge chats",
+        "summary": "One of the guest's own saved travel assistant chats",
         "description": "Signed-in user.",
         "security": [
           {
@@ -8409,7 +8409,7 @@
       },
       "delete": {
         "tags": ["AI"],
-        "summary": "Delete one of the guest's own saved concierge chats",
+        "summary": "Delete one of the guest's own saved travel assistant chats",
         "description": "Signed-in user.",
         "security": [
           {
@@ -9140,7 +9140,7 @@
     "/api/workspaces/{businessId}/payouts": {
       "get": {
         "tags": ["Payments"],
-        "summary": "What Mabeet holds for the business, its online payments and payouts (owners)",
+        "summary": "What Tafaddal holds for the business, its online payments and payouts (owners)",
         "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
         "security": [
           {

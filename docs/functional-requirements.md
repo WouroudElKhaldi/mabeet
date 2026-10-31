@@ -124,7 +124,7 @@ submission (Friday 13 November).
 - **F2 (experiences).** An experience page shows its sessions and how many spots are left.
 - **F5. Keep an account.** Trips, favourites, an activity history, and one review per stay, written only after
   check-out by the guest who actually stayed.
-- **F6. Ask the concierge (big bonus).** Describe a trip in English, Arabic or Arabizi, and get places that are
+- **F6. Ask the travel assistant (big bonus).** Describe a trip in English, Arabic or Arabizi, and get places that are
   really free on those dates. The search takes a town or a region (`src/config/regions.ts`), bedrooms, bathrooms,
   beds, amenities (a jacuzzi included), tags and accessibility, and shows each matching room's layout.
 - **F6a. Book through the AI (last bonus).** The guest's AI (on the website or through the guest MCP in Claude or

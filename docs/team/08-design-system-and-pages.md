@@ -360,7 +360,7 @@ Changes for the new project (from `06-functional-requirements.md`) are marked **
 2. **Browse:** the `Browse` component without its own search: category bar (`CategoryBar`), tabs for stays,
    experiences and services (`ListingTabs`), and the results grid (`ResultsGrid` of `PlaceCard`s).
 3. **Direct receipts** (`DirectReceipts`): what a guest pays on Airbnb or Booking.com compared with booking direct.
-4. **Concierge band** (`ConciergeBand`): an invitation to ask the trip concierge.
+4. **Travel assistant band** (`ConciergeBand`): an invitation to ask the travel assistant.
 
 #### `/search` Search (5C)
 
@@ -431,7 +431,7 @@ Like the place page: title row, gallery, summary, what is included, `ThingsToKno
 "Cancellation" is the same refund rule as the place page (an experience has no "cancel up to N hours" setting).
 The card shows the total, which is what is paid: no deposit line.
 
-#### `/assistant` Trip concierge (B3, bonus)
+#### `/assistant` Travel assistant (B3, bonus)
 
 The `Concierge` chat with idea tickets to start, place cards under answers, and a section "Use it from Claude or
 ChatGPT" with the guest MCP address in a `CopyField`.
@@ -478,7 +478,7 @@ Tabs at the top (`AccountTabs`):
 | `/bookings`                | 4B         | Stays and experience sessions, waiting ones first. Each `BookingRow` shows the guest, room, dates, total, status and countdown, with `BookingActions` on the row: Confirm and Decline (modes 2 and 3), Cancel (every mode), each with `useConfirm`. There is no separate booking page.                                                                          |
 | `/calendar`                | 5B         | `CalendarBoard`: month, week and rooms views; the side panel for the chosen day; `CloseDatesForm`. A platform booking that clashes with ours has a red outline and a note in the side panel; it is never cancelled from here                                                                                                                                    |
 | `/channels`                | 6A         | Each room's export link (`CopyField`); connected Airbnb, Booking.com or other links with last sync and error (`FeedButtons`: Sync now, Remove); `AddFeedForm`                                                                                                                                                                                                   |
-| `/place` Your place        | 9B         | `PlaceEssentials` (description, rules, photos by area), whole place or by room, `PhotoManager`                                                                                                                                                                                                                                                                  |
+| `/place` Your place        | 3B, 9B     | `PlaceEssentials` (description, rules, photos by area), whole place or by room, `PhotoManager`                                                                                                                                                                                                                                                                  |
 | `/rooms`                   | 3B         | Each room in a `RoomEditor` with `PhotoManager` and `SpecialPrices`; "Add a room"                                                                                                                                                                                                                                                                               |
 | `/offerings`               | B2 (bonus) | `OfferingEditor`, `PhotoManager`, `SessionScheduler`. No cancellation-hours field                                                                                                                                                                                                                                                                               |
 | `/reviews`                 | B6 (bonus) | Average rating; each review with `ReviewControls` (reply, hide with a reason)                                                                                                                                                                                                                                                                                   |

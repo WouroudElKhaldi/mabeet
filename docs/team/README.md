@@ -16,7 +16,7 @@ Read them in this order before your first task:
 | [07-data-model.md](07-data-model.md)                               | What changes in the database for the new project     |
 | [08-design-system-and-pages.md](08-design-system-and-pages.md)     | Colours, fonts, spacing, components, and every page  |
 
-These files describe a **reference project**: the first Mabeet, in the `se-next-stays` repository. Its code already
+These files describe a **reference project**: the first version of Tafaddal, in the `se-next-stays` repository. Its code already
 follows every rule written here. So when a file says "copy the style of `booking-service.ts`", that file (in the
 reference project, until we have written ours) is the example. We are building it again as a team, in this
 repository, following `01-team-plan.md`.

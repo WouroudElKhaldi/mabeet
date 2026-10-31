@@ -1,9 +1,9 @@
 ---
-name: mabeet-database
-description: Mabeet's database - the Prisma schema, migrations, the no-double-booking EXCLUDE constraint, money as BigInt cents, soft delete, locks, and who may change the schema. Use before writing a repository query, raw SQL or a seed, or when a task seems to need a database change.
+name: tafaddal-database
+description: Tafaddal's database - the Prisma schema, migrations, the no-double-booking EXCLUDE constraint, money as BigInt cents, soft delete, locks, and who may change the schema. Use before writing a repository query, raw SQL or a seed, or when a task seems to need a database change.
 ---
 
-# Mabeet database
+# Tafaddal database
 
 Read `docs/team/07-data-model.md` (the rules, and what changed from the reference), `docs/erd.md` (every table and
 column, made from `prisma/schema.prisma`), `docs/erd-explained.md` (what each table means), `docs/data-model.md`,
