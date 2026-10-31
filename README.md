@@ -66,7 +66,7 @@ starts take seconds: the database and the libraries are kept in Docker volumes.
 
 No `.env` is needed to start. Copy `.env.example` to `.env` only to add keys (DeepSeek, Stripe, Resend...). Inside
 Docker the database and Redis addresses always point at Docker's own services, whatever `.env` says. Postgres is also
-open on `localhost:5433` (user and password `tafaddal`) for Prisma Studio or any database tool.
+open on `localhost:5433` (user and password `mabeet`) for Prisma Studio or any database tool.
 
 **The production shape** (the built image, the worker, Postgres and Redis, as on DigitalOcean) runs with
 `docker compose -f docker-compose.prod.yml up --build`.
@@ -80,7 +80,7 @@ pnpm install
 cp .env.example .env        # then fill in the values (each one is explained in the file)
 pnpm db:start               # the project's own Postgres, stored in .pgdata; leave this terminal open
 pnpm db:deploy              # creates every table
-pnpm dev                    # http://localhost:3000
+pnpm dev                    # the website on http://localhost:3000 and the job worker
 ```
 
 ## Settings (`.env`)
@@ -93,18 +93,21 @@ settings and GitHub secrets, never in the repository.
 
 ## Useful commands
 
-| Command                 | What it does                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------- |
-| `pnpm dev`              | The website on http://localhost:3000                                            |
-| `pnpm check`            | Types, lint, formatting, unused code (knip) and unit tests: run before every PR |
-| `pnpm test:integration` | Integration tests on the test database                                          |
-| `pnpm db:start`         | The local Postgres (no install)                                                 |
-| `pnpm db:deploy`        | Applies every migration                                                         |
-| `pnpm db:migrate`       | Creates a new migration (the database keeper only)                              |
-| `pnpm db:studio`        | Browse the database                                                             |
-| `pnpm docs`             | Regenerates the ERDs from the schema and `docs/openapi.yaml` from the JSON      |
+| Command                             | What it does                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `pnpm dev`                          | The website on http://localhost:3000 and the job worker, together (Ctrl+C stops both)            |
+| `pnpm dev:web`                      | The website alone; set `JOBS_MODE="inline"` so it runs the jobs itself                           |
+| `pnpm worker`                       | The job worker alone (emails, housekeeping), as in production                                    |
+| `pnpm check`                        | Types, lint, formatting, unused code (knip) and unit tests: run before every PR                  |
+| `pnpm test:integration`             | Integration tests on the test database (only adds rows, never deletes anything)                  |
+| `pnpm db:start`                     | The local Postgres (no install)                                                                  |
+| `pnpm db:deploy`                    | Applies every migration                                                                          |
+| `pnpm db:migrate`                   | Creates a new migration (the database keeper only)                                               |
+| `pnpm db:studio`                    | Browse the database                                                                              |
+| `pnpm run docs`                     | Regenerates the ERDs from the schema and `docs/openapi.yaml` from the JSON                       |
+| `pnpm admins:create "Name <email>"` | Makes platform admins and writes their sign-in details to `.admin-credentials` (never committed) |
 
-Later tasks add `pnpm worker`, `pnpm db:seed` and `pnpm test:e2e`.
+Later tasks add `pnpm db:seed` and `pnpm test:e2e`.
 
 ## The database
 
@@ -126,14 +129,14 @@ cannot express (the no-overlap `EXCLUDE` constraint, the seat triggers, the CHEC
 | [docs/requirements-matrix.md](docs/requirements-matrix.md)                                                | Each requirement, its code and its test              |
 | [docs/architecture.md](docs/architecture.md)                                                              | Layers, the booking race, sync, queues, payments, AI |
 | [docs/data-model.md](docs/data-model.md), [docs/erd-explained.md](docs/erd-explained.md)                  | The data model, table by table                       |
-| [docs/erd.md](docs/erd.md), [platform](docs/erd-platform.md), [AI and MCP](docs/erd-ai-mcp.md)            | Diagrams made from the schema (`pnpm docs`)          |
+| [docs/erd.md](docs/erd.md), [platform](docs/erd-platform.md), [AI and MCP](docs/erd-ai-mcp.md)            | Diagrams made from the schema (`pnpm run docs`)      |
 | [docs/openapi.json](docs/openapi.json), [docs/openapi.yaml](docs/openapi.yaml)                            | The API contract, in JSON and YAML                   |
 | [CLAUDE.md](CLAUDE.md) and [.claude/skills/](.claude/skills)                                              | The rules and skills Claude Code follows here        |
 
 ## Working with Claude
 
 Claude Code reads [CLAUDE.md](CLAUDE.md) in every session, and loads the skills in `.claude/skills/` when the work
-needs them: `tafaddal-task` (build a feature by its requirement id), `tafaddal-architecture`, `tafaddal-screens`,
-`tafaddal-database`, `tafaddal-tests`, `tafaddal-review` and `tafaddal-scope`. Ask for one feature per conversation, for
+needs them: `mabeet-task` (build a feature by its requirement id), `mabeet-architecture`, `mabeet-screens`,
+`mabeet-database`, `mabeet-tests`, `mabeet-review` and `mabeet-scope`. Ask for one feature per conversation, for
 example: "Build rooms, prices and photos (F7), the API first." The prompt template is in
 [docs/team/03-claude-prompt-guide.md](docs/team/03-claude-prompt-guide.md).

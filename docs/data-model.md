@@ -78,22 +78,23 @@ has the full picture.
 
 **Money, trust and AI**
 
-| Table         | In plain words                                                                                                                           |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `Payment`     | Money for a booking: recorded by the host (Whish, OMT, bank, cash), or paid online through Mabeet (`online`), which Mabeet owes the host |
-| `Refund`      | Money given back to a guest from an online payment; `PENDING` when an admin must send it by hand                                         |
-| `Payout`      | A host asking Mabeet to send what it holds for them, to an IBAN or a Whish number                                                        |
-| `PlanPayment` | A host paying for a plan (a Stripe invoice or a Whish month). Mabeet's only revenue                                                      |
-| `Review`      | One review per stay, only by the guest who stayed                                                                                        |
-| `Favorite`    | A place a guest saved                                                                                                                    |
-| `ActivityLog` | Who did what and when, for the activity feeds and admin actions                                                                          |
-| `ApiKey`      | An AI key tied to one team member; only a hash is stored                                                                                 |
-| `McpAuditLog` | Every tool call an AI made, so owners can see what it looked at                                                                          |
-| `AiUsage`     | AI spending per month, for the budget cap                                                                                                |
+| Table         | In plain words                                                                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Payment`     | A guest paying a booking online (Whish or card), always the full amount, into Mabeet's account, which Mabeet owes the host. Offline payments are not recorded |
+| `Refund`      | Money given back to a guest from an online payment; `PENDING` when an admin must send it by hand                                                              |
+| `Payout`      | A host asking Mabeet to send what it holds for them, to an IBAN or a Whish number                                                                             |
+| `PlanPayment` | A host paying for a plan (a Stripe invoice or a Whish month). Mabeet's only revenue                                                                           |
+| `Review`      | One review per stay, only by the guest who stayed                                                                                                             |
+| `Favorite`    | A place a guest saved                                                                                                                                         |
+| `AuditLog`    | What happened in a business or on the platform and who did it (no one, for the system's own events). The bells and the admin trail read it                    |
+| `ActivityLog` | One person's own timeline: what they did and what happened to them, for their account's Activity page                                                         |
+| `ApiKey`      | An AI key tied to one team member; only a hash is stored                                                                                                      |
+| `McpAuditLog` | Every tool call an AI made, so owners can see what it looked at                                                                                               |
+| `AiUsage`     | AI spending per month, for the budget cap                                                                                                                     |
 
 `WhishSandboxPayment` is the Whish simulator's own state, used only while `WHISH_MODE=simulator`.
-`PushSubscription` holds the phones and browsers that turned on notifications, each following a person or one
-booking.
+`PushSubscription` holds the phones and browsers that turned on notifications, each belonging to one signed-in
+person (one browser, one row).
 
 The remaining tables (`Session`, `Account`, `Verification`, `Oauth*`, `Jwks`) belong to sign-in and are managed by
 Better Auth. `Category`, `Photo`, `StoredImage`, `SiteSetting` and `WebhookEvent` are

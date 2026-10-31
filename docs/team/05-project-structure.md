@@ -1,31 +1,113 @@
 # Project structure
 
-This file shows every folder and file of the reference project (`se-next-stays`, the first version of Mabeet). It was made from the repository on
-27 October 2026.
+Mabeet is a **modular monolith**: one Next.js app, one database, one deploy, split into feature modules. A feature
+lives in one folder, `src/modules/<name>/`, from its database queries to its screens and tests. The code every
+feature shares (settings, errors, the database client, sign-in and tenancy, the route wrappers, jobs, email) is
+the **shared kernel** in `src/server/`, and it never depends on a feature.
 
 Put new code in the folder whose note matches it. If no folder fits, ask in your pull request before you add a
-folder. Generated folders (`node_modules`, `.next`) and private notes are not listed.
+folder or a module. Generated folders (`node_modules`, `.next`) and private notes are not listed.
+
+## The shape of a module
+
+```
+src/modules/bookings/
+  index.ts                  # door for code that may run in the browser: input checks, types, screens
+  server.ts                 # door for server code: the services routes and other modules may call
+  schemas.ts                # this module's Zod input checks
+  config.ts                 # this module's fixed lists, when only it uses them
+  server/
+    booking-service.ts      # rules, permissions, transactions
+    booking-repository.ts   # database queries (private to the module)
+    booking-notifications.ts  # its notify jobs (emails, push)
+  components/               # its screens and parts ("use client" only where needed)
+  hooks/                    # hooks only its screens use
+  tests/
+    booking-service.test.ts               # unit test
+    booking-race.integration.test.ts      # needs the database
+```
+
+A module creates only the folders it needs. Its rules:
+
+1. **Two doors.** Outside code imports `@/modules/<name>` or `@/modules/<name>/server`, nothing else. Repositories
+   and every other inner file are private. Inside the module, files import each other by relative path.
+2. **No circles.** If `bookings` calls `payments`, `payments` never calls `bookings` back; one side becomes a job or
+   is called by a third module. The order today: `team` calls `accounts`, `audit` and `billing`; `billing` calls
+   `accounts`, `payments` and `audit`; `housekeeping` calls `billing`. Decided for what comes next: `bookings` calls
+   `payments` and `calendar-sync`, and neither of them ever calls `bookings` (rule 4 says how).
+3. **One transaction across modules passes `tx`.** A public function that writes takes an optional `tx`, so a caller
+   in another module can commit both changes together.
+4. **What must be one transaction stays in one module.** No double booking needs the availability check, the hold
+   and the lock in the same transaction (`lockActiveRoom`, the EXCLUDE constraint). So `bookings` owns reservations,
+   availability, holds, closed dates, session bookings and the night locks. Two consequences:
+   - A booking's payment and refund rows change with its status (paid confirms it in mode 1, a decline or a
+     cancellation refunds it), so `bookings` writes them in the same transaction. `payments` holds what both
+     bookings and plans call: the Whish and Stripe clients, the Whish simulator, payouts and the lock on a business's
+     money (`lockBusinessMoney`).
+   - `calendar-sync` manages the feed links, downloads and reads them, and builds the export file. It never calls
+     `bookings`: `bookings` calls it (the 15-minute sync, "Sync now", the re-read before confirming) and writes the
+     `IMPORTED` rows itself.
+5. **A repository reads its own module's tables.** For another module's data, call that module's `server.ts`. Two
+   exceptions, both reads or one transaction that cannot be split: a count against a plan's limits (billing counts
+   rooms, experiences and members), and closing an account (`softDeleteUser` in `accounts` marks everything that
+   holds the person's data in one transaction, and "Download my data" reads it). The kernel's one repository,
+   `src/server/auth/membership-repository.ts`, reads memberships because the route wrapper needs them before any
+   module runs.
+
+ESLint enforces the import side of these rules, repositories included: a deep import into a module, a relative path
+climbing into another module, or the kernel importing a module fails `pnpm lint`.
+
+## The modules
+
+| Module          | Owns                                                                                                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accounts`      | User accounts: export and delete my data, accounts created from an invitation, platform admins                                                                          |
+| `workspaces`    | Creating a place, its settings, the host profile, the place's own site                                                                                                  |
+| `team`          | Roles, members, invitations, and the team's emails                                                                                                                      |
+| `rooms`         | Rooms, photos, rates and price calculation (`pricing.ts`)                                                                                                               |
+| `offerings`     | Experiences and services, and their sessions                                                                                                                            |
+| `bookings`      | The booking engine: reservations, availability, holds, decisions, closed dates, session bookings, locks, a booking's payments and full refunds, writing imported nights |
+| `calendar-sync` | Airbnb and Booking.com calendar links: managing, downloading and reading feeds, building the export                                                                     |
+| `payments`      | The Whish and Stripe clients, the Whish simulator, payouts, the lock on a business's money                                                                              |
+| `billing`       | Plans: Stripe subscriptions, Whish plan months, plan limits (`assertPlanAllowsAnother`)                                                                                 |
+| `directory`     | The public side: search, place pages, quotes, favourites, contacting a place                                                                                            |
+| `reviews`       | Reviews and host replies                                                                                                                                                |
+| `analytics`     | Revenue, occupancy and reports                                                                                                                                          |
+| `notifications` | The bell feed and push devices (each module sends its own emails and push through jobs)                                                                                 |
+| `assistant`     | The AI: tools, the tool runner, chat, MCP, API keys, AI usage                                                                                                           |
+| `audit`         | The audit log and each person's timeline (`recordAction`, `recordPersonAndBusiness`)                                                                                    |
+| `housekeeping`  | The scheduled tidy-up: expiring holds and plan months                                                                                                                   |
+| `admin`         | The platform admin area                                                                                                                                                 |
+| `partners`      | Partner businesses                                                                                                                                                      |
+
+`accounts`, `workspaces`, `team`, `billing`, `payments`, `audit` and `housekeeping` exist today. The others are
+created by the first feature that needs them, in this shape.
 
 ## Where each kind of file goes
 
-| You are writing…                                    | Put it in                                                                                        | Never in                                         |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| A page or an API route                              | `src/app/**` (`page.tsx`, `route.ts`)                                                            | a file with business rules or database calls     |
-| A business rule, a permission check, a transaction  | `src/server/services/<area>-service.ts`                                                          | routes, components, repositories                 |
-| A database query                                    | `src/server/repositories/<area>-repository.ts`                                                   | services (they pass `prisma` or `tx` in), routes |
-| An input check for an API route                     | `src/server/validation/schemas.ts`                                                               | inside the route                                 |
-| A list of allowed values (statuses, methods, plans) | `src/config/*.ts`, checked with `satisfies` against the Prisma enum                              | typed by hand in many places                     |
-| A colour, radius or shadow                          | a token in `src/app/globals.css` (`@theme`)                                                      | a hex colour or `bg-[#...]` in a component       |
-| A part of the screen used in many places            | `src/components/ui/`                                                                             | copied into each screen                          |
-| A small helper (dates, money, slugs)                | `src/lib/`                                                                                       | a service or a component                         |
-| An AI tool                                          | `src/server/ai/team-tools.ts` (owners) or `guest-tools.ts` (guests), calling an existing service | its own database code                            |
-| Slow or must-happen work (AI, email, schedules)     | a job: `defineJob(...)`, its module listed in `src/server/jobs/registry.ts`                      | awaited on the request path                      |
-| Text on screen                                      | `messages/en.json`, `ar.json`, `ar-LB.json` (same key in all three)                              | written inside a component                       |
-| A test                                              | `tests/unit/<area>.test.ts` or `tests/integration/<area>.test.ts`                                | next to the code file                            |
+| You are writing…                                    | Put it in                                                                                             | Never in                                         |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| A page or an API route                              | `src/app/**` (`page.tsx`, `route.ts`), thin: it calls one module's `server.ts`                        | a file with business rules or database calls     |
+| A business rule, a permission check, a transaction  | `src/modules/<name>/server/<area>-service.ts`, exported through the module's `server.ts`              | routes, components, repositories                 |
+| A database query                                    | `src/modules/<name>/server/<area>-repository.ts`                                                      | services (they pass `prisma` or `tx` in), routes |
+| An input check for an API route                     | `src/modules/<name>/schemas.ts`, exported through `index.ts`; shared pieces in `src/lib/schemas.ts`   | inside the route                                 |
+| A list of allowed values (statuses, methods, plans) | `src/config/*.ts`, checked with `satisfies` against the Prisma enum                                   | typed by hand in many places                     |
+| A colour, radius or shadow                          | a token in `src/app/globals.css` (`@theme`)                                                           | a hex colour or `bg-[#...]` in a component       |
+| A screen or part used by one feature                | `src/modules/<name>/components/`                                                                      | `src/components/`                                |
+| A part of the screen used in many places            | `src/components/ui/`                                                                                  | copied into each screen                          |
+| A hook                                              | `src/modules/<name>/hooks/` for one feature, `src/hooks/` when many screens use it                    | inside a component file                          |
+| A small pure helper (dates, money, slugs)           | `src/utils/`                                                                                          | a service or a component                         |
+| Setup of a library both sides use                   | `src/lib/` (shared Zod checks, `api-client`, `auth-client`)                                           | `src/utils/`                                     |
+| An AI tool                                          | `src/modules/assistant/server/team-tools.ts` or `guest-tools.ts`, calling a module's `server.ts`      | its own database code                            |
+| Slow or must-happen work (AI, email, schedules)     | a job: `defineJob(...)` in its module, the file listed in `src/server/jobs/registry.ts`               | awaited on the request path                      |
+| An email or push                                    | a notify job in the module that owns the event: `src/modules/<name>/server/<name>-notifications.ts`   | a shared notification file                       |
+| Text on screen                                      | `messages/en.json`, `ar.json`, `ar-LB.json` (same key in all three), under the module's key           | written inside a component                       |
+| A test of a module                                  | `src/modules/<name>/tests/<area>.test.ts`, or `<area>.integration.test.ts` when it needs the database | another module's folder                          |
+| A test of the shared kernel or across modules       | `tests/unit/<area>.test.ts` or `tests/integration/<area>.test.ts`                                     | next to the code file                            |
 
 Names:
 
-- File names use `kebab-case`, for example `booking-service.ts`.
+- File names use `kebab-case`, for example `booking-service.ts`. Module folders too, for example `calendar-sync`.
 - Components use `PascalCase`, for example `BookingWidget`.
 - Services and repositories export plain functions named after what they do, for example `requestBooking` or
   `findBookingByReference`.
@@ -33,47 +115,64 @@ Names:
 
 ## What each folder is for
 
-| Folder                            | What goes there                                                                                            |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/`              | The checks that run on every pull request, the deploy, and the scheduled jobs (until the worker runs them) |
-| `docs/`                           | Documents for reviewers: architecture, requirements, data model, database diagram, API contract            |
-| `messages/`                       | All text on screen, in English, Arabic and Lebanese Arabic. Every key must be in all three (a test checks) |
-| `prisma/`                         | The database tables, the migrations (including hand-written database rules), and the demo data             |
-| `prisma/migrations/`              | Never edit a migration after it is merged. Add a new one                                                   |
-| `public/`                         | Fixed files: service worker, icons, images                                                                 |
-| `scripts/`                        | Developer tools: local database, document generators, smoke tests                                          |
-| `src/app/`                        | Pages and API routes (Next.js). They read input, call a service, and answer. No rules, no database         |
-| `src/app/api/`                    | The API. Every route uses route() or tenantRoute() and checks its input with a Zod schema                  |
-| `src/app/(site)/`                 | The public website: home, search, place pages, booking, guest account                                      |
-| `src/app/(auth)/`                 | Sign in, sign up, reset password                                                                           |
-| `src/app/dashboard/[businessId]/` | The owner and staff dashboard, one folder per section. loading.tsx is the loading screen                   |
-| `src/app/admin/`                  | The platform admin area                                                                                    |
-| `src/components/`                 | React components, grouped by area. Client components start with "use client"                               |
-| `src/components/ui/`              | The design system: Button, Field, LabeledControl, FormError, dialogs, skeletons, shared class names        |
-| `src/components/shell/`           | The app frame: side menu, top bar, page header, notification bell, loading screens                         |
-| `src/components/dashboard/`       | Dashboard screens and parts (calendar, editors, charts)                                                    |
-| `src/components/assistant/`       | The AI chat screens: chat panel, guest assistant, owner assistant, action cards                            |
-| `src/config/`                     | Fixed lists and settings used by server and screens (statuses, plans, listing words, brand)                |
-| `src/hooks/`                      | Shared hooks for screens: useAction, useRedirectAction, useStoredChoice                                    |
-| `src/lib/`                        | Small helpers usable anywhere: dates, money format and `MoneyAsNumbers`, API client, tokens, slugs         |
-| `src/server/`                     | Server code only. Screens never import it, except `import type`                                            |
-| `src/server/services/`            | Business rules: permissions, transactions, notifications. One file per area                                |
-| `src/server/repositories/`        | The only code that talks to the database. Every business query filters by businessId                       |
-| `src/server/ai/`                  | The AI: tools, the tool runner, the chat loop, the MCP server, the DeepSeek client                         |
-| `src/server/jobs/`                | Queues and the worker: job definitions, answer-now-or-queue, schedules, `worker.ts` (`pnpm worker`)        |
-| `src/server/auth/`                | Sign-in setup, permissions, TenantContext, AI key checks                                                   |
-| `src/server/http/`                | Route wrappers, error answers, rate limits (Redis), page sign-in helpers                                   |
-| `src/server/validation/`          | The Zod input checks for every API route (schemas.ts)                                                      |
-| `src/server/ical/`                | Calendar files: read (import), build (export), safe download                                               |
-| `src/server/email/`               | Sending emails, and the email template                                                                     |
-| `src/server/payments/`            | The Whish client                                                                                           |
-| `src/server/billing/`             | The Stripe client                                                                                          |
-| `src/server/push/`                | Sending push notifications                                                                                 |
-| `src/server/db/`                  | The Prisma client (money read as numbers), transactions (Tx), database error helpers                       |
-| `tests/unit/`                     | Fast tests with no database                                                                                |
-| `tests/integration/`              | Tests with a real database: services, database rules, races, business isolation                            |
+| Folder                            | What goes there                                                                                                                     |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/`              | The checks that run on every pull request, the deploy, and the scheduled jobs (until the worker runs them)                          |
+| `docs/`                           | Documents for reviewers: architecture, requirements, data model, database diagram, API contract                                     |
+| `messages/`                       | All text on screen, in English, Arabic and Lebanese Arabic. Every key must be in all three (a test checks)                          |
+| `prisma/`                         | The database tables, the migrations (including hand-written database rules), and the demo data                                      |
+| `prisma/migrations/`              | Never edit a migration after it is merged. Add a new one                                                                            |
+| `public/`                         | Fixed files: service worker, icons, images                                                                                          |
+| `scripts/`                        | Developer tools: local database, document generators, smoke tests                                                                   |
+| `src/app/`                        | Pages and API routes (Next.js). They read input, call a module's service, and answer. No rules, no database                         |
+| `src/app/api/`                    | The API. Every route uses route() or tenantRoute() and checks its input with a Zod schema                                           |
+| `src/app/(site)/`                 | The public website: home, search, place pages, booking, guest account                                                               |
+| `src/app/(auth)/`                 | Sign in, sign up, reset password                                                                                                    |
+| `src/app/dashboard/[businessId]/` | The owner and staff dashboard, one folder per section. loading.tsx is the loading screen                                            |
+| `src/app/admin/`                  | The platform admin area                                                                                                             |
+| `src/modules/`                    | The feature modules (see "The modules"). Each holds its server code, input checks, screens and tests                                |
+| `src/components/ui/`              | The design system: Button, Field, LabeledControl, FormError, dialogs, skeletons, shared class names                                 |
+| `src/components/shell/`           | The app frame: side menu (`nav-items.ts`), top bar, page header, notification bell, loading screens                                 |
+| `src/config/`                     | Fixed lists and settings used by server and screens (statuses, plans, permissions, listing words, brand)                            |
+| `src/hooks/`                      | Hooks many screens share: useAction, useRedirectAction, useStoredChoice, useConfirm                                                 |
+| `src/lib/`                        | Library setup both sides use: the shared Zod checks (`schemas.ts`), the API client, the auth client                                 |
+| `src/utils/`                      | Small pure helpers usable anywhere: dates, money format and `MoneyAsNumbers`, tokens, slugs, sign-in links                          |
+| `src/server/`                     | The shared kernel: server code only, no business rules, never imports a module. Screens import it only with `import type`           |
+| `src/server/auth/`                | Sign-in setup (Better Auth), TenantContext, resolving the acting member (`resolve-context.ts`, with its `membership-repository.ts`) |
+| `src/server/http/`                | Route wrappers, error answers, rate limits (Redis), page sign-in helpers                                                            |
+| `src/server/jobs/`                | Queues and the worker: `defineJob`, answer-now-or-queue, `registry.ts` (every module's job file), `worker.ts`                       |
+| `src/server/email/`               | Sending emails, the email template, the sign-in emails, the helpers every notice shares                                             |
+| `src/server/push/`                | Sending push notifications                                                                                                          |
+| `src/server/db/`                  | The Prisma client (money read as numbers), transactions (Tx), database error helpers (`constraint-errors.ts`)                       |
+| `tests/unit/`                     | Fast tests of the shared kernel, with no database                                                                                   |
+| `tests/integration/`              | Database tests of the kernel and across modules (isolation, transactions, queue), and the shared test helpers                       |
 
-## All files (592)
+Tests in a module import the shared helpers as `@tests/integration/helpers`.
+
+## Reading the reference project's paths
+
+The file list below is the reference project, which was built in layers (`src/server/services/`,
+`src/server/repositories/`, `src/components/<area>/`). When a document or the reference names one of those paths,
+this is where it goes here:
+
+| Reference path                                                                                         | Here                                                                                           |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `src/server/services/<area>-service.ts`, `src/server/repositories/<area>-repository.ts`                | `src/modules/<module>/server/`, the module from "The modules"                                  |
+| `src/server/validation/schemas.ts`                                                                     | each module's `schemas.ts`; the shared pieces in `src/lib/schemas.ts`                          |
+| `src/server/services/notification-service.ts`                                                          | each module's `<module>-notifications.ts`; sign-in emails in `src/server/email/auth-emails.ts` |
+| `src/server/services/constraint-errors.ts`                                                             | `src/server/db/constraint-errors.ts`                                                           |
+| `src/server/services/audit.ts`                                                                         | `src/modules/audit/server/audit.ts`                                                            |
+| `src/server/auth/permissions.ts`                                                                       | `src/config/permissions.ts`                                                                    |
+| `src/server/ai/*`, `src/server/auth/mcp-token.ts`, `src/server/jobs/ai-jobs.ts`                        | `src/modules/assistant/server/`                                                                |
+| `src/server/ical/*`                                                                                    | `src/modules/calendar-sync/server/`                                                            |
+| `src/server/payments/whish.ts`                                                                         | `src/modules/payments/server/whish.ts`                                                         |
+| `src/server/billing/stripe.ts`                                                                         | `src/modules/payments/server/stripe.ts`                                                        |
+| `src/server/jobs/cron-jobs.ts`                                                                         | `src/modules/housekeeping/server/housekeeping-jobs.ts`                                         |
+| `src/lib/dates.ts`, `money.ts`, `format.ts`, `tokens.ts`, `slug.ts`, `zoned-time.ts`, `parent-path.ts` | `src/utils/`                                                                                   |
+| `src/components/<area>/*` (place, booking, dashboard editors, assistant…)                              | `src/modules/<module>/components/`                                                             |
+| A feature's `tests/unit/<area>.test.ts` or `tests/integration/<area>.test.ts`                          | `src/modules/<module>/tests/` (`.integration.test.ts` when it needs the database)              |
+
+## All files of the reference project (592)
 
 ```
 .env.example

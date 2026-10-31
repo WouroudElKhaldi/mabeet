@@ -58,9 +58,9 @@ how to test it. They are the source of truth. If the code and a document disagre
   its sections. Every screen follows it exactly.
 - `docs/architecture.md`, `docs/data-model.md`, `docs/functional-requirements.md`,
   `docs/non-functional-requirements.md`, `docs/requirements-matrix.md`: the requirements and the design.
-- `docs/erd.md`, `docs/erd-platform.md`, `docs/erd-ai-mcp.md`: made from the schema by `pnpm docs`. Read them for
+- `docs/erd.md`, `docs/erd-platform.md`, `docs/erd-ai-mcp.md`: made from the schema by `pnpm run docs`. Read them for
   the exact tables; `docs/erd-explained.md` says what each table means. Never edit the generated ERDs by hand.
-- `docs/openapi.json` (and `docs/openapi.yaml`, made from it by `pnpm docs`): the API contract. Build routes to
+- `docs/openapi.json` (and `docs/openapi.yaml`, made from it by `pnpm run docs`): the API contract. Build routes to
   match it. Never edit the YAML by hand.
 - `docs/scope-lock.md` and `docs/Ready for Business Demo-Ready Standard and Scope Lock.pdf`: what we promised for
   Demo Day and what "demo-ready" means. Never build anything on the scope's cut list, and never add a feature that
@@ -71,21 +71,39 @@ If that file does not exist yet in this repository, read the matching file of th
 (`se-next-stays`), which follows every rule here, but apply the new project's rules (`06` and `07`) over its older
 ones: three booking modes, full refunds, payments online only, no Kazderni.
 
-## The layers (never break them)
+## The modules and the layers (never break them)
 
-- Routes and pages (`src/app/**`): read the input, check it with a schema from `src/server/validation/schemas.ts`,
-  call ONE service function, and answer. No business rules. No database. Never import `@/server/repositories/*` or
-  `@/server/db/*`.
+The app is a modular monolith: one Next.js app, one database, split into feature modules
+(`docs/team/05-project-structure.md` lists them and what each owns).
+
+- A feature lives in one module, `src/modules/<name>/`: `server/` (its services, repositories, jobs and
+  notifications), `schemas.ts` (its Zod input checks), `components/` and `hooks/` (its screens), `tests/`.
+- A module has two doors and nothing else is imported from outside it: `@/modules/<name>` (`index.ts`: input checks,
+  types and screens, safe in the browser) and `@/modules/<name>/server` (`server.ts`: the services other code may
+  call). Its repositories are private. Inside a module, files import each other by relative path. ESLint enforces
+  this.
+- A module calls another module only through its `server.ts`, never its repositories, and the modules never call each
+  other in a circle. A change that must commit together across two modules passes `tx` to the other module's public
+  function. Rules that must be one transaction stay in one module: availability, holds, closed dates and the night
+  locks all live in `bookings`, so no double booking is checked and written in one place.
+- The shared kernel, `src/server/` (env, errors, database client, auth and tenancy, HTTP wrappers, jobs, email), has
+  no business rules and never imports a module. The one exception is `src/server/jobs/registry.ts`, where the
+  worker is put together.
+- Routes and pages (`src/app/**`): read the input, check it with a schema from the module's `index.ts` (shared pieces
+  in `src/lib/schemas.ts`), call ONE service function from its `server.ts`, and answer. No business rules. No
+  database. Never import a module's inner files or `@/server/db/*`.
 - Wrap every API route: `route(handler)` for public routes, `tenantRoute(paramsSchema, handler)` for
   `/api/workspaces/[businessId]/**`. Use `parseBody`, `parseQuery`, `parseParams` and `json`. Never call
   `request.json()` yourself.
-- Services (`src/server/services/<area>-service.ts`) hold every rule. Order: `requirePermission(ctx, "...")` first,
-  then business checks, then repository calls. Use `runInTransaction` for changes that go together, `recordAction`
-  for the audit log, and a job (`defineJob` in `src/server/jobs/queue.ts`) for notifications. Services are plain exported functions. When they work in a
+- Services (`src/modules/<name>/server/<area>-service.ts`) hold every rule. Order: `requirePermission(ctx, "...")`
+  first, then business checks, then repository calls. Use `runInTransaction` for changes that go together,
+  `recordAction` (from `@/modules/audit/server`) for the audit log, and a job (`defineJob` in
+  `src/server/jobs/queue.ts`) for notifications. Services are plain exported functions. When they work in a
   business, `ctx: TenantContext` is the first argument.
-- Repositories (`src/server/repositories/<area>-repository.ts`) are the only code that queries the database. The
+- Repositories (`src/modules/<name>/server/<area>-repository.ts`) are the only code that queries the database. The
   first argument is `db: Db` (or `tx: Tx` inside a transaction). Every business query filters by `businessId`. No
-  permission checks. No decisions.
+  permission checks. No decisions. A repository reads only its own module's tables; for another module's data, call
+  that module's `server.ts`.
 - Only the database keeper (named in `docs/team/README.md`) changes `prisma/schema.prisma` and
   `prisma/migrations/`. If the task needs a database change, stop and
   say so.
@@ -95,7 +113,7 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
 - Errors: throw `notFound`, `forbidden`, `conflict`, `invalid`, `unavailable` or `unauthenticated` from
   `src/server/errors.ts`. Write messages a guest or a host understands.
 - Database refusals: wrap the write with `overlapAsConflict(message, write)` or `duplicateAsConflict(message, write)`
-  from `src/server/services/constraint-errors.ts`. Never write your own try/catch for `23P01` or `P2002`.
+  from `src/server/db/constraint-errors.ts`. Never write your own try/catch for `23P01` or `P2002`.
 - Lists of values (statuses, methods, plans, kinds, scopes) come from `src/config/*.ts`. Never type
   `"HELD" | "CONFIRMED"` or `["PRO", "BUSINESS"]` by hand. Add new lists there, checked with `satisfies` against the
   Prisma enum.
@@ -104,7 +122,7 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
 - Money is whole minor units (`...Cents`: 9999 means 99.99), stored as `BigInt` and read as a plain `number`
   through the client's `moneyAsNumbers` extension (`src/server/db/client.ts`). Never use `Decimal`, `Float` or
   `Int` for money. When you use a generated Prisma type with money, wrap it: `MoneyAsNumbers<Booking>`
-  (`src/lib/money.ts`). In raw SQL, sum money as `::bigint` and read it with `moneyNumber()`, never `::int`. A new
+  (`src/utils/money.ts`). In raw SQL, sum money as `::bigint` and read it with `moneyNumber()`, never `::int`. A new
   money column also needs a line in `moneyAsNumbers`.
 - A booking is always paid in full. There are no deposits; never add a deposit field, setting or screen.
 - Plans are paid instantly only (Stripe or Whish). Never build paying by hand, receipt uploads or an approval step.
@@ -117,7 +135,7 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
   never cancel it, delete it, mark it inactive or move it to another table. Code that frees or takes our own nights
   (decisions, cancellations, expiries, closed dates) calls `recheckImportClashes(businessId, roomId)` after it
   commits.
-- Nights are ISO dates, or `DateRange { checkIn, checkOut }` from `src/lib/dates.ts`. The check-out night is free.
+- Nights are ISO dates, or `DateRange { checkIn, checkOut }` from `src/utils/dates.ts`. The check-out night is free.
 - All or nothing: every database step of one change goes in one `runInTransaction`, and nothing inside catches an
   error to carry on, so a failed step undoes the steps before it. Never call Stripe, Whish, R2 or email inside the
   transaction: write our row first, call after the commit, and undo an upload whose row was not saved. Each such
@@ -127,18 +145,21 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
   Postman or Swagger) is merged before its screens pull request (`docs/team/README.md`).
 - Small side writes (logs, usage, "last used") go in `inBackground(label, work)` from `src/server/background.ts`.
   Slow or must-happen work (AI answers, emails, push, scheduled jobs) is a job: `defineJob(queue, kind, handler)`,
-  with its module listed in `src/server/jobs/registry.ts`. Job data holds ids and plain values only, never a
+  with its file listed in `src/server/jobs/registry.ts`. Job data holds ids and plain values only, never a
   `TenantContext`. An AI route calls `runOrQueue(job, data, estimateSeconds)` and answers with `jobResponse`; the
   screen calls `api.run`. Never await slow work on the request path.
 - Functions that depend on the time take `now = new Date()` as the last argument, so tests can set the time.
 - Settings come from `env` (`src/server/env.ts`), never `process.env`. A new setting is declared there, explained in
   `.env.example`, and added to `docker-compose.prod.yml` if production needs it.
 - A new bell entry needs four things: the log call, the action in `notification-feed-service.ts`, an icon (and link)
-  in `notification-list.tsx`, and its text in the three message files. A new email or push is a `notify` job built
-  like `notifyImportConflict` in `notification-service.ts`.
+  in `notification-list.tsx`, and its text in the three message files. A new email or push is a `notify` job in the
+  module that owns the event (`<module>-notifications.ts`), built like `notifyInvitation` in
+  `src/modules/team/server/team-notifications.ts`.
 - Booking needs an account: public booking routes call `requireUser(request)` first.
-- No repeated code. Before you write a helper, search for one in `src/lib`, `src/hooks`, `src/components/ui` and
-  `src/config`. If two places need the same logic, put it in one shared place.
+- No repeated code. Before you write a helper, search for one in `src/utils`, `src/lib`, `src/hooks`,
+  `src/components/ui` and `src/config`. If two places need the same logic, put it in one shared place: `src/utils`
+  for pure functions (dates, money, slugs), `src/lib` for library setup both sides use (shared Zod checks,
+  `api-client`), `src/hooks` for hooks many screens use. A helper only one module needs stays in that module.
 - Names say what things are. For example `createBooking`, not `createHeldBooking` if it also creates confirmed
   bookings. No short forms, except common ones (id, url, ctx, tx, db).
 - Comments explain why, not what, in the same calm style as the existing code. No commented-out code. No TODOs.
@@ -191,14 +212,14 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
 - Raw SQL in a migration for what Prisma cannot express (EXCLUDE, CHECK, triggers, data moves). A new rule that old
   rows break is added `NOT VALID`. A migration that drops a column first moves any data worth keeping. Never edit a
   merged migration.
-- After any schema change: `pnpm exec prisma generate`, `pnpm docs` (ERDs and API contract), and update
+- After any schema change: `pnpm exec prisma generate`, `pnpm run docs` (ERDs and API contract), and update
   `docs/team/07-data-model.md` (and `docs/erd-explained.md` if a table's meaning changed).
 
 ## Rules for the AI
 
 - An AI tool is `defineTool({ name, description, input: z.object(...), requires, mutates, run })` in
-  `src/server/ai/team-tools.ts` (owners) or `guest-tools.ts` (guests). `run` calls an existing service with the
-  context. Tools never take a `businessId` and never query the database.
+  `src/modules/assistant/server/team-tools.ts` (owners) or `guest-tools.ts` (guests). `run` calls an existing service, through its
+  module's `server.ts`, with the context. Tools never take a `businessId` and never query the database.
 - Tools that change data have `mutates: true`. In the dashboard chat, the person confirms them. The model never runs
   them directly.
 - Wrap text written by guests with `guestWritten(text)`.
@@ -206,10 +227,10 @@ ones: three booking modes, full refunds, payments online only, no Kazderni.
 ## Before you say a task is done
 
 1. Run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm knip`, `pnpm test`, and the integration tests for the
-   feature (`pnpm exec vitest run --project integration tests/integration/<file>.test.ts`). Run them one at a time.
+   feature (`pnpm exec vitest run --project integration src/modules/<name>/tests/<file>.integration.test.ts`). Run them one at a time.
    Never run them next to `pnpm dev` on a small computer.
 2. If you added or changed an API route, write it in `docs/openapi.json` to match its Zod schema (once
-   `scripts/openapi.ts` exists, add it there instead: it generates the file) and run `pnpm docs` (it also writes `docs/openapi.yaml`).
+   `scripts/openapi.ts` exists, add it there instead: it generates the file) and run `pnpm run docs` (it also writes `docs/openapi.yaml`).
 3. Every new text is in `messages/en.json`, `ar.json` and `ar-LB.json` (Lebanese Arabic, spoken style). A key you
    stopped using is removed from all three.
 4. If you changed how something works (a rule, a flow, a table, a setting), update the matching file in
@@ -245,14 +266,14 @@ closed dates (F7, F11)">
 - docs/team/05-project-structure.md
 - docs/team/04-test-plan.md, the tests for <feature>
 - <the existing files to copy the style from, for example
-  src/server/services/booking-service.ts for a service,
+  src/modules/bookings/server/booking-service.ts for a service,
   src/app/api/workspaces/[businessId]/bookings/route.ts for a route>
 
 ## What to build
 <A numbered list. Each item names its file:>
-1. Repository: src/server/repositories/<area>-repository.ts — functions <names> (what each returns)
-2. Service: src/server/services/<area>-service.ts — functions <names>, permission <name>, rules <list>
-3. Schemas: src/server/validation/schemas.ts — <schemaName> with fields <list and limits>
+1. Repository: src/modules/<name>/server/<area>-repository.ts — functions <names> (what each returns)
+2. Service: src/modules/<name>/server/<area>-service.ts — functions <names>, permission <name>, rules <list>
+3. Schemas: src/modules/<name>/schemas.ts — <schemaName> with fields <list and limits>
 4. Routes: src/app/api/... — <METHOD path> calling <service function>
 5. Screen: src/app/... and src/components/... — <what the page shows and does>
 6. Text: keys under <namespace> in every language file
@@ -335,21 +356,21 @@ and set a special price per night for some dates.
 - docs/team/02-architecture-and-features.md, Part 3 (layers), Part 4 (requests), "R. Rooms (dashboard)", "P. Pricing"
 - docs/team/05-project-structure.md
 - docs/team/04-test-plan.md, the tests for Rooms and Special prices
-- src/server/services/booking-service.ts (service style), src/server/repositories/booking-repository.ts
+- src/modules/bookings/server/booking-service.ts (service style), src/modules/bookings/server/booking-repository.ts
   (repository style), src/app/api/workspaces/[businessId]/bookings/route.ts (route style),
   src/components/dashboard/settings-form.tsx (form style)
 
 ## What to build
-1. Repository: src/server/repositories/room-repository.ts — listRooms(db, businessId), findRoom(db, businessId, roomId),
+1. Repository: src/modules/rooms/server/room-repository.ts — listRooms(db, businessId), findRoom(db, businessId, roomId),
    createRoom(db, data), updateRoom(db, businessId, roomId, data) returning true or false, setRateOverrides(tx, ...)
-2. Service: src/server/services/room-service.ts — listRooms(ctx) and getRoom(ctx, id) need rooms.read;
+2. Service: src/modules/rooms/server/room-service.ts — listRooms(ctx) and getRoom(ctx, id) need rooms.read;
    createRoom, updateRoom and setSpecialPrice need rooms.manage; createRoom calls
    assertPlanAllowsAnother(ctx.businessId, "rooms"); every change calls recordAction
 3. Schemas: roomInput, roomUpdate (roomInput.partial()), specialPriceInput (at most 366 nights) in schemas.ts
 4. Routes: GET/POST /api/workspaces/[businessId]/rooms, GET/PATCH .../rooms/[roomId], GET/PUT .../rooms/[roomId]/prices
 5. Screen: src/app/dashboard/[businessId]/rooms/page.tsx (list), loading.tsx, room-editor.tsx, special-prices.tsx
 6. Text: dashboard.rooms.* in en.json and ar.json
-7. Tests: tests/integration/rooms.test.ts (see 04-test-plan.md)
+7. Tests: src/modules/rooms/tests/rooms.integration.test.ts (see 04-test-plan.md)
 
 ## Rules for this task
 - Create exportToken with secureToken() when the room is created.
@@ -362,7 +383,7 @@ No photos, no whole-place unit, no database change, no new packages.
 ## Done when
 - As the owner, on a 390 px screen, I add a room, change its price, and set a special price for 3 nights.
 - As front desk staff, the API answers 403 to POST /rooms.
-- tests/integration/rooms.test.ts passes; pnpm typecheck, lint, format:check, knip, test pass.
+- src/modules/rooms/tests/rooms.integration.test.ts passes; pnpm typecheck, lint, format:check, knip, test pass.
 
 ## How to work
 Write a plan first and show me. Build in the order above, with the type check after each piece. At the end, list the
@@ -383,7 +404,7 @@ price per night and the total, and goes to the booking form.
 - docs/team/02-architecture-and-features.md, "P. Places and rooms (public)", "P. Pricing", "D. Design system",
   Part 8 (how to build screens)
 - docs/team/08-design-system-and-pages.md, Part 6 (components) and the `/p/[slug]` entry in Part 8
-- src/components/ui/button.tsx, src/components/ui/field.tsx, src/lib/api-client.ts, src/lib/format.ts
+- src/components/ui/button.tsx, src/components/ui/field.tsx, src/lib/api-client.ts, src/utils/format.ts
 
 ## What to build
 1. src/components/booking/use-room-calendar.ts — useTakenNights(slug, roomId, month) and useRoomQuote(slug, roomId,
@@ -419,7 +440,7 @@ Prove that a member of business A cannot read or change anything of business B t
 
 ## Read first
 - docs/team/04-test-plan.md, "Tenancy, roles and permissions"
-- tests/integration/helpers.ts, tests/integration/http.ts, tests/integration/booking-flow.test.ts
+- tests/integration/helpers.ts, tests/integration/http.ts, src/modules/bookings/tests/booking-flow.integration.test.ts
 
 ## What to build
 tests/integration/tenant-isolation.test.ts with one describe block per area (rooms, bookings, calendar, team,

@@ -22,14 +22,15 @@ x-code: &code
     - path: .env
       required: false
   environment: &code-environment
-    DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal
-    TEST_DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal_test
+    DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+    TEST_DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet_test
     REDIS_URL: redis://redis:6379
     BETTER_AUTH_URL: http://localhost:3000
     # Development-only values, used when .env does not set its own. The live site's are in DigitalOcean.
     BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-development-only-secret-never-used-on-the-live-site}
     CRON_SECRET: ${CRON_SECRET:-development-only-cron-secret}
-    # No worker until task 5A adds it: everything runs inside the website.
+    # No separate worker in development: the website runs the jobs (emails, housekeeping) itself, so saving a file
+    # only needs the website to reload. `pnpm dev` on the computer, and production, run the worker beside it.
     JOBS_MODE: inline
     npm_config_store_dir: /pnpm-store
   volumes:
@@ -41,9 +42,9 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_USER: tafaddal
-      POSTGRES_PASSWORD: tafaddal
-      POSTGRES_DB: tafaddal
+      POSTGRES_USER: mabeet
+      POSTGRES_PASSWORD: mabeet
+      POSTGRES_DB: mabeet
     # Also reachable from the computer (Prisma Studio, a database tool) on port 5433, from this computer only.
     ports:
       - "127.0.0.1:5433:5432"
@@ -52,7 +53,7 @@ services:
       # Creates the integration tests' own database on first start.
       - ./scripts/docker-test-db.sql:/docker-entrypoint-initdb.d/test-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tafaddal"]
+      test: ["CMD-SHELL", "pg_isready -U mabeet"]
       interval: 5s
       retries: 10
 
