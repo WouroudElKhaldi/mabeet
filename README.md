@@ -1,4 +1,4 @@
-# Mabeet · تفضّل
+# Mabeet · مبيت
 
 Direct bookings for Lebanese guesthouses and B&Bs: guests book on the host's own page, paid online in full or
 arranged with the host, with one calendar that stays in sync with Booking.com and Airbnb. Hosts stop paying the 15 to

@@ -80,7 +80,8 @@ Owner: **Omar** (he owns the deployment).
    its own pull request first.
 6. **Never reformat or "tidy" files you don't own.** Run Prettier on your own files only.
 7. **Small pull requests, one feature each: the API first, then its screens.** The API is checked by hand in Postman
-   or Swagger before review (`04` Part 2). Pull `main` every morning.
+   or Swagger before review (`04` Part 2). Branch from `development`, open the pull request into `development`, and pull `development` every
+   morning. `main` only changes when we release (`README.md`, "GitHub").
 
 ## The order for Checkpoint 1
 

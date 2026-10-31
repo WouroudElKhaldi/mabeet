@@ -460,7 +460,7 @@ the cause in one sentence before you fix it.
 ### Example E: ask Claude to review your pull request before a person does
 
 ```
-Review the changes on this branch compared to main, as a strict reviewer for this project.
+Review the changes on this branch compared to development, as a strict reviewer for this project.
 Check them against CLAUDE.md and docs/team/02-architecture-and-features.md, Part 13 (the checklist):
 layers, permissions in services, schemas on every input, value lists from src/config, no repeated code,
 design tokens, text in every language, loading and empty states, and the tests from 04-test-plan.md.

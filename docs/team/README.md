@@ -63,7 +63,7 @@ merged pull request is undone with `git revert`. The exact rules: `02` Part 3, "
 
 ### Shared files
 
-Many features change these. Add your lines in the block for your feature, keep the existing order, and pull `main`
+Many features change these. Add your lines in the block for your feature, keep the existing order, and pull `development`
 every morning so conflicts stay small:
 
 - `src/server/validation/schemas.ts` (the Zod input checks)
@@ -84,10 +84,31 @@ Database keeper: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
 ### GitHub
 
-- **Nobody pushes to `main`.** Every change is a pull request with all checks green, one approval, the branch up to
-  date with `main`, and every comment answered. A merge to `main` updates the live site by itself.
-- **One branch per pull request:** `<type>/<feature>-<short-name>`, for example `feat/F7-api`, `feat/F7-screens`,
-  `fix/F9-confirm-button`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+- **Three kinds of branches:**
+  - `main`: what is live. A merge to `main` updates the live site by itself. Changed only by a release pull request
+    from `development`.
+  - `development`: where the three of us put our work together and test it. Every feature branch starts from it and
+    goes back into it.
+  - Feature branches, one per pull request, made from `development`: `<type>/<feature>-<short-name>`, for example
+    `feat/F7-api`, `feat/F7-screens`, `fix/F9-confirm-button`. Types: `feat`, `fix`, `refactor`, `test`, `docs`,
+    `chore`.
+
+  ```
+  git switch development
+  git pull
+  git switch -c feat/F7-api
+  ```
+
+- **Nobody pushes to `main` or `development` directly.** Every change is a pull request with all checks green, one
+  approval, the branch up to date with its target, and every comment answered.
+- **A feature goes into `development`:** open the pull request into `development` (not `main`), and use **Squash
+  and merge**, then delete the branch. If `development` changed meanwhile: `git pull --rebase origin development`,
+  run the checks again, `git push --force-with-lease`.
+- **`development` goes into `main` (a release):** when the three of us have tested our work together on
+  `development` (the core flow, on phones, in English and Arabic) and nothing is wrong, one of us opens a pull
+  request from `development` into `main`. It needs green checks and one approval, and is merged with **Create a merge
+  commit**, never squashed, so `main` and `development` keep the same history. After it, `development` already holds
+  everything in `main`.
 - **Small pull requests, opened early:** one thing each, under about 400 changed lines; a draft after the first
   commit; commit messages say what changed for the user ("Guests see taken nights greyed out").
 - **Every pull request says:** what it changes (for the user), the feature (`F7`, …), how to check it (steps and
@@ -98,11 +119,15 @@ Database keeper: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 - **Reviews**, within half a day: the layers, permissions in the service, a Zod check on every input, all or nothing
   for changes with several steps, no repeated code or hand-typed value lists, tokens only, text in every language,
   the tests from `04`. Each comment is **must fix** or **suggestion**.
-- **Merging:** **Squash and merge**, then delete the branch. If `main` changed: `git pull --rebase origin main`, run
-  the checks again, `git push --force-with-lease`.
-- **Undoing a merged change:** every pull request is one commit on `main`, so `git switch -c fix/<feature>-revert`,
-  `git revert <the commit>`, and open it as a pull request. A migration is never deleted: a new migration undoes it.
-  On your own branch, start a step again with `git restore` or `git reset`; never rewrite `main`.
+- **Undoing a merged change:**
+  - **A feature that broke `development`:** every feature is one squashed commit there, so make a branch from
+    `development`, `git revert <the commit>`, and open it as a pull request into `development`.
+  - **A release that broke the live site:** make a branch from `main`, `git revert -m 1 <the release's merge
+commit>`, and open it as a pull request into `main`; the site goes back to the release before. Then fix the
+    problem on `development` as usual. Before the next release, revert that revert on `development` (`git revert
+<the revert commit>`), or the reverted work never comes back to `main`.
+  - A migration is never deleted: a new migration undoes it. On your own branch, start a step again with
+    `git restore` or `git reset`; never rewrite `main` or `development`.
 - **Never put secrets in the repository:** no keys, passwords or tokens in code, commits, screenshots or Discord.
   Yours go in `.env`; live ones in DigitalOcean's settings and GitHub secrets. A secret pushed by mistake is
   replaced, not just deleted.
@@ -119,7 +144,7 @@ code, each one is a `route.ts` file under `src/app/api/`.
 The functions that save and change bookings safely, so two guests never get the same room on the same night.
 
 **Branch**
-Your own copy of the code in Git, where you work on one task without changing `main`.
+Your own copy of the code in Git, where you work on one task without changing `development` or `main`.
 
 **CI (checks)**
 Automatic checks that run on GitHub for every pull request: types, lint, format, unused code and tests. A red check
@@ -161,7 +186,7 @@ A standard way for AI apps (Claude, Cursor, Codex) to call our tools. Our MCP se
 about their business.
 
 **Merge**
-Adding your branch's changes into `main`.
+Adding your branch's changes into another branch: a feature into `development`, a release into `main`.
 
 **Minor units (cents)**
 How money is stored: a whole number of the currency's smallest unit, so 99.99 is `9999`. Columns end in `Cents`,
@@ -179,7 +204,8 @@ occupancies.
 A right to do something, such as `bookings.decide` (confirm or decline bookings). Roles are lists of permissions.
 
 **Pull request (PR)**
-A request on GitHub to merge your branch into `main`. Others review it first.
+A request on GitHub to merge your branch into `development` (or, for a release, `development` into `main`). Others
+review it first.
 
 **Redis**
 A small in-memory store running beside the website in Docker. We use it only to count requests for rate limits.

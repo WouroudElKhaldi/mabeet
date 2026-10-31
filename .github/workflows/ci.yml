@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, development]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -75,5 +75,5 @@ jobs:
       # Overlap constraint, seat trigger, race tests, tenant isolation over HTTP and MCP.
       - run: pnpm test:integration
 
-  # The deploy to DigitalOcean (only a push to main that passed both jobs above) is added by task 3C in
-  # docs/team/01-team-plan.md.
+  # The deploy to DigitalOcean (only a push to main that passed both jobs above, never development) comes with the
+  # deployment work (docs/team/01-work-split.md, host side).
