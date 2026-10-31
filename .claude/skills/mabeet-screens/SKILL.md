@@ -1,5 +1,5 @@
 ---
-name: tafaddal-screens
+name: mabeet-screens
 description: Build or change a Mabeet page, screen or component - the fixed design system (tokens, five palettes, light and dark), shared components, the four states of every screen, phones first, English and Arabic right-to-left. Use before touching any page under src/app or anything in src/components.
 ---
 

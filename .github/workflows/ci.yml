@@ -47,7 +47,7 @@ jobs:
         image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: tafaddal_test
+          POSTGRES_DB: mabeet_test
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
@@ -55,8 +55,8 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tafaddal_test
-      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tafaddal_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mabeet_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mabeet_test
       BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
       BETTER_AUTH_URL: http://localhost:3000
       CRON_SECRET: ci-cron-secret-ci-cron-secret

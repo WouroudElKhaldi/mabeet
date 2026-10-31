@@ -1,5 +1,5 @@
 ---
-name: tafaddal-database
+name: mabeet-database
 description: Mabeet's database - the Prisma schema, migrations, the no-double-booking EXCLUDE constraint, money as BigInt cents, soft delete, locks, and who may change the schema. Use before writing a repository query, raw SQL or a seed, or when a task seems to need a database change.
 ---
 
@@ -19,4 +19,4 @@ and Part 6 of `docs/team/02-architecture-and-features.md` (occupancy, money tabl
   runs in `runInTransaction` with `lockActiveRoom` first.
 - Money is `BigInt` minor units, read as numbers through `moneyAsNumbers`. Business rows are soft deleted
   (`isDeleted`), and every read filters them out.
-- After a schema change: `pnpm exec prisma generate`, `pnpm docs`, and update `07-data-model.md`.
+- After a schema change: `pnpm exec prisma generate`, `pnpm run docs`, and update `07-data-model.md`.
