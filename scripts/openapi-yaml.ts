@@ -1,7 +1,7 @@
 /**
  * Writes docs/openapi.yaml from docs/openapi.json, so the API contract can be read (and imported into tools such
  * as Postman or Swagger UI) in either format and the two never drift. Run: pnpm docs:openapi-yaml (part of
- * pnpm docs). Once scripts/openapi.ts generates the JSON from the routes' Zod schemas, `pnpm docs` runs it first.
+ * pnpm run docs). Once scripts/openapi.ts generates the JSON from the routes' Zod schemas, `pnpm run docs` runs it first.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { stringify } from "yaml";

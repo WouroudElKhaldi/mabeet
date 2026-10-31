@@ -2,20 +2,19 @@
 # the same image DigitalOcean runs. For working on the code, use docker-compose.yml (`docker compose up`) instead.
 # Settings come from .env (DATABASE_URL and REDIS_URL are overridden to point at the db and redis services).
 #   docker compose -f docker-compose.prod.yml up --build
-#   docker compose -f docker-compose.prod.yml --profile worker up --build   # also the worker, once it exists (task 5A)
-#   docker compose -f docker-compose.prod.yml --profile worker up --scale worker=2   # more workers share the queues
+#   docker compose -f docker-compose.prod.yml up --scale worker=2   # more workers share the queues
 services:
   db:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_USER: tafaddal
-      POSTGRES_PASSWORD: tafaddal
-      POSTGRES_DB: tafaddal
+      POSTGRES_USER: mabeet
+      POSTGRES_PASSWORD: mabeet
+      POSTGRES_DB: mabeet
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tafaddal"]
+      test: ["CMD-SHELL", "pg_isready -U mabeet"]
       interval: 5s
       retries: 10
 
@@ -46,7 +45,7 @@ services:
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal
+      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
     depends_on:
       db: { condition: service_healthy }
 
@@ -60,7 +59,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal
+      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
       REDIS_URL: redis://redis:6379
       JOBS_MODE: queue
     ports:
@@ -70,16 +69,14 @@ services:
       redis: { condition: service_healthy }
 
   # Must always run beside the website in production: without it, AI answers, emails and scheduled jobs wait in
-  # the queue. Comes back by itself after a crash or a reboot. Behind a profile until the queues task adds
-  # `pnpm worker`; that task removes the profile.
+  # the queue. Comes back by itself after a crash or a reboot.
   worker:
-    profiles: ["worker"]
     build: .
     command: ["pnpm", "worker"]
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://tafaddal:tafaddal@db:5432/tafaddal
+      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
       JOBS_MODE: queue
     # Lets in-flight jobs finish on a deploy (the worker waits up to 60s).
     stop_grace_period: 70s

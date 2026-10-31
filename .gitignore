@@ -29,6 +29,9 @@ npm-debug.log*
 .env*
 !.env.example
 
+# platform admins' sign-in details, written by `pnpm admins:create`
+.admin-credentials
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

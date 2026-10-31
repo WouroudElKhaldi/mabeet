@@ -262,9 +262,19 @@ One overall star rating and a comment. The owner can reply, and an admin can hid
 
 ### 29. ActivityLog
 
-A diary of "who did what," for example "Sara confirmed booking #123."
+One person's own diary: what they did and what happened to them, for example "You asked for 2 nights at Beit
+Batroun" or "Your booking was confirmed." Shown on their account's Activity page.
 
 - It _may_ belong to **one user** and _may_ belong to **one business**.
+
+### 29a. AuditLog
+
+What happened in a business or on the platform, and who did it, for example "Sara confirmed booking #123" or "A
+payment arrived." The business and admin notification bells and the admin audit trail read it.
+
+- It _may_ have **one actor** (a user); it has none for the system's own events (a payment callback, a calendar
+  clash).
+- It _may_ belong to **one business** (platform events have none).
 
 ### 30. PushSubscription
 
