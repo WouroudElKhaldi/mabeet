@@ -43,10 +43,10 @@ section 12.
 
 Each feature is built by one person, from the database to the screen, in two pull requests:
 
-1. **The API** (`feat/<feature>-api`): repositories, the service, the routes with their Zod schemas, the route in
-   `docs/openapi.json` (then `pnpm docs`), and the unit and integration tests. Before asking for a review, run the
+1. **The API** (for example `w-rooms-api`): repositories, the service, the routes with their Zod schemas, the route in
+   `docs/openapi.json` (then `pnpm run docs`), and the unit and integration tests. Before asking for a review, run the
    routes by hand in Postman or Swagger (`04` Part 2, "Checking an API by hand"). Merged first.
-2. **The screens** (`feat/<feature>-screens`): the pages and components on the merged routes, with `api` from
+2. **The screens** (for example `w-rooms-screens`): the pages and components on the merged routes, with `api` from
    `src/lib/api-client.ts`, every text in the three message files, the `loading.tsx` and the empty state.
 
 The shared bases come before any feature, so nobody writes their own: the server base (`env`, errors, the database
@@ -66,10 +66,11 @@ merged pull request is undone with `git revert`. The exact rules: `02` Part 3, "
 Many features change these. Add your lines in the block for your feature, keep the existing order, and pull `development`
 every morning so conflicts stay small:
 
-- `src/server/validation/schemas.ts` (the Zod input checks)
+- `src/lib/schemas.ts` (only the small input pieces every module shares; each module's own checks are in its
+  `schemas.ts`)
 - `messages/en.json`, `messages/ar.json`, `messages/ar-LB.json` (one block per area, same keys in all three)
 - `src/components/dashboard/nav-items.ts` (one line per dashboard page)
-- `docs/openapi.json`: a route you add or change is written there, matching its Zod schema, then `pnpm docs` (which
+- `docs/openapi.json`: a route you add or change is written there, matching its Zod schema, then `pnpm run docs` (which
   also writes `docs/openapi.yaml`). Once `scripts/openapi.ts` exists, it generates the file from the schemas instead
 - `knip.json`: the first change that imports a library removes it from `ignoreDependencies`
 
@@ -80,7 +81,7 @@ every morning so conflicts stay small:
 need in your pull request or on Discord, and it comes in its own small pull request first. Never edit a merged
 migration; add a new one.
 
-Database keeper: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+Database keeper: **Wouroud**.
 
 ### GitHub
 
@@ -89,14 +90,15 @@ Database keeper: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
     from `development`.
   - `development`: where the three of us put our work together and test it. Every feature branch starts from it and
     goes back into it.
-  - Feature branches, one per pull request, made from `development`: `<type>/<feature>-<short-name>`, for example
-    `feat/F7-api`, `feat/F7-screens`, `fix/F9-confirm-button`. Types: `feat`, `fix`, `refactor`, `test`, `docs`,
-    `chore`.
+  - Feature branches, one per pull request, made from `development`: the first letter of your name, a dash, and
+    what you are doing, in lowercase words joined by dashes: `w-` for Wouroud, `f-` for Fatima, `o-` for Omar. For
+    example `w-core-server-base`, `f-place-page-screens`, `o-rooms-api`, `o-fix-confirm-button`. The pull request
+    names the feature (`F7`, …).
 
   ```
   git switch development
   git pull
-  git switch -c feat/F7-api
+  git switch -c w-core-server-base
   ```
 
 - **Nobody pushes to `main` or `development` directly.** Every change is a pull request with all checks green, one
@@ -214,7 +216,7 @@ A small in-memory store running beside the website in Docker. We use it only to 
 The project's code on GitHub.
 
 **Repository file (in the code)**
-A file in `src/server/repositories/`. It is the only place that talks to the database.
+A file in `src/modules/<name>/server/`. It is the only place that talks to the database.
 
 **Review**
 Another person reads your pull request and comments before it is merged.
@@ -226,10 +228,10 @@ A named set of permissions, such as "Owner" or "Front desk".
 The list of tables and columns, in `prisma/schema.prisma`.
 
 **Schema (Zod)**
-A check for input data, for example "the phone must start with +". They live in `src/server/validation/schemas.ts`.
+A check for input data, for example "the phone must start with +". They live in each module's `schemas.ts`.
 
 **Service**
-A file in `src/server/services/`. It holds the business rules and the permission checks.
+A file in `src/modules/<name>/server/`. It holds the business rules and the permission checks.
 
 **Soft delete**
 Marking a row `isDeleted = true` instead of removing it. Business data is never really deleted; every read skips

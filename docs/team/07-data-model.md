@@ -26,7 +26,8 @@ These tables keep the same columns and meaning as in `docs/erd.md`:
 - **Money:** `Refund`, `Payout`, `PlanPayment`, `WebhookEvent`,
   `WhishSandboxPayment` (the Whish simulator).
 - **Guests:** `Favorite`, `Review`.
-- **Logs and settings:** `ActivityLog`, `SiteSetting`. (Rate limits live in Redis, not in a table.)
+- **Logs and settings:** `AuditLog` (what happens in a business or on the platform; the bells read it), `ActivityLog`
+  (one person's own timeline), `SiteSetting`. (Rate limits live in Redis, not in a table.)
 - **AI:** `ApiKey`, `McpAuditLog`, `AiUsage`, `AiChat`, `AiChatMessage`.
 - **Push:** `PushSubscription`.
 
@@ -38,7 +39,7 @@ These were settled on purpose. Do not undo them, and follow them in every new ta
   outgrow a 32-bit int (5 nights at 4,500,000 LBP is 2.25 billion cents). 99.99 is stored as 9999; never use
   `Decimal` or `Float` for money. The client (`src/server/db/client.ts`) reads them back as plain numbers through its
   `moneyAsNumbers` extension, so a new money column must be added there too. Generated types with money are wrapped
-  in `MoneyAsNumbers<…>` (`src/lib/money.ts`). Raw SQL sums of money use `::bigint` and `moneyNumber()`.
+  in `MoneyAsNumbers<…>` (`src/utils/money.ts`). Raw SQL sums of money use `::bigint` and `moneyNumber()`.
 - **No deposits.** A booking is always paid in full: there is no `depositPercent`, `depositCents` or
   `onlineAmount`. `Business.paymentInstructions` (how to pay the host directly) replaces the old deposit
   instructions.
@@ -169,7 +170,7 @@ any new plan payment that is not `STRIPE` or `WHISH`.
 
 ### 2.7 Notifications for payments and refunds
 
-No table change. `ActivityLog` already records `payment.online_confirmed`, refunds and expiries, and the bell reads
+No table change. `AuditLog` already records `payment.online_confirmed`, refunds and expiries, and the bell reads
 from it.
 
 ### 2.8 Job queues: a `pgboss` schema beside ours
@@ -239,4 +240,4 @@ map pin and the `OfferingSession` dates that exist.
    `startsOn` (a `CHECK`), who created it, `isDeleted`. Indexed by dates.
 4. How a sponsor pays is not decided yet. If it is paid through the platform, it is paid instantly with Stripe or
    Whish like plans, and its money is `BigInt` minor units with a line in `moneyAsNumbers`.
-5. After the migration: `pnpm exec prisma generate`, `pnpm docs`, and update `docs/erd-explained.md`.
+5. After the migration: `pnpm exec prisma generate`, `pnpm run docs`, and update `docs/erd-explained.md`.

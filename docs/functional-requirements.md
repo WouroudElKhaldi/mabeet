@@ -1,7 +1,8 @@
 # Functional requirements (new project)
 
 What the product does, for each kind of user. This replaces the reference project's list for the new project.
-How well it must work is in `docs/non-functional-requirements.md`.
+How well it must work is in `docs/non-functional-requirements.md`. The team's copy,
+`docs/team/06-functional-requirements.md`, holds the same text: change both in the same pull request.
 
 ## The problem
 

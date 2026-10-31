@@ -26,20 +26,29 @@ Five ways in, one set of services:
  worker ────────┘                                  + pgboss schema (queues)
 ```
 
-## Layers
+## Modules and layers
+
+The app is a modular monolith: one Next.js app and one database, split into feature modules in
+`src/modules/<name>/` (bookings, rooms, team, payments…). Each module holds its own layers below, and other
+code reaches it only through its two doors: `index.ts` (input checks, types, screens) and `server.ts` (its
+services). The shared kernel in `src/server/` (database client, auth and tenancy, route wrappers, jobs, email)
+never depends on a module. What must be one transaction stays in one module: availability, holds and closed
+dates all live in `bookings`, so no double booking is decided in one place. The full map is in
+`docs/team/05-project-structure.md`.
 
 | Layer            | Lives in                                       | Does                                                                                             | Never does                   |
 | ---------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------- |
 | **Routes/pages** | `src/app/**`                                   | Read the request, validate it with a Zod schema, find out who is calling, call a service, answer | Business rules, Prisma calls |
-| **Services**     | `src/server/services/*`                        | Permissions, business rules, transactions, notifications                                         | Build HTTP responses         |
-| **Repositories** | `src/server/repositories/*`                    | Prisma queries, always scoped by `businessId`                                                    | Decide anything, check roles |
+| **Services**     | `src/modules/*/server/*-service.ts`            | Permissions, business rules, transactions, notifications                                         | Build HTTP responses         |
+| **Repositories** | `src/modules/*/server/*-repository.ts`         | Prisma queries, always scoped by `businessId`                                                    | Decide anything, check roles |
 | **Database**     | `prisma/schema.prisma`, `prisma/migrations/**` | Final guarantees: no overlapping nights, no oversold seats, sane values                          | Trust that the code is right |
 
-The linter enforces the arrows (`eslint.config.mjs`): only repositories may import Prisma at runtime, and nothing
-in `src/app` may import a repository or the database client. A route that skips a layer fails `pnpm lint` and CI.
+The linter enforces the arrows (`eslint.config.mjs`): only repositories may import Prisma at runtime, nothing
+in `src/app` may import a repository or the database client, nobody imports a module's inner files, and the
+kernel never imports a module. A route that skips a layer fails `pnpm lint` and CI.
 
 Every API route goes through one wrapper (`src/server/http/route.ts`). It parses input with the route's Zod
-schema (`src/server/validation/schemas.ts`), turns domain errors into HTTP codes, refuses cross-site writes, and
+schema (from its module's `schemas.ts`; shared pieces in `src/lib/schemas.ts`), turns domain errors into HTTP codes, refuses cross-site writes, and
 never leaks internal errors. Bad input gets `400` with the failing field. Routes that take no input (cron jobs,
 `/api/me/bookings`, `/api/me/export`) have no schema. The Better Auth, MCP and Stripe endpoints hand their input
 to code that checks it: Better Auth, each MCP tool's own Zod schema, and Stripe's signature check.
@@ -54,10 +63,12 @@ to code that checks it: Better Auth, each MCP tool's own Zod schema, and Stripe'
   repositories run queries.
 - **Raw SQL is always Prisma's tagged `$queryRaw` template.** Values are bound parameters; shared
   fragments are `Prisma.sql`. There is no string-built SQL.
-- **Database refusals become clear errors in one place.** `src/server/services/constraint-errors.ts` turns an
+- **Database refusals become clear errors in one place.** `src/server/db/constraint-errors.ts` turns an
   overlap (`23P01`) or a duplicate (`P2002`) into a `409` with a message people can act on.
-- **Side work runs after the response.** `inBackground` (`src/server/background.ts`) runs emails, push, AI tool
-  audit logs and AI usage records after the answer is sent, so they never slow down or break a request.
+- **Side work runs after the response.** Small side writes (AI tool audit logs, AI usage records, "last used"
+  times) go in `inBackground` (`src/server/background.ts`), run after the answer is sent. Emails and push are jobs
+  on the `notify` queue, sent after the commit (see [Queues and workers](#queues-and-workers)). Neither ever slows
+  down or breaks a request.
 
 ## Authentication, authorization and tenant isolation
 
@@ -97,25 +108,30 @@ Repositories take `businessId` from the context in every query. A record id from
 and answers `404 Not found`, even inside your own workspace URL. Tests check this over HTTP and MCP
 (`tests/integration/tenant-isolation.test.ts`, `mcp-isolation.test.ts`).
 
-Roles are made by owners from a fixed list of permissions (`src/server/auth/permissions.ts`). Nobody can grant a
-permission they don't hold, and read-only AI keys keep only the `*.read` permissions of their member.
+Roles are made by owners from a fixed list of permissions (`src/config/permissions.ts`). Nobody can grant a
+permission they don't hold, and read-only AI keys keep only the reading permissions of their member (`rooms.read`,
+`calendar.read`, `bookings.read`, `guests.contact`, `analytics.read`, `ai.use`).
 
-**Guests** need no membership. Their pages are public by place slug. They reach their own booking through an
-unguessable private link (`publicToken`, 32 random bytes), and signed-in guests also see it in their account.
+**Guests** need no membership. Place pages are public by slug, but booking needs an account. A booking's private
+link (`publicToken`, 32 random bytes) opens only for the signed-in guest who made it; they also see it in their
+account.
 
 ## Booking vs Occupancy
 
 This split is the core of the design.
 
-- **`Booking`** is the guest's request and its lifecycle: who, how many, price (always paid in full), what is due online,
-  and a status (`src/server/services/booking-status.ts`):
+- **`Booking`** is the guest's request and its lifecycle: who, how many, the price (an online payment is always the
+  full `totalCents`), the business's `bookingMode` copied onto it, and a status
+  (`src/modules/bookings/server/booking-status.ts`):
 
 ```
-request:  HELD ──host accepts──▶ CONFIRMED                       (paid to the host)
-          HELD ──host accepts──▶ AWAITING_PAYMENT ──paid──▶ CONFIRMED   (paid online)
-instant:  CONFIRMED at once                                       (paid to the host)
-          AWAITING_PAYMENT ──paid within 30 min──▶ CONFIRMED      (paid online)
-any time before it starts: DECLINED, EXPIRED (no answer / no payment) or CANCELLED
+automatic:            AWAITING_PAYMENT ──paid within 10 min──▶ CONFIRMED
+online with approval: AWAITING_PAYMENT ──paid within 10 min──▶ HELD ──owner confirms──▶ CONFIRMED
+                                                                    ──owner declines──▶ DECLINED (full refund)
+offline:              HELD ──owner confirms──▶ CONFIRMED            (paid between the owner and the guest)
+                           ──owner declines──▶ DECLINED
+EXPIRED: not paid within 10 minutes, or the owner did not answer within holdHours (full refund if paid)
+CANCELLED: by the guest or the host, from any active status (full refund if paid online)
 ```
 
 - **`Occupancy`** is inventory: "this room is taken on these nights". One row per taken range, whatever the
@@ -124,7 +140,7 @@ any time before it starts: DECLINED, EXPIRED (no answer / no payment) or CANCELL
 | `kind`     | Comes from                                                              | `active` while                          |
 | ---------- | ----------------------------------------------------------------------- | --------------------------------------- |
 | `DIRECT`   | A Mabeet booking (one row per booking)                                  | `HELD`, `AWAITING_PAYMENT`, `CONFIRMED` |
-| `MANUAL`   | A host closing nights: maintenance, a phone booking, Kazderni           | until the host removes it               |
+| `MANUAL`   | A host closing nights: maintenance, a booking taken by phone            | until the host removes it               |
 | `IMPORTED` | An event read from an Airbnb or Booking.com calendar link (or any iCal) | until it leaves the platform feed       |
 
 Availability, the calendar, the iCal export and the overlap rule all read `Occupancy`, never `Booking`. A new
@@ -152,7 +168,7 @@ if (!(await isTaken(room, dates))) await createBooking(room, dates); // two requ
 Two requests can run the check at the same moment, both see a free room, and both insert. Only the database
 sees every write, so it has the final say.
 
-**What happens on a request** (`requestBooking` in `src/server/services/booking-service.ts`):
+**What happens on a request** (`requestBooking` in `src/modules/bookings/server/booking-service.ts`):
 
 ```
 POST /api/public/places/{slug}/bookings
@@ -166,9 +182,10 @@ BEGIN
   expire this room's stale holds              frees nights nobody answered for
   any IMPORTED night in the range?            yes ──▶ 409 "dates taken"
   price the stay
-  INSERT Booking (HELD) + Occupancy (DIRECT)  occupancy_no_overlap ──▶ 23P01 ──▶ 409 (overlapAsConflict)
+  INSERT Booking + Occupancy (DIRECT)         occupancy_no_overlap ──▶ 23P01 ──▶ 409 (overlapAsConflict)
+    (AWAITING_PAYMENT in the online modes, HELD offline)
   log the activity
-COMMIT ──▶ 201, then email + push in the background
+COMMIT ──▶ 201, then the email and push go on the notify queue
 ```
 
 The room lock makes requests for one room take turns, which keeps the check against imported nights correct.
@@ -176,11 +193,12 @@ That check has to be in code, because imported rows are outside the constraint (
 itself is refused by the constraint, and nothing in the code checks it first. If the lock were removed, the
 constraint would still refuse the overlap.
 
-**Requests hold the room right away.** The occupancy is created as `HELD`, not when the host confirms. Two
-guests never wait on the same nights, and the loser learns at once. Holds last `holdHours` (24 by default).
-Each new request on a room expires that room's stale holds, and a scheduled job expires the rest.
+**Requests hold the room right away.** The occupancy is active from the moment the booking is saved, not when the
+owner confirms. Two guests never wait on the same nights, and the loser learns at once. An unpaid booking holds
+them for 10 minutes; a booking waiting for the owner, for `holdHours` (24 by default). Each new request on a room
+expires that room's stale holds, and a scheduled job expires the rest.
 
-**The race test** (`tests/integration/booking-race.test.ts`): one room, 20 `requestBooking` calls for the same
+**The race test** (`src/modules/bookings/tests/booking-race.integration.test.ts`): one room, 20 `requestBooking` calls for the same
 nights started at the same moment through `Promise.allSettled`. Exactly 1 succeeds, 19 fail with `CONFLICT`, the
 database has exactly one `HELD` booking and exactly one active occupancy. A second test checks that parallel
 requests for different nights all succeed.
@@ -188,7 +206,7 @@ requests for different nights all succeed.
 **Seats work the same way.** Experiences sell seats in an `OfferingSession`. The `session_seats_guard` trigger
 locks the session row and refuses any `SessionBooking` that would go over capacity. `session_capacity_guard`
 refuses lowering capacity below seats sold. Test: 20 guests ask for the last 5 seats at once, exactly 5 get one
-(`tests/integration/session-seats.test.ts`), plus a row inserted by hand that the trigger still refuses.
+(`src/modules/bookings/tests/session-seats.integration.test.ts`), plus a row inserted by hand that the trigger still refuses.
 
 ## Calendar synchronization
 
@@ -199,10 +217,10 @@ CalendarFeed (room, URL, source)
   │  every 15 min (scheduled job) · on "Sync now" · right before a host confirms a booking on that room
   ▼
 fetch: https only, public addresses only, no redirects, 10 s timeout,
-       2 MB cap enforced while streaming (a huge feed is cut off, never buffered)  (src/server/ical/safe-fetch.ts)
+       2 MB cap enforced while streaming (a huge feed is cut off, never buffered)  (src/modules/calendar-sync/server/safe-fetch.ts)
   ▼
 parse: all-day and timed events → [checkIn, checkOut) in the place's timezone;
-       drop cancelled, past, > 540 days ahead and UID-less events  (src/server/ical/parse-feed.ts)
+       drop cancelled, past, > 540 days ahead and UID-less events  (src/modules/calendar-sync/server/parse-feed.ts)
   ▼
 BEGIN · lock the room
   upsert Occupancy (IMPORTED) by (feedId, externalUid)    re-reading a feed never makes duplicates
@@ -230,7 +248,7 @@ Room.exportToken (random, private) ──▶ GET /api/ical/{token}.ics ──▶
 ```
 
 The feed carries no guest names or contacts, and no imported events (echoing Airbnb's nights back to Airbnb
-would make loops). An unknown token answers `404`. Event UIDs (`{occupancyId}@se-next-stays`) never change,
+would make loops). An unknown token answers `404`. Event UIDs (`{occupancyId}@mabeet`) never change,
 because the platforms track exported events by UID.
 
 ### What Mabeet can and cannot promise
@@ -270,7 +288,7 @@ windows. Without `REDIS_URL` (local development, tests) the counts live in the p
 | `cron`   | Calendar sync (every 15 min), housekeeping (every 5 min)         | 1                  | none: the next run comes soon | 1 day                |
 
 **Answer now, or queue.** AI routes call `runOrQueue` (`src/server/jobs/queue.ts`) with an estimate, in seconds,
-worked out from the input before the model is called (`src/server/jobs/ai-jobs.ts`):
+worked out from the input before the model is called (`src/modules/assistant/server/ai-jobs.ts`):
 
 - Travel assistant: 15 s (two or three DeepSeek calls: search, maybe search again, then reply; 6–20 s measured), plus
   1 s for every 1,500 characters of the conversation sent.
@@ -290,7 +308,7 @@ worker, and the web process is never tied up for 30–90 seconds.
 **Watching the answer arrive.** Queueing frees the website but can't make the model faster, so a queued answer
 is shown as it is written:
 
-1. The worker streams each DeepSeek call (`stream: true`, `complete(…, onText)` in `src/server/ai/deepseek.ts`).
+1. The worker streams each DeepSeek call (`stream: true`, `complete(…, onText)` in `src/modules/assistant/server/deepseek.ts`).
 2. The chat loop reports progress (`onProgress` in `assistant.ts`): the tool in use (`step`), then the reply so
    far (`text`).
 3. The job saves it to `JobProgress` at most every 300 ms (`src/server/jobs/progress.ts`) and deletes the row
@@ -327,13 +345,14 @@ expires and is retried.
 | Housekeeping  | every 5 min (UTC)  | `POST /api/cron/expire-holds` | Re-checks online payments still pending after 2 minutes; expires unanswered and unpaid bookings; ends Whish plan months that ran out | Each new request on a room expires that room's stale holds; a returning guest's payment is checked at once |
 
 The worker keeps the schedule in the database, so with several workers each run happens once. The HTTP endpoints
-stay for a manual run: both need `Authorization: Bearer $CRON_SECRET` (compared in constant time), and
-`.github/workflows/scheduled-jobs.yml` still calls them every 15 minutes while the site is on Vercel (no worker there); once the worker runs on DigitalOcean, its `schedule:` lines are deleted and it stays as a manual fallback.
+stay for a manual or outside run: both need `Authorization: Bearer $CRON_SECRET` (compared in constant time).
 
 ## Notifications
 
 Emails (Resend) and push notifications (Web Push with VAPID keys) are sent **after** the transaction commits, as
-jobs on the `notify` queue, and never throw (`src/server/services/notification-service.ts`). A mail or push
+jobs on the `notify` queue, and never throw. Each module sends its own, from `<module>-notifications.ts`
+(for example `src/modules/team/server/team-notifications.ts`); the sign-in emails are in
+`src/server/email/auth-emails.ts`. A mail or push
 outage can't undo or slow a booking, and a failed delivery is retried up to 4 times. A job carries only ids and
 amounts; the worker loads the booking fresh, so the notice reflects what is true when it is sent. Emails carry
 idempotency keys, so a retry never sends one twice. A device that has unsubscribed is forgotten the next time a push to it fails.
@@ -341,8 +360,8 @@ idempotency keys, so a retry never sends one twice. A device that has unsubscrib
 Whoever gets an email about a booking also gets a push on every device they turned notifications on for:
 
 - hosts and staff who can decide bookings: new requests and guest cancellations
-- guests: confirmed, declined, expired, cancelled, payment recorded. Guests without an account follow one booking
-  from its private link
+- guests: confirmed, declined, expired, cancelled, paid and refunded, on every device of their account (booking
+  needs an account)
 - platform admins: AI budget warnings
 - hosts and staff who can decide bookings: questions from a place's Contact host page, sent with the guest's
   address as reply-to, so answering the email reaches the guest. A host can turn this page off (WhatsApp only) for
@@ -360,9 +379,10 @@ live.
 
 ## Payments
 
-Mabeet takes **no commission or fee on bookings**. Guests either pay the host directly (recorded by the host) or
-online into Mabeet's own Whish or Stripe account, and Mabeet owes every cent of that to the host. Mabeet's income
-is plan payments only (`PlanPayment`).
+Mabeet takes **no commission or fee on bookings**. In the two online modes, guests pay the full amount into
+Mabeet's own Whish or Stripe account, and Mabeet owes every cent of that to the host. In offline mode the guest and
+the owner arrange payment themselves, and Mabeet records nothing. Mabeet's income is plan payments only
+(`PlanPayment`).
 
 ```
 guest ──POST /api/public/bookings/{token}/checkout──▶ Payment (PENDING) ──▶ Whish page / Stripe Checkout
@@ -380,7 +400,7 @@ guest ──POST /api/public/bookings/{token}/checkout──▶ Payment (PENDING
 ```
 
 - **Callbacks prove nothing.** Whish's callback is an unauthenticated GET, so it only triggers a status call to
-  Whish (`src/server/payments/whish.ts`). Stripe's webhook is signature-checked and still re-reads the checkout.
+  Whish (`src/modules/payments/server/whish.ts`). Stripe's webhook is signature-checked and still re-reads the checkout.
 - **Idempotent.** The `PENDING → PAID` update is the gate: ten simultaneous callbacks confirm once (tested).
 - **Refunds** (`refundForEndedBooking`): every refund of an online payment is full and automatic, whoever cancels
   (the host declining or cancelling, the guest cancelling, or the booking expiring after it was paid). Card refunds
@@ -415,7 +435,7 @@ guest ──POST /api/public/bookings/{token}/checkout──▶ Payment (PENDING
 
 ## AI and MCP
 
-AI is an extra way in, not a separate system. Every AI tool (`src/server/ai/*-tools.ts`) is a Zod schema and a
+AI is an extra way in, not a separate system. Every AI tool (`src/modules/assistant/server/*-tools.ts`) is a Zod schema and a
 call to an existing service with the caller's `TenantContext`. So the AI has exactly the permissions of the
 person behind it, isolation included.
 
@@ -438,13 +458,13 @@ none of ours. Then a few host actions through the MCP. Our own model (DeepSeek) 
   analytics reports. Chats are saved per person, or kept unsaved and never stored. A monthly budget in `AiUsage`:
   admins are warned at 80%, and our model pauses at 100%.
 
-**One tool runner for every surface.** `createToolRunner` (`src/server/ai/run-tool.ts`) validates a tool's
+**One tool runner for every surface.** `createToolRunner` (`src/modules/assistant/server/run-tool.ts`) validates a tool's
 input, runs it with the caller's context, turns failures into safe messages and reports each call to a listener.
 The MCP server (`mcp-server.ts`) uses it, and so will the DeepSeek chat loop (`assistant.ts`), so they behave the same.
 What the model sees (`toolPayload`) has every amount already formatted (`totalCents` + `currency` becomes
 `total: "$140"`), so the model copies money and never converts cents.
 
-**Every answer of our own model has a stated format, checked on the way back** (`src/server/ai/output.ts`). Chat prompts carry
+**Every answer of our own model has a stated format, checked on the way back** (`src/modules/assistant/server/output.ts`). Chat prompts carry
 `REPLY_FORMAT` (a small markdown subset: bold, lists, tables; no HTML, headings, code or links), and `shapeReply`
 enforces it before a reply leaves the server; `RichText` renders exactly that subset and never HTML. Structured
 answers go through `askForJson`: the Zod schema is sent to the model as JSON Schema, the answer is parsed and

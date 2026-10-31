@@ -21,14 +21,15 @@ How the code is built (layers, rules, contracts) is in `02-architecture-and-feat
 
 Suggested owner: **Wouroud** (the heaviest backend).
 
-| Layer          | Owns                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server base    | `src/server/env.ts`, `errors.ts`, `db/client.ts`, `http/*`, `background.ts`, `email/send.ts`, `src/lib/money.ts`, `dates.ts`, `tokens.ts`                                                                                                                                                                                                                                                                                   |
-| Auth           | `src/server/auth/better-auth.ts`, `permissions.ts`, `tenant-context.ts`, `src/app/api/auth/[...all]/`, `src/lib/auth-client.ts`, `src/config/enums.ts`                                                                                                                                                                                                                                                                      |
-| Auth pages     | `src/app/(auth)/**`, `src/components/account/auth-form.tsx`, `auth-page.tsx`, `password-forms.tsx`, `sign-out-button.tsx`, `create-workspace-form.tsx`, `src/app/home/`                                                                                                                                                                                                                                                     |
-| Accounts       | `onboarding-service.ts`, `account-service.ts`, `business-repository.ts`, `account-repository.ts`, `api/workspaces/route.ts`, `api/me/delete`, `api/me/export`                                                                                                                                                                                                                                                               |
-| Booking engine | `booking-service.ts`, `booking-policy.ts`, `booking-status.ts`, `constraint-errors.ts`, `housekeeping-service.ts`, `booking-repository.ts`, `api/cron/`                                                                                                                                                                                                                                                                     |
-| Payments       | `online-payment-service.ts`, `payment-service.ts`, `whish-simulator-service.ts`, `money-repository.ts`, `payment-repository.ts`, `whish-simulator-repository.ts`, `src/server/payments/whish.ts`, `src/server/billing/stripe.ts`, `api/payments/`, `api/webhooks/`, `api/whish-simulator/`, `api/public/bookings/[token]/checkout/`, `(site)/whish-simulator/`, `components/booking/pay-online.tsx`, `components/payments/` |
+| Layer          | Owns                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server base    | `src/server/env.ts`, `errors.ts`, `db/client.ts`, `http/*`, `background.ts`, `email/*`, `src/utils/money.ts`, `dates.ts`, `tokens.ts`, `src/server/jobs/*` (queues, worker, schedules), `scripts/dev.ts`                                                                                                                                                                                                                                     |
+| Plans          | `src/config/plans.ts`, `billing-service.ts`, `billing-repository.ts`, `api/workspaces/[businessId]/billing/**` (the API; the `/billing` page is Omar's, in the dashboard). Omar's `createRoom` calls `assertPlanAllowsAnother(ctx.businessId, "rooms")`                                                                                                                                                                                      |
+| Auth           | `src/server/auth/better-auth.ts`, `permissions.ts`, `tenant-context.ts`, `src/app/api/auth/[...all]/`, `src/lib/auth-client.ts`, `src/config/enums.ts`                                                                                                                                                                                                                                                                                       |
+| Auth pages     | `src/app/(auth)/**`, `src/components/account/auth-form.tsx`, `auth-page.tsx`, `password-forms.tsx`, `sign-out-button.tsx`, `create-workspace-form.tsx`, `src/app/home/`                                                                                                                                                                                                                                                                      |
+| Accounts       | `onboarding-service.ts`, `account-service.ts`, `business-repository.ts`, `account-repository.ts`, `api/workspaces/route.ts`, `api/me/delete`, `api/me/export`                                                                                                                                                                                                                                                                                |
+| Booking engine | `booking-service.ts`, `booking-policy.ts`, `booking-status.ts`, `constraint-errors.ts`, `housekeeping-service.ts`, `booking-repository.ts`, `api/cron/`                                                                                                                                                                                                                                                                                      |
+| Payments       | `online-payment-service.ts`, `payment-service.ts`, `whish-simulator-service.ts`, `money-repository.ts`, `payment-repository.ts`, `whish-simulator-repository.ts`, `src/modules/payments/server/whish.ts`, `src/modules/payments/server/stripe.ts`, `api/payments/`, `api/webhooks/`, `api/whish-simulator/`, `api/public/bookings/[token]/checkout/`, `(site)/whish-simulator/`, `components/booking/pay-online.tsx`, `components/payments/` |
 
 Core writes **every function** in `booking-service.ts`, including the read functions the others need
 (`listBookings`, `getBookingForGuest`, the guest's trips). They are written first, from the contracts in `02`
@@ -41,11 +42,11 @@ Suggested owner: **Fatima** (strongest on screens).
 | Layer         | Owns                                                                                                                                                                                                                     |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Design system | `src/app/globals.css`, `src/app/fonts/`, `src/components/ui/*`, `shell/*`, `site/*`, `theme/*`, `brand/*`, `src/hooks/*`, `src/lib/api-client.ts`, `parent-path.ts`, `src/app/not-found.tsx`, `error.tsx`, `offline/`    |
-| Languages     | `src/i18n/request.ts`, `src/app/layout.tsx`, `src/app/actions/locale.ts`, `src/lib/format.ts`, `zoned-time.ts`, the skeleton of the three message files                                                                  |
+| Languages     | `src/i18n/request.ts`, `src/app/layout.tsx`, `src/app/actions/locale.ts`, `src/utils/format.ts`, `zoned-time.ts`, the skeleton of the three message files                                                                |
 | Public data   | `directory-service.ts`, `directory-repository.ts`, `pricing.ts`, `api/public/places/[slug]/rooms/**` (quote, availability)                                                                                               |
 | Guest pages   | `src/app/(site)/**` (home, search, `p/[slug]/**`, the book page, `b/[token]`, `account/**`), `components/place/*`, `listing/*`, `browse/*`, `booking/*` (except `pay-online.tsx`), `components/account/account-tabs.tsx` |
 | Guest routes  | `api/public/places/[slug]/bookings/`, `api/public/bookings/[token]/` (read), `api/me/bookings/`: thin routes that call Core's booking functions                                                                          |
-| Lists         | `src/config/listing.ts`, `amenities.ts`, `regions.ts`, `category-icons.ts`, `appearance.ts`, `brand.ts`                                                                                                                  |
+| Lists         | `src/config/listing.ts`, `amenities.ts`, `regions.ts`, `category-icons.ts`, `appearance.ts`, `brand.ts` (Core started `brand.ts` and the language part of `appearance.ts` for the sign-in emails: build on them)         |
 
 ### 3. Host side: the dashboard, the demo data and the live site
 
@@ -69,19 +70,36 @@ Owner: **Omar** (he owns the deployment).
    Part 14. Write your code against them before they are merged, and connect the last line when they merge. Never
    write a fake version.
 4. **The shared files are created on day 1, with one section per area:**
-   - `src/server/validation/schemas.ts` (Core creates it): sections in a fixed order (Auth and accounts / Guest /
-     Host / Bookings and payments). Add only to your own section.
-   - The message files `messages/en.json`, `ar.json`, `ar-LB.json` (Fatima creates them): top-level keys per area,
-     `common`, `auth`, `site`, `dashboard`, `booking`, `payments`, the same in all three files. Add only under your
-     own keys.
+   - The input checks live in each module's `schemas.ts`, so they are no longer shared. Only the small pieces
+     every module reuses are in `src/lib/schemas.ts` (Core owns it): ask before changing one.
+   - The message files `messages/en.json`, `ar.json`, `ar-LB.json` (Fatima creates them): the same top-level groups
+     as the reference project, so the screens copied from it keep working unchanged, and the same keys in all three
+     files. Each group has one owner (the table below). Add only under your own groups; for a text in someone
+     else's group, ask them.
    - `docs/openapi.json`: add only the paths under your own prefixes. On a conflict, keep both sides and run
-     `pnpm docs`.
+     `pnpm run docs`.
 5. **No database changes.** The schema is complete for Checkpoint 1. A change goes through the database keeper, in
    its own pull request first.
 6. **Never reformat or "tidy" files you don't own.** Run Prettier on your own files only.
 7. **Small pull requests, one feature each: the API first, then its screens.** The API is checked by hand in Postman
    or Swagger before review (`04` Part 2). Branch from `development`, open the pull request into `development`, and pull `development` every
    morning. `main` only changes when we release (`README.md`, "GitHub").
+
+## Who owns each group of the message files
+
+Each group belongs to whoever owns the screens that use it.
+
+| Owner                     | Groups                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Fatima** (guest side)   | `common`, `nav`, `footer`, `shell`, `profile`, `pagination`, `appearance`, `dates`, `errors`, `pwa`, `notifications`, `home`, `host`, `search`, `searchPage`, `filters`, `listing`, `listingSummary`, `regions`, `place`, `placePage`, `photoTour`, `meetHost`, `share`, `contactHost`, `thingsToKnow`, `privacy`, `booking`, `bookPage`, `confirmation`, `account` |
+| **Wouroud** (Core)        | `auth`, `invitation`, `oauth`, `permissions`, `serverErrors`, `refundPolicy`, `whishSim`, and `confirmation.pay` (the pay buttons on the booking page)                                                                                                                                                                                                              |
+| **Omar** (host side)      | `dashboard`, `confirm`, `hostProfile`, `overviewAll`, `analytics`, `plans` (the `/billing` page)                                                                                                                                                                                                                                                                    |
+| Whoever builds it (bonus) | `offering`, `offeringPage` (experiences and services), `admin` (the admin area), `assistant` (the AI assistants, last bonus)                                                                                                                                                                                                                                        |
+
+- `common` holds words every screen uses (Save, Cancel…). Ask Fatima before adding to it.
+- `notifications` is the bell. Its frame is Fatima's, but each new bell entry (`notifications.actions.<action>`) is
+  added by whoever adds the event that logs it, as part of the four steps in `CLAUDE.md`.
+- A new group goes in this table in the same pull request that adds it.
 
 ## The order for Checkpoint 1
 

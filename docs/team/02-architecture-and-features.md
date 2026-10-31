@@ -111,7 +111,17 @@ Our product gives the host one booking page, one calendar, and a database that r
 
 ## Part 3. The layers (the most important part)
 
-### Four layers, one direction
+### Modules, then four layers inside each
+
+The app is a modular monolith. Each feature is a module in `src/modules/<name>/` (the map is in
+`05-project-structure.md`). A module holds its own services, repositories, input checks, screens and tests,
+and is entered only through `index.ts` (input checks, types, screens) and `server.ts` (its services). One module
+calls another only through that module's `server.ts`, never in a circle, and passes `tx` when both changes must
+commit together. What must be one transaction stays in one module: no double booking needs availability, the
+hold and the lock together, so they all live in `bookings`. The shared kernel, `src/server/`, holds what every
+module uses and never imports a module.
+
+Inside each module, the layers go one way:
 
 ```
 routes and pages  →  services  →  repositories  →  database
@@ -128,14 +138,14 @@ The website, the AI chat and the MCP server all call **the same services**. So a
 They do four things only:
 
 1. Read the request.
-2. Check the input with a Zod schema from `src/server/validation/schemas.ts`.
-3. Call **one** service function.
+2. Check the input with a Zod schema from the module's `index.ts`.
+3. Call **one** service function, from the module's `server.ts`.
 4. Send the answer.
 
-They have no business rules and never talk to the database. ESLint stops any import of `@/server/repositories/*` or
-`@/server/db/*` from `src/app`.
+They have no business rules and never talk to the database. ESLint stops any import of a module's inner files (its
+repositories included) or of `@/server/db/*` from `src/app`.
 
-### Services (`src/server/services/<area>-service.ts`)
+### Services (`src/modules/<name>/server/<area>-service.ts`)
 
 They hold every rule:
 
@@ -148,7 +158,7 @@ They hold every rule:
 Services are plain functions, grouped by area. When a service works inside a business, its first argument is a
 `TenantContext`.
 
-### Repositories (`src/server/repositories/<area>-repository.ts`)
+### Repositories (`src/modules/<name>/server/<area>-repository.ts`)
 
 The only code that runs database queries.
 
@@ -272,7 +282,7 @@ Services throw these. The wrapper turns them into answers. Write messages that p
 
 ### Database refusals become clear errors in one place
 
-`src/server/services/constraint-errors.ts` wraps a database write:
+`src/server/db/constraint-errors.ts` wraps a database write:
 
 - `overlapAsConflict(message, write)`: when the database refuses overlapping nights (Postgres code `23P01`), the
   user gets a 409 with your message.
@@ -282,10 +292,11 @@ Never write your own try/catch for these.
 
 ### Every input is checked with Zod
 
-- All API input schemas are in `src/server/validation/schemas.ts`.
+- Each module's API input schemas are in its `schemas.ts`, exported through its `index.ts`.
 - Use `parseBody`, `parseQuery` and `parseParams`. Never read `request.json()` yourself.
 - Wrong input gets a 400 answer with the wrong fields. The screen then highlights those fields.
-- Reuse the small pieces at the top of the file: `id`, `isoDate`, `phone`, `cents`, `stayDates`, `dateWindow`.
+- Reuse the small shared pieces in `src/lib/schemas.ts`: `id`, `isoDate`, `phone`, `cents`, `stayDates`,
+  `workspaceParams`.
 
 ### Lists of values live once, in `src/config/`
 
@@ -351,15 +362,18 @@ Helpers:
 
 ### Permissions and roles
 
-`src/server/auth/permissions.ts` lists the permissions: `rooms.read`, `rooms.manage`, `offerings.manage`,
+`src/config/permissions.ts` lists the permissions: `rooms.read`, `rooms.manage`, `offerings.manage`,
 `calendar.read`, `blocks.manage`, `feeds.manage`, `bookings.read`, `bookings.decide`, `guests.contact`,
-`payments.record`, `reviews.reply`, `analytics.read`, `team.manage`, `roles.manage`, `settings.manage`, `ai.use`.
+`reviews.reply`, `analytics.read`, `team.manage`, `roles.manage`, `settings.manage`, `ai.use`. There is no
+permission for recording payments: nothing is paid or recorded by hand. Money, plans and payouts are for the owner
+only (`requireOwner`).
 
 - Each business has an owner role (all permissions, cannot be changed).
 - Each business also gets default roles (Manager, Front desk, Housekeeping), which it can change.
 - Owners can make new roles by ticking permissions.
 - Nobody can give a permission they do not have.
-- A read-only AI key only keeps the "read" permissions.
+- A read-only AI key only keeps the reading permissions: `rooms.read`, `calendar.read`, `bookings.read`,
+  `guests.contact`, `analytics.read` and `ai.use` (`readOnly` in `src/config/permissions.ts`).
 
 ### Staff without `guests.contact` see hidden contact details
 
@@ -370,6 +384,12 @@ this permission. Every staff list or page of bookings uses it.
 
 A user with `platformRole = SUPER_ADMIN` can open any business's dashboard with all permissions. This only works on
 the website, never through AI keys. Their actions are logged under their own name.
+
+Nobody becomes an admin by signing up: `platformRole` is not something a sign-up can set. Admins are made only with
+`pnpm admins:create "Name <email>" …` (`scripts/create-admins.ts`, which calls `ensurePlatformAdmin` in
+`src/modules/accounts/server/platform-admin.ts`). It creates a verified account, or makes an existing one an admin, gives each a
+new random password, and writes the sign-in details to `.admin-credentials`, which git ignores. Running it again
+never makes a copy.
 
 ---
 
@@ -392,7 +412,7 @@ source of taken nights is a new `kind`, not new checks.
 
 A booking has:
 
-- a `reference` like `SN-7KX3P9` (shown to people),
+- a `reference` like `MB-7KX3P9` (shown to people),
 - a secret `publicToken` (the guest's private link),
 - the guest's name, phone, email and note, and `guestCount`,
 - `checkIn` and `checkOut`,
@@ -439,7 +459,11 @@ Its one `Occupancy` row takes the nights.
 
 ### Log and AI tables
 
-- `ActivityLog`: who did what to which thing. It also feeds the notification bell.
+- `AuditLog`: what happened in a business or on the platform, and who did it (`actorId`, empty for the system's
+  own events such as a payment callback or a calendar clash). The business and admin bells and the admin audit
+  trail read it.
+- `ActivityLog`: one person's own timeline (their requests, favourites and reviews, and what happened to them),
+  shown on their account's Activity page.
 - `McpAuditLog`: every AI tool call (tool, result, time taken, channel).
 - `AiUsage`: tokens and cost of each AI answer, for the monthly budget.
 - `AiChat` and `AiChatMessage`: saved AI chats, per person.
@@ -474,14 +498,15 @@ isDeleted: false } })`, and only if nothing changed, `create`. See `createCatego
 ### Locks: who waits for whom
 
 Changes that must not race take a row lock (`SELECT … FOR UPDATE`) at the start of their transaction. The lock
-functions live in the repositories:
+functions live in the repositories of the module that owns them; `lockBusinessMoney` is in `payments` and reached
+through its `server.ts`, because billing (plan months) and payouts both need it:
 
 | Lock                                       | Taken by                                                                                  |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------- |
 | `lockActiveRoom(tx, businessId, roomId)`   | anything that changes a room's nights: deciding, cancelling, calendar sync, clash recheck |
 | `lockBookableRoom(tx, businessId, roomId)` | a new booking, on a room guests can book right now                                        |
 | `lockBusinessForBooking(tx, businessId)`   | a new booking at a place with a whole-place unit (rooms and the whole place take turns)   |
-| `lockBusiness(tx, businessId)` (money)     | payout requests and plan months, so two requests cannot spend the same balance            |
+| `lockBusinessMoney(tx, businessId)`        | payout requests and plan months, so two requests cannot spend the same balance            |
 | the `Payment` row                          | a refund, so two refunds cannot give back more than was paid                              |
 
 Work that follows a committed change (emails, the clash recheck) runs **after** the commit, in its own transaction
@@ -494,7 +519,7 @@ with its own lock, and never throws at the change that caused it.
   totals outgrow a 32-bit int. The database client (`src/server/db/client.ts`) reads every money column back as a
   plain `number`, so code does normal number maths. A new money column must be `BigInt` **and** be added to the
   client's `moneyAsNumbers` extension. Where code uses a generated Prisma type with money (`Booking`, `Payment`…),
-  wrap it: `MoneyAsNumbers<Booking>` (`src/lib/money.ts`). A raw SQL sum of money is cast `::bigint` and read with
+  wrap it: `MoneyAsNumbers<Booking>` (`src/utils/money.ts`). A raw SQL sum of money is cast `::bigint` and read with
   `moneyNumber()`, never `::int`.
 - One fact, one place. Do not add a second field that can say something different from an existing one: for
   example, no free-text cancellation policy beside the refund rule, and no second WhatsApp number beside the
@@ -525,20 +550,23 @@ is deleted"). Code: `account-service.ts`, `src/app/(site)/account/**`.
 
 ### A. Activity log and notification bell
 
-Every important action is recorded:
+Every important action is recorded, through the `audit` module (`@/modules/audit/server`):
 
-- `recordAction(ctx, action, entity, entityId)` for team actions,
-- `logActivity` inside a transaction for guest actions.
+- `recordAction(ctx, action, entity, entityId, tx)` for a team member's action, into `AuditLog`. Pass the change's
+  transaction, so the change and its log line are saved together or not at all.
+- `recordPersonAndBusiness(tx, { userId, businessId, action, entity, entityId })` for something a person did that
+  the business must hear about (a guest's request, someone joining the team): it goes on the person's own timeline
+  (`ActivityLog`) and in the business's `AuditLog`.
+- Something the system noticed (a sync, a payment callback) goes in `AuditLog` with no actor; the audit module
+  exports a function for it with the first such event.
 
 The bell in the top bar shows the last five events of the business. "View all" opens the full list. Code:
 `audit.ts`, `notification-feed-service.ts`, `notification-bell.tsx`.
 
-The bell is read from `ActivityLog`, so it shows only the actions listed in `notification-feed-service.ts`. To add
-a new kind of bell entry (all four steps, or it shows a raw key or nothing):
+The bell is read from `AuditLog`, so it shows only the actions listed in `notification-feed-service.ts`. To add a
+new kind of bell entry (all four steps, or it shows a raw key or nothing):
 
-1. Log it: `recordAction(ctx, "area.thing_happened", entity, entityId)` for a person's action, or
-   `logActivity(tx, { userId: null, businessId, action, entity, entityId })` for something the system noticed (a
-   sync, a payment callback). `userId: null` makes it unread for everyone.
+1. Log it, as above. An event with no actor is unread for everyone.
 2. Add the action to `BOOKING_NEWS` (people with `bookings.read`), `OWNER_NEWS` (owners) or `PLATFORM_NEWS`
    (admins) in `notification-feed-service.ts`.
 3. In `src/components/shell/notification-list.tsx`, give it an icon in `ICONS`, and a link in `hrefFor` if it
@@ -567,7 +595,7 @@ host actions come after it. Our own model (`deepseek.ts`, `assistant.ts`, `outpu
 
 The files:
 
-- `src/server/ai/tool.ts`: the `AiTool` type (`name`, `description`, `input`, `requires` permission, `mutates`,
+- `src/modules/assistant/server/tool.ts`: the `AiTool` type (`name`, `description`, `input`, `requires` permission, `mutates`,
   `run(input, context)`).
 - `run-tool.ts`: `createToolRunner(tools, context, onCall)` checks the input, runs the tool, turns errors into safe
   messages, measures the time, and reports the call to the audit log. `toolPayload` is what the model sees: every
@@ -587,7 +615,7 @@ The files:
 Page: `/dashboard/{id}/assistant`.
 
 - It answers questions: free rooms, bookings, money, commission saved.
-- It can carry out orders, such as "cancel booking SN-7KX3P9" or "close the Arched room from 12 to 15 November".
+- It can carry out orders, such as "cancel booking MB-7KX3P9" or "close the Arched room from 12 to 15 November".
 - It **never** acts on its own:
   1. The model asks for a tool that changes data.
   2. The input is checked against the tool's schema.
@@ -635,7 +663,7 @@ MCP address in a `CopyField`. It has no chat. `SiteFooter` and the home page lin
 ### A. AI: the format of every answer
 
 Rule: **we always tell the model the exact format we expect, and we always check what comes back before anyone sees
-it.** Code: `src/server/ai/output.ts`.
+it.** Code: `src/modules/assistant/server/output.ts`.
 
 - **Chat replies** (owner assistant and guest travel assistant):
   - `REPLY_FORMAT` is added to every system prompt by `runAssistant`: short sentences, `**bold**` for key figures,
@@ -709,11 +737,14 @@ Two kinds, by how much they matter:
  website ──send job──▶ PostgreSQL (pgboss schema) ◀──takes jobs── worker (pnpm worker)
 ```
 
-- **Three queues** (`QUEUES` in `src/server/jobs/queue.ts`):
-  - `ai`: travel assistant answers, team assistant answers, reports. 4 at once per worker. Retried once.
-  - `notify`: every booking, payment, refund and Contact host notice. 8 at once. Retried 4 times, waiting longer
-    each time.
-  - `cron`: calendar sync every 15 minutes and housekeeping every 5 minutes, on the worker's own schedule.
+- **The queues** (`QUEUES` in `src/server/jobs/queue.ts`):
+  - `notify`: every email and push: team invitations today, then every booking, payment, refund and Contact host
+    notice. 8 at once. Retried 4 times, waiting longer each time.
+  - `cron`: housekeeping every 5 minutes (`SCHEDULES` in `jobs/cron-jobs.ts`), on the worker's own schedule; the
+    calendar sync joins it (every 15 minutes) with F11.
+  - `ai` is added with the AI assistants (last bonus): travel and team assistant answers, reports. 4 at once per
+    worker, retried once. `runOrQueue`, `GET /api/jobs/{jobId}` and the progress rows come with it; nothing uses
+    them before then.
 - **Declaring a job:** `defineJob(queue, kind, handler)`. Add the file to `src/server/jobs/registry.ts` so the worker
   knows it. Job data holds only ids and plain values (never a `TenantContext`): the worker loads the rest fresh.
 - **Answer now, or queue** (`runOrQueue`): the route estimates how long the work will take from the size of the
@@ -732,7 +763,9 @@ Two kinds, by how much they matter:
   shown: the client sees the safe message of an `AppError`, or a generic "busy, try again".
 - **Modes:** `JOBS_MODE=queue` in production (the Docker image sets it) and with `pnpm dev`, which starts the
   website and the worker together (`scripts/dev.ts`). `inline` runs everything in the web process with no worker:
-  the tests always use it, and so does `pnpm dev:web` (the website alone, for a computer short of memory).
+  the tests always use it, and so do `pnpm dev:web` (the website alone, for a computer short of memory) and
+  `docker compose up` (development), so saving a file only needs the website to reload.
+  `tests/integration/queue.test.ts` checks the real pg-boss once, in queue mode.
 - **Deploys:** on `SIGTERM` the worker finishes the jobs in hand (up to 60 seconds). More workers share the load.
 
 ### B. Plans and billing
@@ -741,6 +774,29 @@ Free, Pro and Business plans (`src/config/plans.ts`), with limits on rooms, expe
 **instantly only**: by card (Stripe subscription) or by Whish (one month at a time). There is no paying by hand, no
 receipt upload and no admin approval; do not build one. Plan payments and sponsored listings ("F. Featured
 partners and sponsored listings") are the platform's only income. Code: `billing-service.ts`.
+
+| Plan     | Per month | Rooms     | Experiences and services | Team (owner included) | AI  |
+| -------- | --------- | --------- | ------------------------ | --------------------- | --- |
+| Free     | $0        | 3         | 1                        | 2                     | no  |
+| Pro      | $10       | 15        | unlimited                | 10                    | yes |
+| Business | $20       | unlimited | unlimited                | unlimited             | yes |
+
+- **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members")` before adding one. Deleted
+  rooms and experiences and removed members do not count. Inviting and joining a team call it (joining checks
+  again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
+  too.
+- **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
+- **Card (Stripe):** `POST .../billing/checkout` returns Stripe Checkout; the plan only changes when the signed
+  webhook (`POST /api/webhooks/stripe`) says so. Each event is recorded in `WebhookEvent` in the same transaction
+  that applies it, so a replay changes nothing and a failure leaves nothing (Stripe retries). Paid invoices are
+  recorded as `PlanPayment` rows. A paying business changes plan in the portal (`POST .../billing/portal`).
+- **Whish:** `POST .../billing/whish` writes a `PENDING` plan payment, then asks Whish for the payment page; if
+  Whish refuses, the row is marked `FAILED`. Whish's callback (`GET /api/payments/whish/callback?plan=`) only makes
+  us ask Whish for the real status; once paid, 30 days are added (following on from what is left of the same plan),
+  once. Housekeeping re-checks pending Whish plan payments from the last day whose callback never came, and puts a
+  business whose Whish month ran out back on Free.
+- **Simulator:** with `WHISH_MODE=simulator` the Whish client talks to `/api/whish-simulator/*` inside the app
+  (Whish v1.4.4). Phone 96170123456 and code 111111 pay; any other code is a failed attempt.
 
 ### B. Bookings: the statuses
 
@@ -857,7 +913,7 @@ then email and push the hosts about each NEW clash, and save lastSyncedAt and la
 - The host hears about a clash **once**, when its flag turns on: a bell entry, an email and a push to everyone who
   can decide bookings (`notifyImportConflict`). When it clears, the bell says so and the red outline goes.
 - A clash clears **at once** when our side changes, not at the next sync: deciding or cancelling a booking, a guest
-  cancelling, a hold expiring, and adding, moving or removing closed dates all call `recheckImportClashes` for the
+  cancelling, a hold expiring, and adding or removing closed dates all call `recheckImportClashes` for the
   room after they commit. When the platform cancels, the next sync turns the imported row off and clears the flag.
 - A stay that simply ended and left the feed is not announced as "cleared".
 - If a link fails, nothing already imported changes.
@@ -920,7 +976,7 @@ Shared pieces:
 - Each email is in the reader's language.
 - Without an API key, emails are printed in the log.
 - Addresses on reserved test domains (`.test`, `.example`, `.invalid`, `.localhost`) are never sent to, because they
-  can never receive email. The demo accounts (`host@tafaddal.test`) use them.
+  can never receive email. The demo accounts (`host@mabeet.test`) use them.
 - Emails only reach other people's inboxes after the sending domain is verified on Resend.
 
 ### E. Experiences and services
@@ -1012,13 +1068,18 @@ Bonus (F22), needs experiences and services (F8).
 - Hosts and staff who can decide bookings hear about new requests and guest cancellations, and about a platform
   booking that clashes with nights already sold (once, when the clash appears; see "Calendar sync").
 - Guests hear about every status change.
+- A person invited to a team gets the invitation email with its link (`/invite/{token}`), in the language the host
+  used; the host who invited them hears when they join. An invitation cancelled or run out before the job runs
+  sends nothing.
 - Each notification is an email and a push notification to every device the person turned on.
 - Everything is queued on the `notify` queue after saving, and never throws an error. The worker sends it and
   retries a failed delivery up to 4 times; emails carry an idempotency key, so a retry never sends one twice.
 
-Code: `notification-service.ts`, `push-service.ts`.
+Code: each module's `<module>-notifications.ts` (for example `src/modules/team/server/team-notifications.ts`),
+the shared helpers in `src/server/email/notices.ts`, and `push-service.ts` in `notifications`.
 
-To add a notice, copy an existing one in `notification-service.ts` (for example `notifyImportConflict`):
+To add a notice, add it to the notifications file of the module that owns the event, copying an existing one
+(for example `notifyInvitation`):
 
 - An exported `notifyX(id, …)` that only calls `queueNotice(job, data)`. Data holds ids and plain values.
 - `defineJob("notify", "notify.x", handler)`. The handler loads the rows fresh, and returns without sending when
@@ -1029,11 +1090,11 @@ To add a notice, copy an existing one in `notification-service.ts` (for example 
   event), so a retry never sends twice but a second event still does.
 - `tellHosts(businessId, build)` reaches the people who can decide bookings, one email per language plus a push to
   each of their devices; `tellGuest(notice, letter)` reaches the guest.
-- If the module is new, list it in `src/server/jobs/registry.ts`.
+- If the file is new, list it in `src/server/jobs/registry.ts`.
 
 ### O. Creating a place
 
-`POST /api/workspaces` creates a business with a unique slug (`uniqueSlug` in `src/lib/slug.ts`), its owner role
+`POST /api/workspaces` creates a business with a unique slug (`uniqueSlug` in `src/utils/slug.ts`), its owner role
 and default roles, and makes the user its owner. All in one transaction.
 
 ### P. Photos
@@ -1083,7 +1144,8 @@ cache, because availability must always be live.
 
 Only a guest who stayed may review, only once, and only after check-out. A review is one overall rating (1 to 5) and
 a comment; there are no sub-ratings (cleanliness, location, value). Owners can reply or hide a review with a reason.
-Code: `review-service.ts`.
+A review whose author closed their account stays, without their name: closing an account keeps the user row (marked
+deleted), so review reads show no name when `author.isDeleted` (F17). Code: `review-service.ts`.
 
 ### R. Rooms (dashboard)
 
@@ -1161,9 +1223,9 @@ bottom.
 | Calendar sync | every 15 min    | `POST /api/cron/sync-feeds`   | Reads up to 20 calendar links not read in 15 minutes                                                  | Calendars still update on "Sync now" and before each confirmation                             |
 | Housekeeping  | every 5 min     | `POST /api/cron/expire-holds` | Checks pending online payments, expires unanswered and unpaid bookings, ends unpaid Whish plan months | Each new request expires its room's old holds; a returning guest's payment is checked at once |
 
-The worker runs both on its own schedule (`src/server/jobs/cron-jobs.ts`), kept in the database so each run happens
+The worker runs both on its own schedule (`src/modules/housekeeping/server/housekeeping-jobs.ts`), kept in the database so each run happens
 once even with several workers. The routes need `Authorization: Bearer $CRON_SECRET`.
-`.github/workflows/scheduled-jobs.yml` still calls them every 15 minutes while the site is on Vercel (no worker there); once the worker runs on DigitalOcean, its `schedule:` lines are deleted and it stays as a manual fallback.
+They are only for a manual or outside run: on DigitalOcean the worker runs every schedule itself.
 
 ---
 
@@ -1212,9 +1274,10 @@ once even with several workers. The routes need `Authorization: Bearer $CRON_SEC
 
 - `README.md`: setup, architecture, key decisions, known limits.
 - `docs/functional-requirements.md` and `docs/non-functional-requirements.md`.
-- `docs/erd.md`: the database diagram, made from `prisma/schema.prisma` by `pnpm docs:erd`.
-- `docs/openapi.json`: the API contract, made from the same Zod schemas the routes use, by `pnpm docs:openapi`. A test
-  fails if a route is missing from it.
+- `docs/erd.md`: the database diagram, made from `prisma/schema.prisma` by `pnpm run docs`.
+- `docs/openapi.json`: the API contract. Each route is written in it by hand, matching its Zod schema, until
+  `scripts/openapi.ts` generates it from the schemas; `pnpm run docs` writes `docs/openapi.yaml` from it. A test
+  (`tests/unit/openapi.test.ts`) will fail if a route is missing from it.
 - `docs/architecture.md` and `docs/requirements-matrix.md` (each requirement, where it is built, and which test
   proves it).
 
@@ -1222,9 +1285,10 @@ once even with several workers. The routes need `Authorization: Bearer $CRON_SEC
 
 ## Part 13. Checklist for any new code
 
-1. Is the rule in a service, the query in a repository, and the route short?
+1. Is the code in the right module, and does other code reach it only through `index.ts` or `server.ts`? Is the rule
+   in a service, the query in a repository, and the route short?
 2. Does the service check the permission and filter by `ctx.businessId`?
-3. Is every input checked by a schema in `schemas.ts`?
+3. Is every input checked by a schema in the module's `schemas.ts`?
 4. Do lists of values come from `src/config/`, not typed by hand?
 5. Are database refusals handled with `overlapAsConflict` or `duplicateAsConflict`?
 6. Are small side writes (logs, usage) inside `inBackground`, and slow or must-happen work (AI, email, push) a job?
@@ -1232,7 +1296,7 @@ once even with several workers. The routes need `Authorization: Bearer $CRON_SEC
 8. Is every new text in all language files?
 9. Are the tests from `04-test-plan.md` written and passing?
 10. Does `pnpm check` pass? Is a new or changed route written in `docs/openapi.json` (generated by `scripts/openapi.ts` once it exists), then
-    `pnpm docs`?
+    `pnpm run docs`?
 
 ---
 
@@ -1242,7 +1306,7 @@ A contract is the exact way to call a function: its name, what it takes in, and 
 functions other features call. They do not change without a pull request announced on Discord. Build your feature
 against these exact shapes, even before the function is merged.
 
-### The booking engine (`src/server/services/booking-service.ts`)
+### The booking engine (`src/modules/bookings/server/booking-service.ts`)
 
 ```ts
 interface BookingRequest {
@@ -1295,7 +1359,7 @@ requirePageTenant(businessId: string): Promise<TenantContext>          // pages:
 requirePageAccess(businessId: string, anyOf: Permission[]): Promise<TenantContext>
 ```
 
-### Permissions and roles (`src/server/auth/permissions.ts`)
+### Permissions and roles (`src/config/permissions.ts`)
 
 ```ts
 type Permission = "rooms.read" | "rooms.manage" | ... | "ai.use"   // the full list is in Part 5
