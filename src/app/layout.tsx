@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tafaddal",
+  title: "Mabeet",
   description: "Book Lebanese guesthouses directly with the people who run them.",
 };
 

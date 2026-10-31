@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Tafaddal API",
+    "title": "Mabeet API",
     "version": "1.0.0",
     "description": "Direct bookings for Lebanese guesthouses, experiences and services. Every workspace route resolves the business from the URL and the caller's membership, never from the request body."
   },
@@ -9140,7 +9140,7 @@
     "/api/workspaces/{businessId}/payouts": {
       "get": {
         "tags": ["Payments"],
-        "summary": "What Tafaddal holds for the business, its online payments and payouts (owners)",
+        "summary": "What Mabeet holds for the business, its online payments and payouts (owners)",
         "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
         "security": [
           {
