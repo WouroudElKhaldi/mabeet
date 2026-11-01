@@ -1018,10 +1018,23 @@ platform admins.
 
 ### L. Languages
 
-- `messages/en.json`, `ar.json` and `ar-LB.json` hold every text on screen.
-- A unit test fails if a key is missing or empty in any file.
-- Arabic pages are right-to-left.
-- Server error messages are translated by `localizeError`.
+- `messages/en.json`, `ar.json` and `ar-LB.json` hold every text on screen, in the same top-level groups as the
+  reference project (`nav`, `footer`, `home`, `placePage`, `dashboard`, `serverErrors`...). Each group has one owner
+  (`01-work-split.md`, "Who owns each group of the message files"): add texts only under your own groups. A new group
+  goes in that table in the same pull request that adds it.
+- English is the model. Its keys type `t("...")` (`src/global.d.ts`), so a wrong key fails the type check. A unit test
+  (`tests/unit/messages.test.ts`) fails if a key is missing, extra or empty in any file, if a text is not valid for
+  next-intl (a missing brace, an unclosed tag), if a key name has a dot, or if a translation needs other `{names}` or
+  `<tags>` than the English text (plural and select forms are read properly).
+- A text may hold `{name}`, plural forms and tags such as `<em>`. Read tags with `t.rich("key", { em: ... })`.
+- The language is not in the address. The `locale` cookie decides, then the browser's `Accept-Language` (`pickLocale`
+  in `src/config/appearance.ts`, the same rule the API and the emails use). `src/i18n/request.ts` loads the messages and
+  `src/app/layout.tsx` sets `lang` and `dir` on `<html>`. Arabic pages are right-to-left.
+- Numbers use the digits 0 to 9 and dates the Gregorian calendar in all three languages. Both Arabic languages write
+  prices with a decimal point (`ar-LB`'s own format has a decimal comma, which reads as thousands next to dollar prices).
+  Use `formatMoney` and `formatDate` from `src/utils/format.ts`, never `toLocaleString` by hand.
+- Server error messages are translated by `localizeError`, using `serverErrors` (`messages`, `entities`, `statuses`).
+  Every new message thrown with `conflict(...)`, `invalid(...)` and the like needs its text there, in all three files.
 - In components use `useTranslations("namespace")`. On the server use `getTranslations`.
 
 ### M. Money: guests paying online

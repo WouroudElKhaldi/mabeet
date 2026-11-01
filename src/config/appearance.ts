@@ -1,5 +1,5 @@
 /** English, Modern Standard Arabic, and Lebanese Arabic ("ar-LB", the way people actually talk in Lebanon). */
-const LOCALES = ["en", "ar", "ar-LB"] as const;
+export const LOCALES = ["en", "ar", "ar-LB"] as const;
 export type Locale = (typeof LOCALES)[number];
 const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_COOKIE = "locale";

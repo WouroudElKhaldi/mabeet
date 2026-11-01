@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
+import { isArabic } from "@/config/appearance";
+import { BRAND } from "@/config/brand";
 import "./globals.css";
 
 // The fonts are files in this repository, so the build never depends on the internet. The Arabic fonts only hold
@@ -37,18 +41,22 @@ const kufi = localFont({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Mabeet",
-  description: "Book Lebanese guesthouses directly with the people who run them.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("footer");
+  return { title: `${BRAND.name} · ${BRAND.nameAr}`, description: t("about") };
+}
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
   return (
     <html
-      lang="en"
+      lang={locale}
+      dir={isArabic(locale) ? "rtl" : "ltr"}
       className={`${inter.variable} ${archivo.variable} ${plexArabic.variable} ${kufi.variable}`}
     >
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      </body>
     </html>
   );
 }

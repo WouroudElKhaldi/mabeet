@@ -1,0 +1,2015 @@
+{
+  "nav": {
+    "explore": "Explore",
+    "host": "Become a host",
+    "signIn": "Sign in",
+    "assistant": "Trip concierge",
+    "pricing": "Pricing"
+  },
+  "footer": {
+    "about": "Guesthouses, B&Bs and mountain cabins across Lebanon, booked straight from the people who run them.",
+    "guests": "Guests",
+    "explore": "Explore stays",
+    "trips": "Your trips",
+    "assistant": "Trip concierge",
+    "hosts": "Hosts",
+    "listPlace": "Become a host",
+    "dashboard": "Host dashboard",
+    "privacy": "Privacy",
+    "madeIn": "Made in Beirut",
+    "pricing": "Plans and pricing"
+  },
+  "appearance": {
+    "language": "Language",
+    "toDark": "Switch to dark mode",
+    "toLight": "Switch to light mode"
+  },
+  "search": {
+    "where": "Where",
+    "wherePlaceholder": "Batroun, Chouf, Ehden…",
+    "when": "When",
+    "anyDates": "Add dates",
+    "who": "Guests",
+    "guests": "{count, plural, one {# guest} other {# guests}}",
+    "guestsLabel": "Guests",
+    "guestsHint": "Including children",
+    "submit": "Search",
+    "popular": "Popular right now",
+    "categories": "Categories",
+    "areas": {
+      "Batroun": "Batroun",
+      "Byblos": "Byblos",
+      "Chouf": "Chouf",
+      "Ehden": "Ehden",
+      "Tannourine": "Tannourine",
+      "Jezzine": "Jezzine",
+      "Douma": "Douma",
+      "Tyre": "Tyre"
+    },
+    "whereTo": "Where to?"
+  },
+  "dates": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "chooseCheckIn": "Choose check-in",
+    "chooseCheckOut": "Now choose check-out"
+  },
+  "place": {
+    "save": "Save",
+    "unsave": "Remove from favourites",
+    "new": "New",
+    "from": "from",
+    "perNight": "night",
+    "total": "total",
+    "title": "Your place",
+    "intro": "What guests read about the place, its photos, and how they book it.",
+    "viewPage": "View my page",
+    "description": "Description",
+    "descriptionPlaceholder": "A restored stone house under oak trees, ten minutes from the cedar reserve…",
+    "descriptionHint": "Shown at the top of your place's page.",
+    "howBook": "How guests book",
+    "units": {
+      "ROOMS": {
+        "title": "Room by room",
+        "body": "Each room has its own price and calendar."
+      },
+      "WHOLE_PLACE": {
+        "title": "The whole place",
+        "body": "One price for the whole place. Rooms are shown, never booked one by one."
+      }
+    },
+    "saved": "Saved.",
+    "unitTitle": "The whole place",
+    "unitIntro": "Its price per night, how many guests, beds and minimum stay, as guests book it."
+  },
+  "home": {
+    "eyebrow": "No platform fees. Ever.",
+    "title": "Lebanon's guesthouses, <em>booked direct.</em>",
+    "subtitle": "Stone houses in the Chouf, sea-view rooms in Batroun, cabins under the cedars. Book direct with the host and keep the commission in Lebanon.",
+    "featured": "Places hosts love to share",
+    "seeAll": "See all",
+    "empty": "The first hosts are joining now. Check back soon.",
+    "directTitle": "Booking direct is <em>simpler</em> than you think",
+    "directBody": "You talk to the people whose home it is. They see your request instantly and the room is held for you while they confirm.",
+    "steps": {
+      "noFees": {
+        "title": "No booking fees",
+        "body": "Prices are the host's own. Nothing is added on top, for you or for them."
+      },
+      "held": {
+        "title": "Your room is held",
+        "body": "The moment you request dates, nobody else can take them while the host confirms."
+      },
+      "pay": {
+        "title": "One price, no deposit",
+        "body": "Pay online with Whish or a card, or as your host arranges it. Online payments are always refunded in full if a booking is cancelled."
+      }
+    },
+    "concierge": {
+      "eyebrow": "Trip concierge",
+      "title": "Describe the weekend. We'll find the place.",
+      "body": "Tell our concierge what you imagine, in English, Arabic or Arabizi. It only suggests places that are really free on your dates.",
+      "cta": "Ask the concierge",
+      "sampleQuestion": "Quiet mountain weekend for two, hiking nearby, under $120 a night, 7 to 9 November",
+      "mcp": "Use it in Claude",
+      "languages": "Speaks",
+      "found": "Free",
+      "postcard": "Dear concierge,",
+      "perNight": "a night"
+    },
+    "pass": {
+      "kicker": "Booking request",
+      "held": "Held for you",
+      "dates": "Dates",
+      "guests": "Guests",
+      "total": "Total",
+      "fees": "Platform fees",
+      "feesValue": "0",
+      "heldNote": "Room held while the host confirms"
+    },
+    "receipts": {
+      "platform": "Through a booking site",
+      "direct": "Direct on Mabeet",
+      "room": "Room, {nights} nights",
+      "guestFee": "Guest service fee",
+      "platformFee": "Platform fees",
+      "youPay": "You pay",
+      "hostKeeps": "Host keeps",
+      "note": "Example: {rate} a night. Booking sites typically add about {fee} for the guest and take about {commission} from the host."
+    }
+  },
+  "searchPage": {
+    "title": "Explore stays",
+    "heading": "{count, plural, =0 {No places match yet} one {# place to stay} other {# places to stay}}",
+    "freeHeading": "{count, plural, =0 {Nothing free on those dates} one {# place free on your dates} other {# places free on your dates}}",
+    "emptyTitle": "Nothing matches, yet",
+    "emptyBody": "Try other dates or fewer filters. Or describe your trip to the concierge and it will look for you.",
+    "askConcierge": "Ask the concierge",
+    "sections": {
+      "homes": "Places to stay",
+      "experiences": "Experiences",
+      "services": "Services for your stay"
+    },
+    "seeAll": "See all",
+    "results": "{count, plural, =0 {Nothing matches yet} one {# result} other {# results}}"
+  },
+  "placePage": {
+    "newListing": "New listing",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "after": "After {time}",
+    "before": "Before {time}",
+    "payment": "Payment",
+    "paymentValue": "Full price, no deposit",
+    "rooms": "Rooms",
+    "perNight": "night",
+    "sleeps": "{count, plural, one {Sleeps #} other {Sleeps #}}",
+    "beds": "{count, plural, one {# bed} other {# beds}}",
+    "minNights": "{count, plural, one {Minimum # night} other {Minimum # nights}}",
+    "amenities": "What this place offers",
+    "amenity": {
+      "wifi": "Wi-Fi",
+      "parking": "Free parking",
+      "breakfast": "Breakfast included",
+      "ac": "Air conditioning",
+      "heating": "Heating",
+      "fireplace": "Fireplace",
+      "jacuzzi": "Jacuzzi",
+      "pool": "Pool",
+      "kitchen": "Kitchen",
+      "view": "Mountain or sea view",
+      "garden": "Garden",
+      "pets": "Pets welcome",
+      "generator": "24/7 electricity"
+    },
+    "houseRules": "House rules",
+    "cancellation": "Cancellation",
+    "reviews": "What guests say",
+    "noReviews": "No reviews yet. Guests can review after their stay.",
+    "guest": "Guest",
+    "hostReply": "Host reply:",
+    "noRooms": "This place is not taking bookings right now.",
+    "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
+    "baths": "{count, plural, one {# bath} other {# baths}}",
+    "showAllPhotos": "Show all photos",
+    "whereYoullSleep": "Where you'll sleep",
+    "wholePlaceIntro": "You book the whole place, for up to {guests} guests. These are its rooms.",
+    "wholeHomeIn": "Entire home in {area}",
+    "wholeHome": "Entire home",
+    "roomsIn": "Guesthouse rooms in {area}",
+    "roomsHere": "Guesthouse rooms",
+    "guestsCount": "{count, plural, one {# guest} other {# guests}}",
+    "showAllReviews": "Show all {count} reviews",
+    "showAllAmenities": "Show all {count} amenities"
+  },
+  "booking": {
+    "perNight": "a night",
+    "room": "Room",
+    "sleeps": "{count, plural, one {Sleeps #} other {Sleeps #}}",
+    "dates": "Dates",
+    "addDates": "Add your dates",
+    "guests": "Guests",
+    "nightsTimesRate": "{count, plural, one {# night} other {# nights}} × {rate}",
+    "total": "Total",
+    "justTaken": "Those nights are taken. Please pick other dates.",
+    "request": "Request to book",
+    "pickDatesFirst": "Pick your dates",
+    "noChargeYet": "Nothing is charged now. Your room is held while the host confirms.",
+    "bookNow": "Book and pay",
+    "payOnlineNote": "You pay online after booking, with Whish or a card. Mabeet takes no commission."
+  },
+  "bookPage": {
+    "title": "Book your stay",
+    "name": "Full name",
+    "phone": "Mobile number",
+    "phoneHint": "The host will reach you here, usually on WhatsApp.",
+    "email": "Email (optional)",
+    "emailHint": "For your confirmation link.",
+    "note": "Message to the host (optional)",
+    "notePlaceholder": "Arriving late? Travelling with children? Let them know.",
+    "submit": "Send request",
+    "terms": "Your room is held while the host decides. Once they confirm, you pay them directly, as they tell you.",
+    "genericError": "We could not send your request. Please try again.",
+    "taken": "Someone just took those nights.",
+    "pickOther": "Pick other dates",
+    "dates": "Dates",
+    "guests": "Guests",
+    "nights": "Nights",
+    "total": "Total",
+    "payHostNote": "After the host confirms, you pay the full <strong>{amount}</strong> directly to them.",
+    "checkFields": "Please check the highlighted fields.",
+    "invalidName": "Enter your full name (at least 2 letters).",
+    "invalidPhone": "Use an international number, for example +961 71 123 456.",
+    "invalidEmail": "This email doesn't look right.",
+    "payOnlineNote": "You'll pay <strong>{amount}</strong> online right after booking, with Whish or a card.",
+    "submitPay": "Book and pay",
+    "termsPay": "Your room is held for 10 minutes while you pay. Online payments are always refunded in full if the booking is cancelled.",
+    "approvalNote": "After you pay, the host confirms within {hours, plural, one {# hour} other {# hours}}. If they decline or don't answer, you get a full refund."
+  },
+  "confirmation": {
+    "title": "Your booking",
+    "reference": "Booking",
+    "heading": {
+      "HELD": "Your room at {place} is held",
+      "CONFIRMED": "You're going to {place}",
+      "DECLINED": "{place} couldn't take this booking",
+      "EXPIRED": "This booking at {place} expired",
+      "CANCELLED": "This booking at {place} was cancelled",
+      "AWAITING_PAYMENT": "Pay to secure your stay at {place}"
+    },
+    "guests": "{count, plural, one {# guest} other {# guests}}",
+    "steps": {
+      "requested": "Request sent",
+      "confirmed": "Host confirmed",
+      "paid": "Payment received"
+    },
+    "holdIntro": "Nobody else can book these nights while the host decides. Time left:",
+    "holdLeft": "{hours}h {minutes}m",
+    "holdOver": "The hold has ended",
+    "payTitle": "Pay the host: {amount}",
+    "payFallback": "The host will send you how to pay (Whish, OMT, bank transfer or cash).",
+    "whatsapp": "Message the host on WhatsApp",
+    "whatsappMessage": "Hi! I just requested booking {reference} for {name}. Looking forward to staying with you.",
+    "total": "Total",
+    "checkInFrom": "Check-in from",
+    "keepLink": "Your booking is saved to your account. Sign in any time to see its latest status here or under your trips.",
+    "room": "Room",
+    "dates": "Dates",
+    "guestsLabel": "Guests",
+    "passenger": "Guest",
+    "status": {
+      "HELD": "Held",
+      "CONFIRMED": "Confirmed",
+      "DECLINED": "Declined",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled",
+      "AWAITING_PAYMENT": "To pay"
+    },
+    "when": "When",
+    "meetingPoint": "Meeting point",
+    "host": "Host",
+    "cancelBooking": "Cancel this booking",
+    "pay": {
+      "title": "Pay {amount} to confirm",
+      "intro": "Pay online with Whish or a card. Mabeet takes no commission: it all goes to the host. The dates stay yours until the time runs out:",
+      "whish": "Pay with Whish",
+      "card": "Pay by card",
+      "unavailable": "Online payment isn't available right now. Message the host.",
+      "paid": "Paid online: {amount}",
+      "refunded": "Refunded to you: {amount}"
+    }
+  },
+  "auth": {
+    "name": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "At least 10 characters.",
+    "wrongCredentials": "That email and password don't match.",
+    "genericError": "Something went wrong. Please try again.",
+    "sign-in": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to see your trips, favourites and your place.",
+      "submit": "Sign in",
+      "switchPrompt": "New here?"
+    },
+    "sign-up": {
+      "title": "Create your account",
+      "subtitle": "Save places, keep your trips in one place, or list your own.",
+      "submit": "Create account",
+      "switchPrompt": "Already have an account?"
+    },
+    "panel": {
+      "kicker": "Lebanon, booked direct",
+      "title": "Stay with the people who live there.",
+      "body": "Stone houses, sea rooms and mountain cabins, booked straight with their hosts.",
+      "passKicker": "Your next stay",
+      "passTitle": "Anywhere in Lebanon",
+      "passSubtitle": "Booked with the host, not a platform",
+      "fees": "Platform fees",
+      "feesValue": "None",
+      "payment": "Payment",
+      "paymentValue": "Whish · card",
+      "hold": "Your room",
+      "holdValue": "Held while they confirm",
+      "language": "Language",
+      "languageValue": "العربية · English",
+      "trust1": "No platform fees",
+      "trust2": "Online payments refunded in full",
+      "trust3": "Your room is held while they confirm"
+    },
+    "notVerified": "Please confirm your email first. We just sent you a new link.",
+    "forgotLink": "Forgot password?",
+    "checkInbox": {
+      "title": "Check your inbox",
+      "body": "We sent a link to {email}. Open it to confirm your email and you are in.",
+      "back": "Back to sign in"
+    },
+    "forgot": {
+      "title": "Forgot your password?",
+      "subtitle": "Enter your email and we will send you a link to choose a new one.",
+      "submit": "Send reset link",
+      "sent": "If an account uses {email}, a reset link is on its way.",
+      "back": "Back to sign in"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "subtitle": "At least 10 characters. You will be signed out on your other devices.",
+      "submit": "Save new password",
+      "done": "Your password is changed. Sign in with the new one.",
+      "invalid": "This link has expired or was already used. Ask for a new one.",
+      "again": "Send a new link"
+    },
+    "emailTaken": "An account already uses this email. Sign in instead."
+  },
+  "invitation": {
+    "pageTitle": "Team invitation",
+    "title": "Join {place}",
+    "subtitle": "{name} invited you to the team as <strong>{role}</strong>.",
+    "phone": "Phone",
+    "emailFixed": "The invitation was sent to this email.",
+    "join": "Join the team",
+    "error": "Couldn't accept the invitation. Try again.",
+    "otherAccount": "This invitation was sent to {email}, but you're signed in as {current}. Sign out, then open the link again.",
+    "signInFirst": "You already have an account with {email}. Sign in to join.",
+    "signIn": "Sign in to join",
+    "invalid": {
+      "title": "This invitation isn't valid",
+      "body": "It may have been cancelled. Ask the host to send a new one."
+    },
+    "expired": {
+      "title": "This invitation has expired",
+      "body": "Ask {name} to send you a new one."
+    },
+    "accepted": {
+      "title": "You're already on the team",
+      "body": "You joined {place}. Sign in to open its dashboard.",
+      "open": "Open the dashboard"
+    }
+  },
+  "host": {
+    "title": "List your place",
+    "headline": "Your guests, <em>your bookings.</em> No commission.",
+    "intro": "One calendar that stays in sync with Airbnb and Booking.com, a booking page for your Instagram bio, and a database that makes double bookings impossible.",
+    "points": {
+      "sync": {
+        "title": "Synced with the platforms",
+        "body": "Paste your Airbnb and Booking.com calendar links. We keep every room in step, both ways."
+      },
+      "noDouble": {
+        "title": "Never double-booked",
+        "body": "The database itself refuses two bookings on the same night. Not a promise, a rule."
+      },
+      "instagram": {
+        "title": "Made for Instagram and WhatsApp",
+        "body": "One link for your bio. Guests book, you confirm from your phone, and online payments become yours to collect once the stay starts."
+      },
+      "ai": {
+        "title": "Ask your own assistant",
+        "body": "Connect Claude or ChatGPT to your place and ask what's booked, what's free and what you earned."
+      }
+    },
+    "formTitle": "Create your workspace",
+    "formSubtitle": "Free during the pilot. You can add rooms right after.",
+    "placeName": "Name of your place",
+    "area": "Town or area",
+    "create": "Create workspace",
+    "error": "We could not create your workspace. Please try again.",
+    "signUpFirst": "Create an account to start",
+    "haveAccount": "I already have an account",
+    "seePlans": "See plans and prices"
+  },
+  "permissions": {
+    "rooms": {
+      "read": {
+        "title": "See rooms",
+        "description": "Rooms, rates and photos"
+      },
+      "manage": {
+        "title": "Manage rooms",
+        "description": "Create and edit rooms, rates and photos"
+      }
+    },
+    "calendar": {
+      "read": {
+        "title": "See the calendar",
+        "description": "Who is staying when, from every channel"
+      }
+    },
+    "blocks": {
+      "manage": {
+        "title": "Close dates",
+        "description": "Block and reopen nights"
+      }
+    },
+    "feeds": {
+      "manage": {
+        "title": "Manage channels",
+        "description": "Airbnb, Booking.com and other calendar links"
+      }
+    },
+    "bookings": {
+      "read": {
+        "title": "See bookings",
+        "description": "Requests and confirmed stays"
+      },
+      "decide": {
+        "title": "Confirm bookings",
+        "description": "Confirm, decline and cancel"
+      }
+    },
+    "guests": {
+      "contact": {
+        "title": "See guest contacts",
+        "description": "Phone numbers and emails"
+      }
+    },
+    "payments": {},
+    "reviews": {
+      "reply": {
+        "title": "Handle reviews",
+        "description": "Reply to and hide reviews"
+      }
+    },
+    "analytics": {
+      "read": {
+        "title": "See analytics",
+        "description": "Revenue, occupancy and savings"
+      }
+    },
+    "team": {
+      "manage": {
+        "title": "Manage the team",
+        "description": "Add and remove members"
+      }
+    },
+    "roles": {
+      "manage": {
+        "title": "Manage roles",
+        "description": "Create roles and choose their permissions"
+      }
+    },
+    "settings": {
+      "manage": {
+        "title": "Business settings",
+        "description": "Profile, payment rules and policies"
+      }
+    },
+    "ai": {
+      "use": {
+        "title": "Use the AI assistant",
+        "description": "Chat and MCP keys, limited to this member's own permissions"
+      }
+    },
+    "offerings": {
+      "manage": {
+        "title": "Manage experiences & services",
+        "description": "Create experiences and services and schedule their sessions"
+      }
+    }
+  },
+  "dashboard": {
+    "myAccount": "My account",
+    "switchWorkspace": "Switch business",
+    "newWorkspace": "Add a business",
+    "nav": {
+      "overview": "Today",
+      "bookings": "Bookings",
+      "calendar": "Calendar",
+      "rooms": "Rooms",
+      "channels": "Channels",
+      "reviews": "Reviews",
+      "team": "Team",
+      "assistant": "AI assistant",
+      "keys": "Claude & ChatGPT (MCP)",
+      "settings": "Settings",
+      "offerings": "Experiences & services",
+      "billing": "Billing",
+      "payouts": "Payouts",
+      "place": "Your place",
+      "analytics": "Analytics"
+    },
+    "overview": {
+      "title": "Today",
+      "subtitle": "Requests waiting for you, and how your place is doing.",
+      "kpis": "Key numbers",
+      "occupancy": "Occupancy",
+      "last90": "Last 90 days",
+      "directRevenue": "Direct revenue",
+      "commissionSaved": "Commission saved",
+      "vsPlatforms": "Versus booking through platforms",
+      "nightsSold": "Nights sold",
+      "requests": "{count, plural, =0 {No requests waiting} one {# request waiting} other {# requests waiting}}",
+      "noRequests": "You're all caught up.",
+      "nightsByMonth": "Nights sold by month",
+      "nightsTitle": "{month}: {count} nights",
+      "channels": "Where bookings come from",
+      "channelsHint": "Nights in the last 90 days, by channel.",
+      "channel": {
+        "DIRECT": "Direct",
+        "AIRBNB": "Airbnb",
+        "BOOKING": "Booking.com",
+        "OTHER": "Other",
+        "MANUAL": "Blocked"
+      },
+      "noNightsYet": "No nights sold yet. Your first booking will show up here.",
+      "savings": {
+        "title": "What Mabeet saved you",
+        "intro": "Since you joined: every confirmed direct booking, the commission Airbnb or Booking.com would have taken at your rate, and what you paid Mabeet.",
+        "revenue": "Direct bookings",
+        "saved": "Commission saved",
+        "fees": "Paid for your plan",
+        "kept": "You kept",
+        "keptNote": "Saved, minus what you paid Mabeet"
+      }
+    },
+    "bookings": {
+      "title": "Bookings",
+      "tabs": {
+        "requests": "Requests",
+        "upcoming": "Upcoming",
+        "past": "Past",
+        "all": "All"
+      },
+      "empty": "Nothing here yet.",
+      "guests": "{count, plural, one {# guest} other {# guests}}",
+      "status": {
+        "HELD": "Waiting for you",
+        "CONFIRMED": "Confirmed",
+        "DECLINED": "Declined",
+        "EXPIRED": "Expired",
+        "CANCELLED": "Cancelled",
+        "AWAITING_PAYMENT": "Waiting for payment"
+      },
+      "confirm": "Confirm",
+      "decline": "Decline",
+      "cancel": "Cancel booking",
+      "amount": "Amount",
+      "method": "Method",
+      "save": "Save",
+      "sessionsTitle": "Experiences & services",
+      "staysTitle": "Stays"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "previous": "Previous month",
+      "next": "Next month",
+      "removeBlock": "Reopen these dates",
+      "legend": {
+        "DIRECT": "Direct booking",
+        "MANUAL": "Blocked by you",
+        "IMPORTED": "From a platform",
+        "conflict": "Clash to check",
+        "pending": "Waiting for answer or payment"
+      },
+      "room": "Room",
+      "from": "From",
+      "source": "Booked on",
+      "note": "Note",
+      "block": "Close these dates",
+      "sources": {
+        "NONE": "Closed",
+        "OTHER": "Phone or walk-in",
+        "AIRBNB": "Airbnb",
+        "BOOKING": "Booking.com"
+      },
+      "intro": "Every booking, block and platform stay. Click a day to see it, double-click to close dates, drag closed dates to move them.",
+      "today": "Today",
+      "month": "Month",
+      "week": "Week",
+      "timeline": "Rooms",
+      "view": "View",
+      "show": "Show",
+      "allRooms": "All rooms",
+      "closeDates": "Close dates",
+      "hint": "Double-click a day (or use Close dates), then click the last night. Drag closed dates to move them.",
+      "pickLastNight": "Now click the last night to close, or pick it below.",
+      "closeRange": "Close {from} to {to} (nights included)",
+      "lastNight": "Last night",
+      "cancel": "Cancel",
+      "close": "Close",
+      "more": "+{count} more",
+      "arrives": "Arrives",
+      "leaves": "Leaves",
+      "length": "Length",
+      "nights": "{count, plural, one {# night} other {# nights}}",
+      "reference": "Reference",
+      "conflictHint": "A platform booking overlaps this one. Check it on Airbnb or Booking.com.",
+      "openBooking": "Open booking",
+      "dragHint": "Drag it in the calendar to move it to other nights or, in Rooms view, another room.",
+      "arrivals": "Arriving ({count})",
+      "departures": "Leaving ({count})",
+      "staying": "Staying ({count})",
+      "freeRooms": "Free rooms ({count} of {total})",
+      "comingUp": "Coming up, next 7 days",
+      "nothingComing": "No arrivals in the next 7 days."
+    },
+    "rooms": {
+      "title": "Rooms",
+      "live": "Bookable",
+      "hidden": "Hidden",
+      "new": "Add a room",
+      "name": "Room name",
+      "rate": "Nightly rate",
+      "description": "Description",
+      "capacity": "Guests",
+      "bedrooms": "Bedrooms",
+      "beds": "Beds",
+      "bathrooms": "Bathrooms",
+      "minNights": "Min. nights",
+      "amenities": "Amenities",
+      "active": "Bookable by guests",
+      "save": "Save room",
+      "create": "Add room",
+      "prices": {
+        "title": "Special prices",
+        "hint": "Set a different price for holidays, weekends or events. Other nights use the base rate ({base}).",
+        "none": "No special prices coming up.",
+        "perNight": "{price} a night",
+        "remove": "Back to the base rate",
+        "firstNight": "First night",
+        "lastNight": "Last night",
+        "price": "Price a night ({currency})",
+        "save": "Set price"
+      },
+      "photos": "Photos of this room",
+      "photosHint": "Optional: pick a few now, add more later.",
+      "unitActive": "Guests can book the whole place",
+      "showOnly": "Show this room on my listing",
+      "showOnlyHint": "Your place is booked as a whole, so rooms are shown but not booked one by one.",
+      "wholePlaceNote": "Your place is booked as a whole: rooms here are shown to guests, not booked one by one.",
+      "wholePlaceLink": "Change it on Your place",
+      "shown": "Shown"
+    },
+    "channels": {
+      "title": "Channels",
+      "intro": "Keep Airbnb, Booking.com and other platforms in step with your direct bookings. Platforms refresh on their own schedule, often every few hours.",
+      "exportTitle": "Your calendar link for the platforms",
+      "exportHint": "Paste this into Airbnb and Booking.com under \"Import calendar\". It shows dates as taken, never guest details.",
+      "importTitle": "Calendars we read from",
+      "lastSynced": "Last synced {when}",
+      "neverSynced": "Not synced yet",
+      "syncNow": "Sync now",
+      "remove": "Remove",
+      "source": "Platform",
+      "url": "Calendar link (.ics)",
+      "add": "Add calendar",
+      "sources": {
+        "AIRBNB": "Airbnb",
+        "BOOKING": "Booking.com",
+        "OTHER": "Other"
+      }
+    },
+    "team": {
+      "title": "Team",
+      "members": "Members",
+      "you": "you",
+      "role": "Role",
+      "remove": "Remove member",
+      "email": "Email",
+      "roles": "Roles",
+      "rolesIntro": "Build roles that match how your place runs. Each switch is one thing a member can do. You can only give permissions you have yourself.",
+      "memberCount": "{count, plural, =0 {No members} one {# member} other {# members}}",
+      "newRole": "New role",
+      "roleName": "Role name",
+      "roleDescription": "What it's for",
+      "permissions": "Permissions",
+      "saveRole": "Save role",
+      "createRole": "Create role",
+      "deleteRole": "Delete role",
+      "name": "Full name",
+      "phone": "Phone",
+      "inviteTitle": "Invite someone to the team",
+      "inviteIntro": "They get an email with a link to create their account, or sign in, and join with the role you pick here.",
+      "sendInvite": "Send invitation",
+      "inviteSent": "Invitation sent to {email}.",
+      "invitations": "Invitations",
+      "invitedBy": "Invited by {name} on {date}",
+      "acceptedOn": "Joined on {date}",
+      "cancelInvite": "Cancel",
+      "invitationStatus": {
+        "PENDING": "Waiting",
+        "ACCEPTED": "Accepted",
+        "CANCELLED": "Cancelled",
+        "EXPIRED": "Expired"
+      }
+    },
+    "reviews": {
+      "title": "Reviews",
+      "empty": "No reviews yet. Guests are invited to review after they check out.",
+      "rating": "{rating} out of 5",
+      "reply": "Reply",
+      "updateReply": "Update reply",
+      "replyPlaceholder": "Thank the guest or answer publicly",
+      "hide": "Hide",
+      "show": "Show again",
+      "hideReason": "Why hide this review? Guests won't see it, and the reason is logged.",
+      "hiddenBecause": "Hidden: {reason}"
+    },
+    "settings": {
+      "title": "Settings",
+      "publicLink": "Your booking page: {url}",
+      "profile": "Profile",
+      "name": "Name",
+      "area": "Area",
+      "address": "Address",
+      "description": "Description",
+      "categories": "Categories",
+      "listedPublicly": "Show my place in public search and to the trip concierge",
+      "contact": "Contact",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp number",
+      "bookingRules": "Money and holds",
+      "currency": "Currency",
+      "commission": "Platform commission you avoid (%)",
+      "commissionHint": "Used to show how much direct bookings save you.",
+      "holdHours": "Time to answer a request (hours)",
+      "holdHint": "If you don't answer in time, the booking expires and the room is free again. A guest who paid online gets a full refund.",
+      "checkInTime": "Check-in from",
+      "checkOutTime": "Check-out by",
+      "paymentInstructions": "How guests pay you directly",
+      "paymentPlaceholder": "e.g. Whish to 70 123 456, with the booking reference",
+      "houseRules": "House rules",
+      "save": "Save settings",
+      "tags": "Good for",
+      "tagsHint": "Guests can filter by these.",
+      "accessibility": "Accessibility",
+      "minGuestAge": "Minimum guest age",
+      "minGuestAgeHint": "Leave empty if everyone is welcome.",
+      "location": "Location on the map",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "locationHint": "In Google Maps, right-click your door and click the numbers to copy them, e.g. 33.6969, 35.5636.",
+      "thingsToKnow": "Things to know",
+      "payments": {
+        "title": "Booking and payments",
+        "intro": "Choose how guests book and pay. Mabeet never takes a commission: online payments are paid out to you in full.",
+        "bookingMode": "How guests book and pay",
+        "modes": {
+          "AUTOMATIC": {
+            "name": "Automatic",
+            "body": "Guests pay online in full, with Whish or a card, and the booking is confirmed as soon as the payment arrives."
+          },
+          "ONLINE_APPROVAL": {
+            "name": "Online, with my approval",
+            "body": "Guests pay online in full, then you confirm or decline. If you decline or don't answer in time, they get a full refund."
+          },
+          "OFFLINE": {
+            "name": "Offline",
+            "body": "Guests send a request and you confirm or decline. You and the guest arrange the payment yourselves; Mabeet doesn't handle it."
+          }
+        },
+        "policy": {
+          "title": "Payment policy",
+          "body": "With online payments, refunds are always full and automatic: whether you decline, cancel or don't answer in time, or the guest cancels, the guest gets everything back.",
+          "accept": "I accept the payment policy: online payments are always refunded in full",
+          "accepted": "You accepted the payment policy on {date}",
+          "required": "Accept the payment policy to choose an online mode."
+        }
+      },
+      "stayRules": "Arrival and house rules",
+      "saved": "Saved.",
+      "generalIntro": "How the business runs: currency, holds and payments. What guests read about the place is on",
+      "placeLink": "Your place"
+    },
+    "offerings": {
+      "title": "Experiences & services",
+      "intro": "Hikes, tastings, transfers, a private chef: anything guests book by the session. Add it, then schedule its dates.",
+      "new": "Add an experience or service",
+      "empty": "Nothing yet. Add your first experience or service below.",
+      "kind": "Type",
+      "kinds": {
+        "EXPERIENCE": "Experience",
+        "SERVICE": "Service"
+      },
+      "titleLabel": "Title",
+      "description": "Description",
+      "category": "Category",
+      "none": "None",
+      "area": "Area",
+      "meetingPoint": "Meeting point",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "duration": "Duration (minutes)",
+      "price": "Price",
+      "priceUnit": "Price is",
+      "maxGuests": "Group size (max guests)",
+      "minAge": "Minimum age",
+      "activityLevel": "Activity level",
+      "skillLevel": "Skill level",
+      "notSet": "Not set",
+      "included": "What’s included",
+      "notIncluded": "What’s not included",
+      "listHint": "One item per line.",
+      "accessibility": "Accessibility",
+      "languages": "Languages",
+      "tags": "Good for",
+      "active": "Bookable",
+      "save": "Save",
+      "create": "Create",
+      "live": "Bookable",
+      "hidden": "Hidden",
+      "schedule": "Schedule dates",
+      "from": "From",
+      "to": "Until",
+      "weekdays": "On these days",
+      "time": "Start time",
+      "capacity": "Spots per session",
+      "addSessions": "Add sessions",
+      "added": "{count, plural, one {# session added} other {# sessions added}}",
+      "noDates": "Pick a date range and at least one weekday.",
+      "upcoming": "Upcoming sessions",
+      "noUpcoming": "No upcoming sessions.",
+      "seats": "{taken} of {capacity} booked",
+      "cancelSession": "Cancel session",
+      "openPage": "Open public page",
+      "weekday": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      }
+    },
+    "photos": {
+      "title": "Photos",
+      "hint": "The first photo is the cover on cards. Photos are shrunk before upload, so they load fast on phones.",
+      "upload": "Add photos",
+      "uploading": "Uploading {done} of {total}…",
+      "cover": "Cover",
+      "makeCover": "Make cover",
+      "remove": "Delete photo",
+      "empty": "No photos yet. Guests book places they can see: add at least five.",
+      "failed": "Some photos could not be uploaded.",
+      "roomTitle": "Photos of this room",
+      "roomHint": "Shown when a guest opens this room. The first one is its cover.",
+      "area": "What it shows",
+      "noArea": "Part of the place…"
+    },
+    "phoneAlerts": "Phone notifications",
+    "payouts": {
+      "title": "Payouts",
+      "intro": "What guests paid online through Mabeet. Mabeet keeps no commission. Money for a stay becomes available once the stay starts; then ask for it and it reaches your bank or Whish.",
+      "empty": "No online payments yet. Turn them on in Settings, under Booking and payments.",
+      "available": "Available to pay out",
+      "upcoming": "For upcoming stays",
+      "upcomingNote": "Available once they start",
+      "paidOut": "Paid out",
+      "requestedNote": "{amount} requested",
+      "requestTitle": "Ask for a payout",
+      "nothingAvailable": "Nothing to pay out yet. Money becomes available once the stay or session has started.",
+      "currency": "Currency",
+      "amount": "Amount",
+      "method": "Send it to",
+      "accountName": "Account holder's name",
+      "whishPhone": "Whish phone number",
+      "bankName": "Bank",
+      "iban": "IBAN",
+      "ibanHint": "Spaces are fine.",
+      "noCards": "For your safety, Mabeet never asks for card numbers. Payouts go to a bank account or a Whish number.",
+      "request": "Ask for it",
+      "requested": "Requested. You'll be told when it's sent.",
+      "history": "Payouts",
+      "noPayouts": "No payouts yet.",
+      "payments": "Online payments",
+      "noPayments": "No online payments yet.",
+      "card": "Card",
+      "refunded": "{amount} refunded",
+      "methods": {
+        "WHISH": "Whish",
+        "BANK_TRANSFER": "Bank transfer"
+      },
+      "status": {
+        "REQUESTED": "Requested",
+        "PAID": "Sent",
+        "REJECTED": "Refused"
+      }
+    },
+    "navGroups": {
+      "today": "Today",
+      "bookings": "Bookings",
+      "listings": "Listings",
+      "money": "Money",
+      "team": "Team",
+      "business": "Business",
+      "ai": "AI"
+    },
+    "findBusiness": "Find a business",
+    "allPlaces": "All my places"
+  },
+  "account": {
+    "eyebrow": "Your account",
+    "hello": "Hello, {name}",
+    "hostDashboard": "Host dashboard",
+    "admin": "Platform admin",
+    "signOut": "Sign out",
+    "tabs": {
+      "label": "Account sections",
+      "trips": "Trips",
+      "favorites": "Favourites",
+      "activity": "Activity",
+      "privacy": "Privacy",
+      "notifications": "Notifications"
+    },
+    "noTrips": "No trips yet. Where to first?",
+    "explore": "Explore places",
+    "upcoming": "Upcoming",
+    "past": "Past stays",
+    "status": {
+      "HELD": "Waiting for the host",
+      "CONFIRMED": "Confirmed",
+      "DECLINED": "Declined",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled",
+      "AWAITING_PAYMENT": "Waiting for your payment"
+    },
+    "noFavorites": "Nothing saved yet",
+    "noFavoritesHint": "Tap the heart on any place to keep it here.",
+    "review": {
+      "title": "How was your stay?",
+      "stars": "{count} out of 5",
+      "comment": "Your review",
+      "placeholder": "What did you love? What should the next guest know?",
+      "submit": "Post review",
+      "titleExperience": "How was it?",
+      "scale": "1 = poor · 5 = wonderful"
+    },
+    "activity": {
+      "empty": "Nothing here yet.",
+      "booking": {
+        "requested": "You requested a booking",
+        "confirmed": "The host confirmed your booking",
+        "awaiting_payment": "Your booking is waiting for your payment",
+        "declined": "The host declined your request",
+        "cancelled": "The host cancelled your booking",
+        "cancelled_by_guest": "You cancelled a booking",
+        "expired": "Your request ran out before the host answered"
+      },
+      "favorite": {
+        "added": "You saved a place",
+        "removed": "You removed a saved place"
+      },
+      "review": {
+        "submitted": "You posted a review"
+      },
+      "member": {
+        "invitation_accepted": "You joined a team"
+      }
+    },
+    "experiences": "Experiences & services",
+    "privacy": {
+      "downloadTitle": "Download your data",
+      "downloadBody": "A file with your profile, bookings, reviews, saved places, team memberships and activity: everything Mabeet holds about you.",
+      "download": "Download my data",
+      "deleteTitle": "Delete your account",
+      "deleteIntro": "You are signed out everywhere and can no longer sign in, and your email is freed for a new account. Your saved places, chats and team access are removed from view. Mabeet keeps the records marked as deleted, and hosts keep the bookings you made with them, because they need them for their records.",
+      "deleteBody": "This cannot be undone. Type your email to confirm.",
+      "typeEmail": "Your email",
+      "deleteConfirm": "Delete for good",
+      "delete": "Delete my account"
+    }
+  },
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "loading": "Loading…",
+    "error": "Something went wrong. Please try again.",
+    "close": "Close",
+    "back": "Back"
+  },
+  "assistant": {
+    "placeholder": "Ask anything…",
+    "send": "Send",
+    "thinking": "Looking it up…",
+    "progress": {
+      "searching": "Searching what's free…",
+      "checking": "Checking your data…",
+      "report": "Writing the report…"
+    },
+    "noAnswer": "I couldn't find an answer to that. Could you rephrase?",
+    "error": "The assistant didn't answer. Please try again.",
+    "guest": {
+      "title": "Trip concierge",
+      "subtitle": "Describe the weekend you imagine. It only suggests places that are really free, with real prices.",
+      "greeting": "Ahla! Where would you like to wake up, and when? Tell me who's coming and what you feel like doing.",
+      "suggestions": {
+        "mountain": "A quiet mountain weekend for two with hiking, under $120 a night",
+        "sea": "Something by the sea in Batroun for 4 people next weekend",
+        "arabizi": "badde chalet bl jabal la 2 layele, fi fireplace?"
+      },
+      "mcpTitle": "Use it from Claude or ChatGPT",
+      "mcpBody": "Add this address as a connector in any AI app that supports MCP, and ask it about places and dates directly.",
+      "privacy": "We send only your message and public listing data to the AI provider. Never your phone, email or bookings.",
+      "units": {
+        "stay": "total",
+        "night": "/ night",
+        "person": "/ person",
+        "group": "/ group"
+      },
+      "kicker": "Your travel desk",
+      "speaker": "Mabeet concierge",
+      "open": "Open",
+      "mcpKicker": "Take it with you",
+      "worksWith": "Works with",
+      "costs": "Costs",
+      "free": "Free",
+      "anyMcp": "Any MCP app"
+    },
+    "team": {
+      "title": "Assistant",
+      "subtitle": "Ask about your bookings, calendar and numbers. It only sees what your role lets you see.",
+      "greeting": "Hi! Ask me what's booked, what's free, or how the month is going.",
+      "suggestions": {
+        "weekend": "Which rooms are free this weekend?",
+        "month": "How much did direct bookings save us this month?",
+        "requests": "Any requests waiting for me?"
+      },
+      "speaker": "Your assistant",
+      "actions": {
+        "title": "Waiting for you to confirm",
+        "hint": "Nothing changes until you confirm.",
+        "confirm": "Confirm",
+        "cancel": "Don't do it",
+        "done": "Done",
+        "dismissed": "Not done",
+        "tools": {
+          "confirm_booking": "Confirm booking",
+          "decline_booking": "Decline request",
+          "cancel_booking": "Cancel booking",
+          "close_dates": "Close dates",
+          "reopen_dates": "Reopen dates"
+        },
+        "fields": {
+          "reference": "Booking",
+          "reason": "Reason",
+          "room": "Room",
+          "checkIn": "From",
+          "checkOut": "Until (morning)",
+          "source": "Booked on",
+          "note": "Note",
+          "blockId": "Closed dates",
+          "place": "Place"
+        }
+      }
+    },
+    "keys": {
+      "title": "Connect your AI",
+      "intro": "Create a key and connect Claude, ChatGPT or any MCP app to your place. The AI sees exactly what you can see, nothing more. Revoke a key any time.",
+      "create": "New key",
+      "name": "Key name",
+      "namePlaceholder": "e.g. Claude on my laptop",
+      "expires": "Expires after",
+      "days": "{count} days",
+      "never": "Never",
+      "allowWrite": "Allow changes",
+      "allowWriteHint": "Lets the AI confirm or decline bookings and close dates, if your role allows. Your AI app asks you before each change.",
+      "generate": "Create key",
+      "copyNow": "Copy this key now. For your safety it won't be shown again.",
+      "secret": "Your key",
+      "claudeCode": "Claude Code",
+      "desktop": "Claude Desktop or Cursor (config)",
+      "done": "I've copied it",
+      "yourKeys": "Your keys",
+      "noKeys": "No keys yet.",
+      "readOnly": "Read only",
+      "readWrite": "Read and change",
+      "lastUsed": "Last used {when}",
+      "neverUsed": "Never used",
+      "revoke": "Revoke",
+      "auditTitle": "What the AI looked at",
+      "auditHint": "Every tool call from a key or the assistant, newest first.",
+      "noCalls": "No calls yet.",
+      "ok": "ok"
+    },
+    "ideas": "Start with an idea",
+    "idea": "Idea {number}",
+    "enterHint": "Enter to send · Shift + Enter for a new line",
+    "newChat": "New chat",
+    "history": "History ({count})",
+    "temporary": "Temporary chat",
+    "signInToSave": "Sign in to keep your chats. This one won't be saved.",
+    "temporaryHint": "Temporary: this chat isn't saved and disappears when you leave.",
+    "savedHint": "Saved to your history. Only you can see it.",
+    "noHistory": "No saved chats yet.",
+    "deleteChat": "Delete chat"
+  },
+  "admin": {
+    "title": "Platform",
+    "businesses": "Businesses",
+    "users": "People",
+    "bookings30": "Requests, last 30 days",
+    "allTime": "{count} all time",
+    "confirmed30": "Confirmed, last 30 days",
+    "name": "Name",
+    "area": "Area",
+    "rooms": "Rooms",
+    "bookings": "Bookings",
+    "team": "Team",
+    "since": "Joined",
+    "listed": "Listed",
+    "suspend": "Suspend",
+    "reactivate": "Reactivate",
+    "recentUsers": "Newest people",
+    "userCounts": "{places} places · {trips} trips",
+    "theme": {
+      "title": "Website colours",
+      "hint": "One palette for the whole website. Visitors can still switch between light and dark.",
+      "palettes": {
+        "cedar": "Cedar",
+        "byblos": "Byblos",
+        "batroun": "Batroun",
+        "baalbek": "Baalbek",
+        "jounieh": "Jounieh"
+      },
+      "paletteNotes": {
+        "cedar": "Cedar green, ivory and brass",
+        "byblos": "Phoenician navy, sand and terracotta",
+        "batroun": "Terracotta roofs, cream and olive",
+        "baalbek": "Aubergine, limestone and ochre",
+        "jounieh": "Midnight bay, pearl and champagne"
+      }
+    },
+    "categories": {
+      "title": "Categories",
+      "hint": "What guests browse by on the home page and in search. The slug and type are fixed once created.",
+      "kinds": {
+        "HOME": "Homes",
+        "EXPERIENCE": "Experiences",
+        "SERVICE": "Services"
+      },
+      "kind": "Type",
+      "nameEn": "English name",
+      "nameAr": "Arabic name",
+      "icon": "Icon",
+      "position": "Order",
+      "save": "Save",
+      "add": "Add category",
+      "new": "New category",
+      "delete": "Delete category",
+      "deleteTitle": "Delete “{name}”?",
+      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first"
+    },
+    "ai": {
+      "title": "AI this month",
+      "ofBudget": "{spent} of the {budget} monthly budget. Admins get an email at 80%; at 100% the assistants pause until the 1st.",
+      "none": "No assistant answers yet this month.",
+      "row": "{answers, plural, one {# answer} other {# answers}} · {tokens} tokens",
+      "surfaces": {
+        "concierge": "Guest concierge",
+        "team": "Team assistant",
+        "report": "Analytics reports"
+      }
+    },
+    "sync": {
+      "title": "Calendar sync",
+      "summary": "{total, plural, one {# feed} other {# feeds}} connected · {problems, plural, =0 {all healthy} one {# needs attention} other {# need attention}}",
+      "allGood": "Every feed synced in the last two hours.",
+      "lastSynced": "Last synced {when}",
+      "never": "Never synced"
+    },
+    "money": {
+      "title": "Money",
+      "intro": "What Mabeet earned from plans, what it holds for each host from online payments, and what you need to send.",
+      "earnedAll": "Earned from plans",
+      "earnedMonth": "Earned this month",
+      "byCard": "Paid by card",
+      "byWhish": "Paid with Whish",
+      "byMonth": "Plan revenue by month",
+      "payments": "{count, plural, one {# payment} other {# payments}}",
+      "requests": "Payouts to send",
+      "noRequests": "No payout requests waiting.",
+      "reference": "Transfer reference",
+      "markPaid": "Mark as sent",
+      "markSent": "Mark as sent",
+      "reject": "Refuse",
+      "owed": "What Mabeet owes hosts",
+      "owedIntro": "Online payments held for each host, net of refunds and payouts.",
+      "nothingOwed": "Nothing held for any host.",
+      "host": "Host",
+      "available": "Available",
+      "upcoming": "Upcoming stays",
+      "requested": "Requested",
+      "paidOut": "Paid out",
+      "refunds": "Refunds to send by hand",
+      "refundsIntro": "Refunds are automatic and always in full. Any refund a provider refused is sent by you.",
+      "noRefunds": "No refunds waiting.",
+      "card": "Card",
+      "recent": "Recent payouts",
+      "status": {
+        "REQUESTED": "Requested",
+        "PAID": "Sent",
+        "REJECTED": "Refused"
+      }
+    },
+    "nav": {
+      "overview": "Overview",
+      "businesses": "Businesses",
+      "users": "Users",
+      "money": "Money",
+      "categories": "Categories",
+      "appearance": "Appearance",
+      "health": "Health",
+      "groups": {
+        "platform": "Platform",
+        "money": "Money",
+        "content": "Content",
+        "operations": "Operations"
+      },
+      "hosts": "Hosts"
+    },
+    "overviewIntro": "The platform at a glance, and what needs you today.",
+    "businessesIntro": "Every business on Mabeet. Suspending one hides it everywhere at once.",
+    "usersIntro": "The newest accounts: guests, hosts and staff.",
+    "healthIntro": "What runs on its own: calendar sync with the platforms, and AI spending.",
+    "newestBusinesses": "Newest businesses",
+    "seeAll": "See all",
+    "attention": {
+      "title": "Needs your attention",
+      "payouts": "{count, plural, =0 {No payouts to send} one {1 payout to send} other {# payouts to send}}",
+      "refunds": "{count, plural, =0 {No refunds to send by hand} one {1 refund to send by hand} other {# refunds to send by hand}}",
+      "feeds": "{count, plural, =0 {All calendar links syncing} one {1 calendar link failing} other {# calendar links failing}}"
+    },
+    "hosts": {
+      "title": "Hosts",
+      "intro": "{count, plural, one {# host} other {# hosts}}, each listed once with all their businesses. Open one for their profile, contacts and businesses.",
+      "host": "Host",
+      "phone": "Phone",
+      "businesses": "Businesses",
+      "bookings": "Bookings",
+      "since": "Joined",
+      "suspended": "{count} suspended",
+      "open": "Open {name}",
+      "profile": "Host profile",
+      "shown": "Shown to guests",
+      "hidden": "Private",
+      "noProfile": "This host hasn't filled in a profile yet.",
+      "email": "Email",
+      "city": "City",
+      "languages": "Languages",
+      "hostingSince": "Hosting since",
+      "joined": "Joined Mabeet",
+      "theirBusinesses": "{count, plural, one {# business} other {# businesses}}",
+      "counts": "{rooms} rooms · {offerings} experiences · {bookings} bookings · {team} in the team",
+      "openDashboard": "Open dashboard",
+      "openPage": "Public page"
+    }
+  },
+  "errors": {
+    "notFoundTitle": "This page wandered off",
+    "notFoundBody": "The link may be old, or the place is no longer listed.",
+    "home": "Back home",
+    "errorTitle": "Something went wrong on our side",
+    "errorBody": "Please try again. If it keeps happening, tell the host or write to us.",
+    "retry": "Try again"
+  },
+  "privacy": {
+    "title": "Privacy",
+    "body": "We collect only what a booking needs: your name, phone and, if you give it, your email. Hosts see your contact details only if their role allows it. Calendar feeds we share with Airbnb and Booking.com say only that dates are taken. The trip concierge sends your message and public listing data to our AI provider (DeepSeek), never your phone, email or bookings. Owners' AI keys see only what that owner's role permits, and every access is logged. Ask us to delete your account at any time."
+  },
+  "listing": {
+    "tabs": {
+      "all": "All",
+      "homes": "Homes",
+      "experiences": "Experiences",
+      "services": "Services"
+    },
+    "tags": {
+      "family-friendly": "Family-friendly",
+      "romantic": "Romantic",
+      "pet-friendly": "Pets welcome",
+      "work-friendly": "Good for work",
+      "group-friendly": "Good for groups",
+      "hiking-nearby": "Hiking nearby",
+      "sea-view": "Sea view",
+      "mountain-view": "Mountain view",
+      "historic": "Historic",
+      "eco-friendly": "Eco-friendly",
+      "quiet": "Quiet",
+      "local-food": "Local food"
+    },
+    "accessibility": {
+      "step-free-access": "Step-free access",
+      "step-free-bathroom": "Step-free bathroom",
+      "disabled-parking": "Disabled parking spot",
+      "flat-ground": "Mainly flat or level ground",
+      "wide-doorways": "Wide doorways",
+      "low-sensory": "No extreme sensory stimuli"
+    },
+    "languages": {
+      "ar": "Arabic",
+      "en": "English",
+      "fr": "French"
+    },
+    "activity": {
+      "LIGHT": "light",
+      "MODERATE": "moderate",
+      "CHALLENGING": "challenging"
+    },
+    "skill": {
+      "BEGINNER": "beginner",
+      "INTERMEDIATE": "intermediate",
+      "ADVANCED": "advanced"
+    },
+    "priceUnit": {
+      "PER_PERSON": "per person",
+      "PER_GROUP": "per group"
+    }
+  },
+  "filters": {
+    "title": "Filters",
+    "button": "Filters",
+    "price": "Price range",
+    "priceHint": "Per night for homes, per person or group for experiences and services",
+    "min": "Minimum",
+    "max": "Maximum",
+    "categories": "Type of place or activity",
+    "amenities": "What this place offers",
+    "tags": "Good for",
+    "accessibility": "Accessibility",
+    "clear": "Clear all",
+    "show": "Show results",
+    "close": "Close",
+    "previous": "Scroll back",
+    "next": "Scroll forward"
+  },
+  "offering": {
+    "perPerson": "/ person",
+    "perGroup": "/ group",
+    "from": "From",
+    "next": "Next: {when}",
+    "hours": "{count, plural, one {# hour} other {# hours}}",
+    "minutes": "{count} min",
+    "hosted": "Hosted by {name}",
+    "new": "New"
+  },
+  "thingsToKnow": {
+    "title": "Things to know",
+    "requirements": "Guest requirements",
+    "requirementsAge": "Guests ages {age} and up can attend, up to {max} guests total.",
+    "requirementsMax": "Up to {max} guests total.",
+    "activity": "Activity level",
+    "activityBody": "The activity level is {activity} and the skill level is {skill}.",
+    "activityOnly": "The activity level is {activity}.",
+    "included": "What’s included",
+    "notIncluded": "What’s not included",
+    "accessibility": "Accessibility",
+    "noAccessibility": "The host has not listed accessibility features yet. Message them before booking.",
+    "cancellation": "Cancellation",
+    "languages": "Languages",
+    "meetingPoint": "Where you’ll meet",
+    "houseRules": "House rules",
+    "checkInOut": "Check-in and check-out",
+    "checkInOutBody": "Check-in after {in}, check-out before {out}.",
+    "stayRequirements": "Guests ages {age} and up."
+  },
+  "offeringPage": {
+    "whereYouMeet": "Where you’ll meet",
+    "whereYoullBe": "Where you’ll be",
+    "openMaps": "Open in Google Maps",
+    "hostedBy": "Hosted by {name}",
+    "chooseTime": "Choose a time",
+    "noSessions": "No upcoming dates yet. Check back soon or message the host.",
+    "seatsLeft": "{count, plural, =0 {Full} one {# spot left} other {# spots left}}",
+    "guests": "Guests",
+    "yourDetails": "Your details",
+    "name": "Full name",
+    "phone": "Phone",
+    "phoneHint": "With country code, e.g. +961 71 123 456",
+    "email": "Email",
+    "emailHint": "For your confirmation (optional)",
+    "note": "Note to the host",
+    "request": "Request to book",
+    "signInToBook": "Sign in to book",
+    "total": "Total",
+    "noChargeYet": "Nothing is charged now. Your spots are held while the host confirms.",
+    "tags": "Good for",
+    "genericError": "Something went wrong. Please try again.",
+    "showMore": "Show {count} more dates",
+    "noReviews": "No reviews yet. Guests can review after taking part.",
+    "bookNow": "Book now",
+    "payOnlineNote": "You pay online after booking, with Whish or a card. Mabeet takes no commission.",
+    "showAllPhotos": "Show all photos",
+    "experienceIn": "Experience in {area}",
+    "serviceIn": "Service in {area}",
+    "experience": "Experience",
+    "service": "Service",
+    "upTo": "{count, plural, one {Up to # guest} other {Up to # guests}}"
+  },
+  "serverErrors": {
+    "messages": {
+      "invalidInput": "Invalid input",
+      "signIn": "Sign in required",
+      "noPermission": "You do not have permission to do this",
+      "missingPermission": "Missing permission: {permission}",
+      "cannotGrant": "You cannot grant permissions you do not have: {list}",
+      "rateLimited": "Too many requests. Please slow down.",
+      "notFound": "{entity} not found",
+      "bodyJson": "Request body must be JSON",
+      "datesTaken": "Those dates were just taken. Please pick other dates.",
+      "seatsTaken": "Those seats were just taken. Please pick another time.",
+      "transition": "A {from} booking cannot become {to}",
+      "checkoutAfter": "Check-out must be after check-in",
+      "pastCheckIn": "Check-in cannot be in the past",
+      "tooFar": "Those dates are too far ahead",
+      "maxNights": "Stays are limited to {max} nights",
+      "sleepsUpTo": "This room sleeps up to {capacity}",
+      "minNights": "This room needs at least {nights} nights",
+      "holdExpired": "This hold has expired. Ask the guest to request again.",
+      "sessionStarted": "This session has already started.",
+      "groupSize": "Up to {max} guests can book together",
+      "nightsBlocked": "Those nights are already booked or blocked",
+      "roleExists": "A role with this name already exists",
+      "roleHasMembers": "Move the members on this role to another role first",
+      "ownerRoleLocked": "The owner role cannot be changed",
+      "ownerRoleUndeletable": "The owner role cannot be deleted",
+      "ownOnly": "Only an owner can make someone an owner",
+      "ownerChange": "Only an owner can change another owner",
+      "ownAccess": "You cannot change your own access",
+      "alreadyMember": "This person is already on the team. Change their role from the team list instead.",
+      "noAccount": "No account uses this email yet. Ask them to sign up first.",
+      "platformOnly": "Platform admins only",
+      "alreadyReviewed": "You already reviewed this stay",
+      "reviewAfter": "You can review this stay after check-out",
+      "unknownCategories": "Unknown categories: {list}",
+      "categoryKind": "Pick a category of the same type",
+      "sessionsFuture": "Sessions must start in the future",
+      "sessionHasGuests": "Guests are booked on this session. Cancel their bookings first.",
+      "calendarHttps": "Calendar links must start with https://",
+      "calendarCredentials": "Calendar links cannot contain credentials",
+      "calendarNotFound": "That calendar link's website could not be found",
+      "calendarPrivate": "That calendar link points to a private address",
+      "calendarStatus": "The calendar link answered with status {status}",
+      "calendarTooLarge": "That calendar is too large",
+      "calendarNotIcal": "That link is not an iCal calendar",
+      "photoEmpty": "The file is empty",
+      "photoTooBig": "Photos must be smaller than 2.5 MB",
+      "photoType": "Upload a JPEG, PNG or WebP photo",
+      "photoMissing": "Choose a photo to upload",
+      "photoMultipart": "Send the photo as multipart form data",
+      "galleryFull": "A gallery holds up to {max} photos. Delete one first.",
+      "assistantOff": "The assistant is not set up yet.",
+      "assistantBusy": "The assistant is busy right now. Please try again in a moment.",
+      "stayStarted": "This stay has already started.",
+      "typeEmail": "Type your email exactly to confirm",
+      "soleOwner": "You are the only owner of {list}. Add another owner first.",
+      "alreadyReviewedThis": "You already reviewed this",
+      "alreadyReviewedExperience": "You already reviewed this experience",
+      "reviewAfterExperience": "You can review this experience after it ends",
+      "reviewTarget": "Name either a stay or an experience booking",
+      "priceNights": "Pick up to {max} nights, ending after they start",
+      "categoryExists": "A category with this slug already exists",
+      "categoryInUse": "Places or experiences still use this category. Move them first.",
+      "unknownIcon": "Unknown icon: {icon}",
+      "slugFormat": "Use lowercase letters, numbers and dashes",
+      "aiResting": "The assistant is resting until next month. Search and booking still work.",
+      "planRooms": "Your plan allows up to {max} rooms. Upgrade to add more.",
+      "planOfferings": "Your plan allows up to {max} experiences or services. Upgrade to add more.",
+      "planMembers": "Your plan allows up to {max} team members. Upgrade to add more.",
+      "planAi": "The AI assistant is on the Pro and Business plans. Upgrade to use it.",
+      "ownerPlan": "Only an owner can change the plan",
+      "paymentsOff": "Payments are not set up yet.",
+      "paymentsDown": "Payments are not available right now. Please try again shortly.",
+      "hasPlan": "You already have a plan. Change it from Manage billing.",
+      "choosePlan": "Choose a plan first",
+      "connectWorkspace": "You cannot connect an AI app to this workspace",
+      "nothingToPay": "This booking has nothing to pay online right now.",
+      "payTimeOver": "The time to pay has run out. Please book again.",
+      "alreadyPaid": "This booking is already paid.",
+      "whishCurrency": "Whish can't take this currency.",
+      "cardCurrency": "Cards can't be used for this currency.",
+      "whishNotSetUp": "Whish payments are not set up yet.",
+      "whishOdd": "Whish did not answer as expected. Please try again shortly.",
+      "whishDown": "Whish payments are not available right now. Please try again shortly.",
+      "ownersPayouts": "Only an owner can see payouts",
+      "payoutTooMuch": "That is more than is available to pay out.",
+      "payoutDecided": "This payout was already decided.",
+      "refundNotWaiting": "This refund is not waiting to be sent.",
+      "payByCard": "You pay by card. Change your plan from Manage billing.",
+      "hostOwnersOnly": "Only an owner has a host profile",
+      "adminNoKeys": "Platform admins can't create AI keys for a business they don't belong to",
+      "whatsappOnly": "This host answers on WhatsApp only",
+      "alreadyInvited": "This person already has an invitation waiting. Cancel it to send a new one.",
+      "invitationExpired": "This invitation has expired. Ask the host to send a new one.",
+      "invitationUsed": "This invitation can't be used any more.",
+      "alreadyOnTeam": "You are already on this team.",
+      "invitationRoleGone": "The role on this invitation no longer exists. Ask the host to send a new one.",
+      "haveAccount": "You already have an account with this email. Sign in to accept the invitation.",
+      "otherEmail": "This invitation was sent to another email address.",
+      "roleHasInvitations": "Cancel the invitations waiting for this role first"
+    },
+    "entities": {
+      "Block": "Block",
+      "Booking": "Booking",
+      "Business": "Business",
+      "Calendar_link": "Calendar link",
+      "Calendar": "Calendar",
+      "Experience": "Experience",
+      "Image": "Image",
+      "Key": "Key",
+      "Member": "Member",
+      "Photo": "Photo",
+      "Place": "Place",
+      "Review": "Review",
+      "Role": "Role",
+      "Room": "Room",
+      "Session": "Session",
+      "Stay": "Stay",
+      "Workspace": "Workspace",
+      "Account": "Account",
+      "Category": "Category",
+      "Payment": "Payment",
+      "Payout": "Payout",
+      "Page": "Page",
+      "Host": "Host",
+      "Chat": "Chat",
+      "Invitation": "Invitation"
+    },
+    "statuses": {
+      "held": "held",
+      "confirmed": "confirmed",
+      "declined": "declined",
+      "expired": "expired",
+      "cancelled": "cancelled",
+      "pending payment": "pending payment"
+    }
+  },
+  "confirm": {
+    "keep": "Go back",
+    "reasonOptional": "Reason (optional, the guest sees it)",
+    "decline": {
+      "title": "Decline this request?",
+      "body": "The dates open up again and the guest is told by email.",
+      "confirm": "Decline"
+    },
+    "cancel": {
+      "title": "Cancel this confirmed booking?",
+      "body": "The guest is told by email. Anything they paid online is refunded in full; refund what they paid you directly yourself.",
+      "confirm": "Cancel booking"
+    },
+    "removeMember": {
+      "title": "Remove {name} from the team?",
+      "body": "They lose access at once, including their MCP keys.",
+      "confirm": "Remove"
+    },
+    "changeRole": {
+      "title": "Change {name}’s role to {role}?",
+      "body": "Their access changes right away.",
+      "confirm": "Change role"
+    },
+    "revokeKey": {
+      "title": "Revoke the key “{name}”?",
+      "body": "Any AI app using it stops working immediately.",
+      "confirm": "Revoke"
+    },
+    "removeFeed": {
+      "title": "Disconnect this calendar?",
+      "body": "Nights imported from it are released. You can connect it again later.",
+      "confirm": "Disconnect"
+    },
+    "removeBlock": {
+      "title": "Reopen these nights?",
+      "body": "Guests can book them again.",
+      "confirm": "Reopen"
+    },
+    "deleteRole": {
+      "title": "Delete the role “{name}”?",
+      "confirm": "Delete role",
+      "body": "Nobody uses it any more. This cannot be undone."
+    },
+    "suspend": {
+      "title": "Suspend {name}?",
+      "body": "Its pages, search listing, team access and keys stop working until you reactivate it.",
+      "confirm": "Suspend"
+    },
+    "cancelSession": {
+      "title": "Cancel this session?",
+      "body": "It disappears from the public page.",
+      "confirm": "Cancel session"
+    },
+    "deletePhoto": {
+      "title": "Delete this photo?",
+      "confirm": "Delete",
+      "body": "It is removed from your page straight away."
+    },
+    "hideReview": {
+      "title": "Hide this review?",
+      "body": "It disappears from your page. Hiding is logged, and the reason is kept.",
+      "reason": "Why are you hiding it?",
+      "placeholder": "e.g. it is about a different place",
+      "confirm": "Hide review"
+    },
+    "guestCancel": {
+      "title": "Cancel your booking?",
+      "bodyHeld": "The host is told and the dates or spots are released.",
+      "bodyConfirmed": "The host is told. Anything you paid online is refunded to you in full.",
+      "reason": "Tell the host why (optional)",
+      "confirm": "Cancel booking"
+    },
+    "cancelInvitation": {
+      "title": "Cancel {name}'s invitation?",
+      "body": "The link in their email stops working. You can invite them again later.",
+      "confirm": "Cancel invitation"
+    }
+  },
+  "plans": {
+    "title": "Plans for hosts",
+    "subtitle": "Start free. Upgrade when you add rooms, a team or the AI assistant. Guests never pay a fee.",
+    "perMonth": "/ month",
+    "unlimited": "Unlimited",
+    "rooms": "{count} rooms",
+    "offerings": "{count} experiences or services",
+    "members": "{count} team members",
+    "basics": "Booking page, calendar sync, guest emails",
+    "ai": "AI team assistant and MCP for AI apps",
+    "notIncluded": "Not included:",
+    "current": "Your plan",
+    "popular": "Most popular",
+    "names": {
+      "FREE": "Free",
+      "PRO": "Pro",
+      "BUSINESS": "Business"
+    },
+    "blurbs": {
+      "FREE": "For a small guesthouse trying direct bookings.",
+      "PRO": "For a busy place with a team.",
+      "BUSINESS": "For several places and bigger teams."
+    },
+    "startFree": "Start free",
+    "startWith": "Start with {plan}",
+    "choose": "Choose {plan}",
+    "manage": "Manage billing",
+    "noCommission": "No commission on bookings, on any plan. Cancel any time.",
+    "billingTitle": "Plan and billing",
+    "currentPlan": "You are on {plan}",
+    "renews": "renews or ends on {date}",
+    "thanks": "Thank you! Your plan updates as soon as Stripe confirms the payment, usually within a minute.",
+    "notConfigured": "Online payment is not set up yet (Stripe keys missing), so plans cannot be bought here for now.",
+    "ownersOnly": "Only an owner can change the plan.",
+    "usage": {
+      "rooms": "Rooms",
+      "offerings": "Experiences and services",
+      "members": "Team members"
+    },
+    "payWhish": "Pay a month with Whish",
+    "whishPending": "We're waiting for Whish to confirm your payment. Refresh in a minute."
+  },
+  "oauth": {
+    "kicker": "Connect an AI app",
+    "failed": "That didn't work. Go back to your AI app and try connecting again.",
+    "workspaceTitle": "Which workspace?",
+    "workspaceBody": "The app will act in this one place only, with the access your role gives you.",
+    "noWorkspace": "None of your workspaces can connect an AI app yet. It needs the Pro or Business plan, and a role allowed to use the AI assistant.",
+    "continue": "Continue",
+    "consentTitle": "Allow {app} to connect?",
+    "anApp": "this app",
+    "consentWhere": "It will work in {business}, as you.",
+    "scopes": {
+      "mcp_read": "See bookings, the calendar, rooms, reviews and numbers your role can see",
+      "mcp_write": "Confirm or decline bookings and close dates, if your role allows it. The app asks you before each change.",
+      "offline_access": "Stay connected until you disconnect it",
+      "profile": "Know your name and email"
+    },
+    "allow": "Allow",
+    "deny": "Don't allow",
+    "revokeHint": "You can disconnect it any time from your dashboard, under Connect your AI."
+  },
+  "pwa": {
+    "title": "Notifications on this device",
+    "accountBody": "Get told the moment something changes, even with Mabeet closed: new requests and cancellations if you host, and every update on your own trips.",
+    "bookingTitle": "Follow this booking",
+    "bookingBody": "We'll tell you on this device when the host answers, and about any change after that.",
+    "turnOn": "Turn on notifications",
+    "on": "On for this device",
+    "turnOff": "Turn off",
+    "blocked": "Notifications are blocked for Mabeet. Allow them in your browser's site settings, then come back.",
+    "unsupported": "This browser can't show notifications. Chrome, Edge, Firefox and Safari can.",
+    "needsInstall": "On iPhone and iPad, add Mabeet to your Home Screen first, then open it from there to turn these on.",
+    "installTitle": "Mabeet as an app",
+    "installBody": "Open Mabeet from your home screen, full screen, like any other app.",
+    "install": "Install the app",
+    "installed": "Installed on this device",
+    "iosSteps": "In Safari, tap Share, then Add to Home Screen.",
+    "manualSteps": "Use your browser's menu and choose Install app or Add to Home Screen.",
+    "offlineTitle": "You're offline",
+    "offlineBody": "Mabeet needs a connection to show live availability. Check your signal and try again."
+  },
+  "refundPolicy": {
+    "full": "Online payments are always refunded in full."
+  },
+  "whishSim": {
+    "title": "Whish Pay (simulator)",
+    "banner": "Test mode: no real money moves. Use phone 96170123456 and code 111111.",
+    "pay": "Pay {amount}",
+    "phone": "Whish phone number",
+    "otp": "Code sent to your Whish app",
+    "confirm": "Confirm payment",
+    "cancel": "Cancel and go back",
+    "wrongCode": "That code didn't work. Try again: the payment is still open.",
+    "done": "Paid. Taking you back…",
+    "closed": "This payment link is closed."
+  },
+  "shell": {
+    "signOut": "Sign out",
+    "close": "Close menu",
+    "menu": "Open menu",
+    "viewSite": "View site",
+    "notifications": "Notifications",
+    "tabs": "Main pages",
+    "more": "More",
+    "account": "My account",
+    "admin": "Platform admin",
+    "hostDashboard": "Host dashboard",
+    "hostArea": "Host",
+    "adminArea": "Admin",
+    "adminBadge": "Platform admin",
+    "askAi": "Ask AI",
+    "adminVisiting": "You're viewing this business as platform admin. Back to hosts",
+    "profile": "My profile",
+    "notificationsUnread": "{count} new notifications"
+  },
+  "hostProfile": {
+    "title": "My host profile",
+    "intro": "About you as a host, shared by all your businesses. It's always saved; guests see it only if you turn it on below.",
+    "displayName": "Name guests see",
+    "displayNameHint": "Leave empty to use your account name.",
+    "city": "Where you live",
+    "hostingSince": "Hosting since (year)",
+    "hostingSinceShort": "Hosting since {year}",
+    "languages": "Languages you speak",
+    "bio": "About you",
+    "bioPlaceholder": "Who you are, why you host, what guests love about your places…",
+    "show": "Show my profile on my listings",
+    "showHint": "Guests then see your name, bio, languages and a WhatsApp button. Your phone number is never shown.",
+    "save": "Save profile",
+    "saved": "Saved.",
+    "yourHost": "Your host",
+    "message": "Message on WhatsApp",
+    "contactBy": "How guests reach you",
+    "contactByHint": "Applies to all your places. Contact host emails you the guest's question, and you reply from your inbox.",
+    "contact": {
+      "BOTH": "WhatsApp and Contact host",
+      "WHATSAPP": "WhatsApp only",
+      "MESSAGE": "Contact host only"
+    }
+  },
+  "profile": {
+    "title": "My profile",
+    "intro": "Your own details and password. They follow you across every business you work in.",
+    "details": "Your details",
+    "name": "Full name",
+    "email": "Email",
+    "emailHint": "You sign in with it, so it can't be changed here.",
+    "phone": "Phone",
+    "save": "Save",
+    "saved": "Saved.",
+    "password": "Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "passwordRules": "At least 8 characters.",
+    "passwordWrong": "Your current password isn't right.",
+    "changePassword": "Change password",
+    "passwordChanged": "Password changed. Other devices were signed out."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "intro": "Requests, bookings, cancellations, payments and team changes in this business.",
+    "adminIntro": "Payout requests, late payments, new requests and reviews across every business.",
+    "empty": "Nothing yet. New requests and payments will show up here.",
+    "unread": "New",
+    "someone": "Someone",
+    "aGuest": "A guest",
+    "actions": {
+      "booking_requested": "{guest} asked to book {reference}",
+      "booking_confirmed": "{actor} confirmed {guest}'s booking {reference}",
+      "booking_awaiting_payment": "{guest} started a booking ({reference}); waiting for payment",
+      "booking_declined": "{actor} declined {guest}'s request {reference}",
+      "booking_cancelled": "{actor} cancelled {guest}'s booking {reference}",
+      "booking_cancelled_by_guest": "{guest} cancelled their booking {reference}",
+      "calendar_conflict": "A platform booking clashes with nights you already sold",
+      "calendar_conflict_resolved": "A calendar clash was cleared",
+      "payment_online_confirmed": "{guest} paid online for {reference}",
+      "payment_online_late": "{guest} paid too late for {reference}; it was refunded",
+      "review_submitted": "{actor} left a review",
+      "payout_requested": "{actor} asked for a payout",
+      "member_added": "{actor} added someone to the team",
+      "member_removed": "{actor} removed someone from the team",
+      "member_role_changed": "{actor} changed someone's role",
+      "member_invited": "{actor} invited someone to the team",
+      "member_invitation_accepted": "{actor} accepted the invitation and joined the team",
+      "member_invitation_cancelled": "{actor} cancelled an invitation"
+    },
+    "viewAll": "View all notifications",
+    "failed": "Couldn't load notifications. Try again.",
+    "loading": "Loading"
+  },
+  "meetHost": {
+    "title": "Meet your host",
+    "trusted": "Trusted host",
+    "rating": "Rating",
+    "trustedTitle": "{name} is a trusted host",
+    "trustedBody": "Trusted hosts are highly rated and answer almost every request.",
+    "speaks": "Speaks {languages}",
+    "details": "Host details",
+    "responseRate": "Response rate",
+    "new": "New on Mabeet",
+    "withinHour": "Responds within an hour",
+    "withinDay": "Responds within a day",
+    "withinDays": "Responds within a few days",
+    "messageText": "Hi! I'm interested in {place} on Mabeet.",
+    "protect": "Book and pay through Mabeet so your booking and payment are recorded.",
+    "reviews": "{count, plural, one {Review} other {Reviews}}",
+    "years": "{count, plural, one {Year hosting} other {Years hosting}}",
+    "contact": "Contact host",
+    "whatsapp": "WhatsApp"
+  },
+  "photoTour": {
+    "title": "Photo tour",
+    "showAll": "Show all photos",
+    "none": "No photos yet.",
+    "photos": "{count, plural, one {# photo} other {# photos}}",
+    "areas": {
+      "LIVING_ROOM": "Living room",
+      "KITCHEN": "Kitchen",
+      "DINING": "Dining area",
+      "BEDROOM": "Bedroom",
+      "BATHROOM": "Bathroom",
+      "EXTERIOR": "Exterior",
+      "TERRACE": "Terrace",
+      "GARDEN": "Garden",
+      "POOL": "Pool",
+      "VIEW": "View",
+      "OTHER": "Additional photos"
+    }
+  },
+  "share": {
+    "button": "Share",
+    "title": "Share this place",
+    "close": "Close",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "email": "Email",
+    "messages": "Messages",
+    "embed": "Embed",
+    "more": "More options"
+  },
+  "overviewAll": {
+    "title": "All my places",
+    "overview": "Overview",
+    "yourPlaces": "Your places",
+    "intro": "Today across your {count} places. Open one to manage it.",
+    "addPlace": "Add a place",
+    "totals": {
+      "waiting": "Requests waiting",
+      "arriving": "Arriving today",
+      "leaving": "Leaving today",
+      "inHouse": "Staying tonight"
+    },
+    "month": "This month",
+    "noAccess": "Your role here doesn't include bookings."
+  },
+  "pagination": {
+    "label": "Pages",
+    "newer": "Newer",
+    "older": "Older",
+    "of": "Page {page} of {pages}"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "intro": "Straight from your bookings and calendars. Pick a period and this place or all your places.",
+    "presets": {
+      "30": "Last 30 days",
+      "90": "Last 90 days",
+      "365": "Last 12 months"
+    },
+    "from": "From",
+    "to": "Until",
+    "scope": "Places",
+    "scopes": {
+      "place": "This place",
+      "all": "All my places"
+    },
+    "apply": "Show",
+    "occupancy": "Occupancy",
+    "nightsOf": "{sold} of {available} nights",
+    "revenue": "Direct revenue",
+    "saved": "Commission saved",
+    "rating": "Reviews",
+    "ratingNote": "{average}★ average",
+    "noReviews": "No reviews yet",
+    "requests": "Requests",
+    "nightsSold": "Nights sold",
+    "response": "Median response",
+    "places": "Places",
+    "place": "Place",
+    "nightsByMonth": "Nights sold by month",
+    "revenueByMonth": "Direct revenue by month",
+    "currencyNote": "Places in {currency} only; other currencies are in the table below.",
+    "channels": "Where bookings come from",
+    "requestsByStatus": "Requests by outcome",
+    "byPlace": "By place",
+    "empty": "Nothing in this period yet.",
+    "error": "Something went wrong. Try again.",
+    "nights": "{count, plural, one {# night} other {# nights}}",
+    "minutes": "{count, plural, one {# minute} other {# minutes}}",
+    "report": {
+      "title": "AI report",
+      "intro": "Choose what to cover, the period and the places, then Generate. The numbers and charts come from your data; the AI writes the analysis.",
+      "cover": "Cover",
+      "topics": {
+        "occupancy": "Occupancy",
+        "revenue": "Revenue",
+        "channels": "Booking sources",
+        "requests": "Requests and answers",
+        "reviews": "Reviews",
+        "places": "Comparing places"
+      },
+      "generate": "Generate report",
+      "writing": "Writing your report…",
+      "print": "Print or save as PDF",
+      "recommendations": "What to do next",
+      "disclaimer": "Written by AI from your data. Check important decisions against the numbers above."
+    }
+  },
+  "listingSummary": {
+    "hostedBy": "Hosted by {name}",
+    "trusted": "Trusted host",
+    "new": "New on Mabeet",
+    "ratedOutOf": "Rated {rating} out of 5",
+    "reviews": "{count, plural, one {# review} other {# reviews}}",
+    "yearsHosting": "{count, plural, =0 {New host} one {# year hosting} other {# years hosting}}",
+    "hours": "{count, plural, one {# hour} other {# hours}}"
+  },
+  "contactHost": {
+    "metaTitle": "Contact the host of {place}",
+    "title": "Contact {name}",
+    "mostAsk": "Most guests ask about",
+    "gettingThere": "Getting there",
+    "location": "The place is in {area}.",
+    "priceAvailability": "Price and availability",
+    "fullPayment": "You pay the full price to confirm your booking; there is no deposit.",
+    "stillQuestions": "Still have questions? Message the host",
+    "stillQuestionsBody": "{name} gets your message by email and replies to the address you give.",
+    "name": "Your name",
+    "email": "Your email",
+    "emailHint": "The host replies here.",
+    "message": "Message",
+    "placeholder": "Hi {name}, I'd like to know…",
+    "send": "Send message",
+    "sentTitle": "Message sent",
+    "sentBody": "{name} will reply to your email. Keep an eye on your inbox, and your spam folder just in case.",
+    "checkAvailability": "Check availability"
+  },
+  "regions": {
+    "label": "Region",
+    "hint": "Guests searching for a region find you here.",
+    "fromTown": "From the town",
+    "names": {
+      "north": "North Lebanon",
+      "mount-lebanon": "Mount Lebanon",
+      "beirut": "Beirut",
+      "bekaa": "Bekaa",
+      "south": "South Lebanon"
+    }
+  }
+}
