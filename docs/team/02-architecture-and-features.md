@@ -1030,6 +1030,9 @@ platform admins.
 - The language is not in the address. The `locale` cookie decides, then the browser's `Accept-Language` (`pickLocale`
   in `src/config/appearance.ts`, the same rule the API and the emails use). `src/i18n/request.ts` loads the messages and
   `src/app/layout.tsx` sets `lang` and `dir` on `<html>`. Arabic pages are right-to-left.
+- The visitor changes language with `AppearanceMenu`, which calls the `setLocale` server action
+  (`src/app/actions/locale.ts`): it checks the value against `LOCALES`, saves the `locale` cookie for a year and builds
+  the pages again. The language names (`appearance.languageNames`) are each written in their own language.
 - Numbers use the digits 0 to 9 and dates the Gregorian calendar in all three languages. Both Arabic languages write
   prices with a decimal point (`ar-LB`'s own format has a decimal comma, which reads as thousands next to dollar prices).
   Use `formatMoney` and `formatDate` from `src/utils/format.ts`, never `toLocaleString` by hand.

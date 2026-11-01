@@ -135,13 +135,16 @@ status colours and `--scrim` are in the `:root` block (light) and the `:root[dat
 
 ### 2.4 How light, dark and the palette are applied
 
-- The `<html>` tag gets `data-palette="cedar"` (the site's palette, from `SiteSetting`) and `data-mode="light"` or
-  `"dark"`.
-- A small script in `<head>` (`src/components/theme/appearance-script.tsx`) sets them before the page paints, so
-  there is no flash of the wrong theme.
-- The light/dark switch is in `appearance-menu.tsx`. The choice is saved in the browser.
-- Dark-only styles use the `dark:` variant (`dark:bg-surface-2`), but most things need nothing: the tokens change by
-  themselves.
+- The `<html>` tag gets `data-palette="cedar"` and `data-mode="light"` or `"dark"`. `layout.tsx` sets the palette from
+  `DEFAULT_PALETTE` until the platform admin's choice (`SiteSetting`, F16) is read there.
+- A small script in `<head>` (`src/components/theme/appearance-script.tsx`) sets `data-mode` before the page paints, so
+  there is no flash of the wrong theme: the visitor's saved choice (`localStorage`, key `mabeet-mode`), else the
+  device's setting.
+- `AppearanceMenu` (`src/components/theme/appearance-menu.tsx`) is the language list and the light/dark button, for the
+  top bar. It reads and writes `data-mode` on `<html>` and saves the choice in the browser. The language list calls
+  the `setLocale` server action.
+- `dark:` follows `data-mode` (`@custom-variant` in `globals.css`), and native controls (scrollbars, an open select)
+  follow it too (`color-scheme`). Most things need no `dark:` at all: the tokens change by themselves.
 
 ---
 

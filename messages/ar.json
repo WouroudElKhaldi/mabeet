@@ -22,7 +22,12 @@
   "appearance": {
     "language": "اللغة",
     "toDark": "الوضع الداكن",
-    "toLight": "الوضع الفاتح"
+    "toLight": "الوضع الفاتح",
+    "languageNames": {
+      "en": "English",
+      "ar": "العربية",
+      "ar-LB": "اللبنانية"
+    }
   },
   "search": {
     "where": "أين",

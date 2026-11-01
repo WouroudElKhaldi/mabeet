@@ -1,17 +1,18 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { PALETTES } from "@/config/appearance";
 
 // The design system lives in src/app/globals.css (docs/team/08-design-system-and-pages.md, Part 2). These tests keep
 // it complete and readable: a palette that forgets a token, or text that cannot be read, is found here and not on a
 // guest's phone.
 
-// Comments and `@import` lines are removed, so each block's selector is only its own.
-const css = readFileSync(path.resolve(import.meta.dirname, "../../src/app/globals.css"), "utf8")
-  .replace(/\/\*[\s\S]*?\*\//g, "")
-  .replace(/@import[^;]*;/g, "");
+const source = readFileSync(path.resolve(import.meta.dirname, "../../src/app/globals.css"), "utf8");
 
-const palettes = ["cedar", "byblos", "batroun", "baalbek", "jounieh"] as const;
+// Comments and one-line rules (`@import`, `@custom-variant`) are removed, so each block's selector is only its own.
+const css = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/@(?:import|custom-variant)[^;{]*;/g, "");
+
+const palettes = PALETTES;
 const modes = ["light", "dark"] as const;
 
 // The tokens each palette chooses itself. The status colours, the scrim and the accent's tint are shared.
@@ -128,6 +129,12 @@ describe("status colours", () => {
 });
 
 describe("Tailwind names", () => {
+  it("makes `dark:` follow the page's mode, which the visitor's switch changes", () => {
+    expect(source).toMatch(
+      /@custom-variant dark \(&:where\(\[data-mode="dark"\], \[data-mode="dark"\] \*\)\);/,
+    );
+  });
+
   const colourNames = [...blockFor("@theme inline")].filter(([name]) => name.startsWith("--color-"));
 
   it("exposes every palette token as a class", () => {

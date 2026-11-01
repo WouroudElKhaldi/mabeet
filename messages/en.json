@@ -22,7 +22,12 @@
   "appearance": {
     "language": "Language",
     "toDark": "Switch to dark mode",
-    "toLight": "Switch to light mode"
+    "toLight": "Switch to light mode",
+    "languageNames": {
+      "en": "English",
+      "ar": "العربية",
+      "ar-LB": "اللبنانية"
+    }
   },
   "search": {
     "where": "Where",

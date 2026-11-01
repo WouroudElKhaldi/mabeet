@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
-import { isArabic } from "@/config/appearance";
+import { AppearanceScript } from "@/components/theme/appearance-script";
+import { DEFAULT_PALETTE, isArabic } from "@/config/appearance";
 import { BRAND } from "@/config/brand";
 import "./globals.css";
 
@@ -52,8 +53,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html
       lang={locale}
       dir={isArabic(locale) ? "rtl" : "ltr"}
+      // The platform admin's choice will come from the site settings; until then it is the default palette.
+      data-palette={DEFAULT_PALETTE}
+      // The boot script sets data-mode before React starts, so React must not treat it as a difference.
+      suppressHydrationWarning
       className={`${inter.variable} ${archivo.variable} ${plexArabic.variable} ${kufi.variable}`}
     >
+      <head>
+        <AppearanceScript />
+      </head>
       <body className="antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* `dark:` follows the page's mode (the data-mode attribute the visitor's switch sets), not only the device's setting. */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
 /*
   The design system's tokens, exactly as docs/team/08-design-system-and-pages.md describes them (Parts 2, 3 and 4.4).
   Components use these names only (bg-surface, text-muted, ring-line...); a component never knows which palette is on.
@@ -25,6 +28,9 @@
 
   /* How wide headings are set (the display font has a width axis; Arabic headings ignore it). */
   --heading-stretch: 125%;
+
+  /* Scrollbars, date pickers and the open list of a select follow the mode too. */
+  color-scheme: light;
 }
 
 /* Light mode. Cedar is the default, so the page is themed even before the palette attribute is set. */
@@ -107,6 +113,7 @@
 /* Dark mode: the status colours are shared by every palette; each palette then fills its own tokens. */
 
 :root[data-mode="dark"] {
+  color-scheme: dark;
   --success: #4ade80;
   --warning: #fbbf24;
   --danger: #f87171;
