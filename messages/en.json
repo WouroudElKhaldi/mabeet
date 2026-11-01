@@ -3,7 +3,7 @@
     "explore": "Explore",
     "host": "Become a host",
     "signIn": "Sign in",
-    "assistant": "Trip concierge",
+    "assistant": "Trip Assistant",
     "pricing": "Pricing"
   },
   "footer": {
@@ -11,7 +11,7 @@
     "guests": "Guests",
     "explore": "Explore stays",
     "trips": "Your trips",
-    "assistant": "Trip concierge",
+    "assistant": "Trip Assistant",
     "hosts": "Hosts",
     "listPlace": "Become a host",
     "dashboard": "Host dashboard",
@@ -111,15 +111,15 @@
       }
     },
     "concierge": {
-      "eyebrow": "Trip concierge",
+      "eyebrow": "Trip Assistant",
       "title": "Describe the weekend. We'll find the place.",
-      "body": "Tell our concierge what you imagine, in English, Arabic or Arabizi. It only suggests places that are really free on your dates.",
-      "cta": "Ask the concierge",
+      "body": "Tell our assistant what you imagine, in English, Arabic or Arabizi. It only suggests places that are really free on your dates.",
+      "cta": "Ask the assistant",
       "sampleQuestion": "Quiet mountain weekend for two, hiking nearby, under $120 a night, 7 to 9 November",
       "mcp": "Use it in Claude",
       "languages": "Speaks",
       "found": "Free",
-      "postcard": "Dear concierge,",
+      "postcard": "Dear assistant,",
       "perNight": "a night"
     },
     "pass": {
@@ -148,8 +148,8 @@
     "heading": "{count, plural, =0 {No places match yet} one {# place to stay} other {# places to stay}}",
     "freeHeading": "{count, plural, =0 {Nothing free on those dates} one {# place free on your dates} other {# places free on your dates}}",
     "emptyTitle": "Nothing matches, yet",
-    "emptyBody": "Try other dates or fewer filters. Or describe your trip to the concierge and it will look for you.",
-    "askConcierge": "Ask the concierge",
+    "emptyBody": "Try other dates or fewer filters. Or describe your trip to the assistant and it will look for you.",
+    "askConcierge": "Ask the assistant",
     "sections": {
       "homes": "Places to stay",
       "experiences": "Experiences",
@@ -761,7 +761,7 @@
       "address": "Address",
       "description": "Description",
       "categories": "Categories",
-      "listedPublicly": "Show my place in public search and to the trip concierge",
+      "listedPublicly": "Show my place in public search and to the Trip Assistant",
       "contact": "Contact",
       "phone": "Phone",
       "whatsapp": "WhatsApp number",
@@ -1037,7 +1037,7 @@
     "noAnswer": "I couldn't find an answer to that. Could you rephrase?",
     "error": "The assistant didn't answer. Please try again.",
     "guest": {
-      "title": "Trip concierge",
+      "title": "Trip Assistant",
       "subtitle": "Describe the weekend you imagine. It only suggests places that are really free, with real prices.",
       "greeting": "Ahla! Where would you like to wake up, and when? Tell me who's coming and what you feel like doing.",
       "suggestions": {
@@ -1055,7 +1055,7 @@
         "group": "/ group"
       },
       "kicker": "Your travel desk",
-      "speaker": "Mabeet concierge",
+      "speaker": "Mabeet assistant",
       "open": "Open",
       "mcpKicker": "Take it with you",
       "worksWith": "Works with",
@@ -1203,7 +1203,7 @@
       "none": "No assistant answers yet this month.",
       "row": "{answers, plural, one {# answer} other {# answers}} · {tokens} tokens",
       "surfaces": {
-        "concierge": "Guest concierge",
+        "concierge": "Guest assistant",
         "team": "Team assistant",
         "report": "Analytics reports"
       }
@@ -1312,7 +1312,7 @@
   },
   "privacy": {
     "title": "Privacy",
-    "body": "We collect only what a booking needs: your name, phone and, if you give it, your email. Hosts see your contact details only if their role allows it. Calendar feeds we share with Airbnb and Booking.com say only that dates are taken. The trip concierge sends your message and public listing data to our AI provider (DeepSeek), never your phone, email or bookings. Owners' AI keys see only what that owner's role permits, and every access is logged. Ask us to delete your account at any time."
+    "body": "We collect only what a booking needs: your name, phone and, if you give it, your email. Hosts see your contact details only if their role allows it. Calendar feeds we share with Airbnb and Booking.com say only that dates are taken. The Trip Assistant sends your message and public listing data to our AI provider (DeepSeek), never your phone, email or bookings. Owners' AI keys see only what that owner's role permits, and every access is logged. Ask us to delete your account at any time."
   },
   "listing": {
     "tabs": {

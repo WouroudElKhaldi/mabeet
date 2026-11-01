@@ -44,12 +44,21 @@ const kufi = localFont({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("footer");
+  const [t, palette] = await Promise.all([getTranslations("footer"), getSitePalette()]);
+  // The tab and home-screen icons wear the site's palette, like the logo (made by `pnpm brand:assets`).
+  const icons = `/brand/icons/${palette}`;
   return {
     // Each page names itself; the brand follows in the tab ("Sign in · Mabeet").
     title: { default: `${BRAND.name} · ${BRAND.nameAr}`, template: `%s · ${BRAND.name}` },
     description: t("about"),
     applicationName: BRAND.name,
+    icons: {
+      icon: [
+        { url: `${icons}/favicon.ico`, sizes: "48x48" },
+        { url: `${icons}/icon.png`, type: "image/png", sizes: "512x512" },
+      ],
+      apple: { url: `${icons}/apple-icon.png`, sizes: "180x180" },
+    },
   };
 }
 

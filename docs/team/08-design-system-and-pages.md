@@ -273,6 +273,18 @@ These classes give the product its Lebanese travel look. Use them where the refe
 - Components in `src/components/brand/`: `ArchWindow`, `BoardingPass`, `Postmark`, `ConciergeBand`,
   `DirectReceipts`, `AppIcon`.
 
+The logo (`docs/brand/mabeet-logo.png`, the arch opening onto a landscape above "Mabeet") is used two ways:
+
+- `Wordmark` (`src/components/site/wordmark.tsx`), in the header, footer and sign-in pages: its arch, landscape and
+  name are masks cut from the logo (`public/brand/mabeet-arch.png`, `mabeet-scene.png`, `mabeet-word.png`), filled
+  with the palette's accent (the landscape lighter), so every palette, light and dark, wears its own logo. It reads
+  left to right in every language.
+- The browser tab and home-screen icons: the emblem in the site palette's accent on its paper, one set per palette in
+  `public/brand/icons/<palette>/` (`favicon.ico`, `icon.png`, `apple-icon.png`). `layout.tsx` names the set of the
+  palette the admin chose, and `/favicon.ico` sends there too. `pnpm brand:assets` (`scripts/brand-assets.ts`) makes
+  the masks and every palette's icons from the logo and the palettes in `globals.css`: run it after changing the logo
+  or adding or changing a palette.
+
 ---
 
 ## Part 5. Icons and images
@@ -495,7 +507,9 @@ The `Concierge` chat with idea tickets to start, place cards under answers, and 
 #### `/privacy`, `/offline`, not found and error pages (the privacy page: F17)
 
 Plain reading pages. The privacy page also holds the payment policy (online refunds are always full; offline
-payments are between the host and the guest). `/offline` shows `HeroLandscape` and "You're offline".
+payments are between the host and the guest). `/offline` shows `HeroLandscape` and "You're offline". Not found
+(`src/app/not-found.tsx`) is the reference's: `HeroLandscape` filling the screen, a big "404" in the accent, the
+title, one line and "Back home", with the wordmark in the corner. The error page (`error.tsx`) uses `MessagePage`.
 
 ### 8.2 Sign in and accounts (F17)
 
