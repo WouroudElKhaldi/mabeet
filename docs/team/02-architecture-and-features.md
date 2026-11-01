@@ -781,7 +781,9 @@ partners and sponsored listings") are the platform's only income. Code: `billing
 | Pro      | $10       | 15        | unlimited                | 10                    | yes |
 | Business | $20       | unlimited | unlimited                | unlimited             | yes |
 
-- **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members")` before adding one. Deleted
+- **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members", tx)` inside the transaction that
+  adds one: with `tx` it locks the business first, so two additions at the same moment cannot both take the last
+  place. Deleted
   rooms and experiences and removed members do not count. Inviting and joining a team call it (joining checks
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.

@@ -1978,6 +1978,7 @@
                   "amenities": {
                     "default": [],
                     "maxItems": 13,
+                    "uniqueItems": true,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -2212,6 +2213,7 @@
                   },
                   "amenities": {
                     "maxItems": 13,
+                    "uniqueItems": true,
                     "type": "array",
                     "items": {
                       "type": "string",

@@ -20,7 +20,10 @@ const roomFields = {
   bathrooms: count(30),
   baseRateCents: cents,
   minNights: z.number().int().min(1).max(60),
-  amenities: z.array(z.enum(AMENITIES)).max(AMENITIES.length),
+  amenities: z
+    .array(z.enum(AMENITIES))
+    .max(AMENITIES.length)
+    .refine((list) => new Set(list).size === list.length, "List each amenity once"),
   active: z.boolean(),
 };
 

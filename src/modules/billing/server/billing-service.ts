@@ -16,7 +16,7 @@ import {
   whishEnabled,
 } from "@/modules/payments/server";
 import { requireOwner, requirePermission, type TenantContext } from "@/server/auth/tenant-context";
-import { prisma, runInTransaction, type Tx } from "@/server/db/client";
+import { type Db, prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { env } from "@/server/env";
 import { conflict, invalid, notFound, unavailable } from "@/server/errors";
 import { secureToken } from "@/utils/tokens";
@@ -42,15 +42,19 @@ const LIMIT_MESSAGES: Record<Counted, (max: number) => string> = {
   members: (max) => `Your plan allows up to ${max} team members, you included. Upgrade to add more.`,
 };
 
-async function loadBilling(businessId: string) {
-  const row = await billing.findBilling(prisma, businessId);
+async function loadBilling(businessId: string, db: Db = prisma) {
+  const row = await billing.findBilling(db, businessId);
   if (!row) throw notFound("Business");
   return row;
 }
 
-/** Refuses adding one more room, experience or team member past the plan's limit. */
-export async function assertPlanAllowsAnother(businessId: string, what: Counted): Promise<void> {
-  const row = await loadBilling(businessId);
+/**
+ * Refuses adding one more room, experience or team member past the plan's limit. Pass the transaction that adds it:
+ * the business is then locked until it commits, so two additions at the same moment cannot both pass the check.
+ */
+export async function assertPlanAllowsAnother(businessId: string, what: Counted, tx?: Tx): Promise<void> {
+  if (tx) await billing.lockBusinessForPlan(tx, businessId);
+  const row = await loadBilling(businessId, tx);
   const max = PLAN_LIMITS[row.plan][what];
   const used = what === "members" ? row._count.memberships : row._count[what];
   if (max !== null && used >= max) throw conflict(LIMIT_MESSAGES[what](max));

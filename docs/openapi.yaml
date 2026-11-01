@@ -1374,6 +1374,7 @@ paths:
                 amenities:
                   default: []
                   maxItems: 13
+                  uniqueItems: true
                   type: array
                   items:
                     type: string
@@ -1540,6 +1541,7 @@ paths:
                   maximum: 60
                 amenities:
                   maxItems: 13
+                  uniqueItems: true
                   type: array
                   items:
                     type: string

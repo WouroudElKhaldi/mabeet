@@ -365,7 +365,7 @@ and set a special price per night for some dates.
    createRoom(db, data), updateRoom(db, businessId, roomId, data) returning true or false, setRateOverrides(tx, ...)
 2. Service: src/modules/rooms/server/room-service.ts — listRooms(ctx) and getRoom(ctx, id) need rooms.read;
    createRoom, updateRoom and setSpecialPrice need rooms.manage; createRoom calls
-   assertPlanAllowsAnother(ctx.businessId, "rooms"); every change calls recordAction
+   assertPlanAllowsAnother(ctx.businessId, "rooms", tx) inside its transaction; every change calls recordAction
 3. Schemas: roomInput, roomUpdate (roomInput.partial()), specialPriceInput (at most 366 nights) in schemas.ts
 4. Routes: GET/POST /api/workspaces/[businessId]/rooms, GET/PATCH .../rooms/[roomId], GET/PUT .../rooms/[roomId]/prices
 5. Screen: src/app/dashboard/[businessId]/rooms/page.tsx (list), loading.tsx, room-editor.tsx, special-prices.tsx
