@@ -1,6 +1,6 @@
 import clsx from "clsx";
-import { useId } from "react";
-import type { ComponentProps, ReactNode } from "react";
+import { cloneElement, isValidElement, useId } from "react";
+import type { ComponentProps, ReactElement, ReactNode } from "react";
 
 // Inputs and text areas share these classes. They are built from one base and never overridden (we have no class
 // merging tool), so a text area is not "an input with a different height".
@@ -124,11 +124,18 @@ export function LabeledControl({
   children,
 }: FieldText & { className?: string; children: ReactNode }) {
   const messageId = useId();
+  // The control inside is told about the message too, so a screen reader reads the hint or the error with it.
+  const control = isValidElement(children)
+    ? cloneElement(children as ReactElement<{ "aria-describedby"?: string; "aria-invalid"?: boolean }>, {
+        "aria-describedby": error || hint ? messageId : undefined,
+        "aria-invalid": error ? true : undefined,
+      })
+    : children;
   return (
     <div className={clsx("flex flex-col gap-1.5", className)}>
       <label className="flex flex-col gap-1.5">
         <span className={labelClass}>{label}</span>
-        {children}
+        {control}
       </label>
       <FieldMessage id={messageId} hint={hint} error={error} />
     </div>
