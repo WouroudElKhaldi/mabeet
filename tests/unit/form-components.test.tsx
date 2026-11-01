@@ -56,31 +56,31 @@ describe("PageHeader and Panel", () => {
 });
 
 describe("SlideLabel", () => {
-  it("keeps the words for screen readers and hides the icon from them", () => {
+  it("keeps the words whole, for screen readers too, and hides the icon from them", () => {
     const html = renderToStaticMarkup(<SlideLabel icon={LogIn}>Sign in</SlideLabel>);
-    expect(html).toContain("Sign in");
+    expect(html).toContain('class="truncate slide-word">Sign in</span>');
     expect(html).toMatch(/<svg[^>]*aria-hidden="true"/);
+    expect(slideParent).toBe("group/slide");
   });
 
-  it("slides only under a parent marked with slideParent, and mirrors arrows in Arabic", () => {
+  it("hops the icon across, and mirrors arrows in Arabic", () => {
     const html = renderToStaticMarkup(
       <SlideLabel icon={LogIn} flipInRtl>
         Sign in
       </SlideLabel>,
     );
-    expect(slideParent).toBe("group/slide");
-    expect(html).toContain("group-hover/slide:start-[calc(100%-1rem)]");
-    expect(html).toContain("group-hover/slide:opacity-0");
+    expect(html).toContain("slide-icon");
     expect(html).toContain("rtl:rotate-180");
   });
 
-  it("stands still and spins while the button waits", () => {
+  it("stands still with a spinner while the button waits", () => {
     const html = renderToStaticMarkup(
       <SlideLabel icon={LogIn} spinning>
         Sign in
       </SlideLabel>,
     );
     expect(html).toContain("animate-spin");
-    expect(html).not.toContain("group-hover/slide");
+    expect(html).not.toContain("slide-icon");
+    expect(html).not.toContain("slide-word");
   });
 });

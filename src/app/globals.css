@@ -485,6 +485,65 @@ p {
   animation: float 6s ease-in-out infinite;
 }
 
+/*
+  SlideLabel (src/components/ui/slide-label.tsx): on hover or keyboard focus of its `group/slide` parent, the icon hops
+  across to the end and lands with a wiggle, bumping the word off ahead of it. When the pointer leaves, the word
+  springs back with a bounce and the icon glides home.
+*/
+@keyframes slide-hop {
+  0%,
+  50%,
+  100% {
+    translate: 0 -50%;
+  }
+  25% {
+    translate: 0 calc(-50% - 9px);
+  }
+  75% {
+    translate: 0 calc(-50% - 5px);
+  }
+}
+@keyframes slide-land {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: rotate(-16deg) scale(1.25);
+  }
+  60% {
+    transform: rotate(12deg) scale(0.95);
+  }
+  80% {
+    transform: rotate(-5deg);
+  }
+}
+.slide-icon {
+  transition: inset-inline-start 560ms var(--ease-out);
+}
+.slide-word {
+  display: inline-block;
+  transition:
+    translate 460ms var(--ease-spring),
+    scale 460ms var(--ease-spring),
+    opacity 300ms var(--ease-out);
+}
+:is(.group\/slide:hover, .group\/slide:focus-visible) .slide-icon {
+  inset-inline-start: calc(100% - 1rem);
+  animation:
+    slide-hop 560ms var(--ease-out),
+    slide-land 520ms 560ms var(--ease-spring);
+}
+:is(.group\/slide:hover, .group\/slide:focus-visible) .slide-word {
+  translate: 1.5rem 0;
+  scale: 0.85 1.1;
+  opacity: 0;
+  transition-delay: 120ms;
+}
+[dir="rtl"] :is(.group\/slide:hover, .group\/slide:focus-visible) .slide-word {
+  translate: -1.5rem 0;
+}
+
 .skeleton {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
