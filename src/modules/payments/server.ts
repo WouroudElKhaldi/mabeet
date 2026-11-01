@@ -22,6 +22,7 @@ export {
 } from "./server/whish";
 export {
   createSimulatedPayment,
+  getPayPage,
   hasWhishHeaders,
   paySimulatedPayment,
   readSimulatedStatus,

@@ -1746,8 +1746,10 @@
   },
   "whishSim": {
     "title": "Whish Pay (simulator)",
+    "testMode": "Test mode",
+    "paying": "Paying {merchant}",
+    "secured": "Secure payment by Whish · simulator",
     "banner": "Test mode: no real money moves. Use phone 96170123456 and code 111111.",
-    "pay": "Pay {amount}",
     "phone": "Whish phone number",
     "otp": "Code sent to your Whish app",
     "confirm": "Confirm payment",

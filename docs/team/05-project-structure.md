@@ -349,10 +349,10 @@ src/
         page.tsx
       use-with-ai/
         page.tsx
-      whish-simulator/
-        pay/
-          [code]/
-            page.tsx
+    whish-simulator/              # its own page, outside the site frame: Whish's page in the simulator
+      pay/
+        [code]/
+          page.tsx
     .well-known/
       oauth-authorization-server/
         api/
@@ -769,7 +769,7 @@ src/
       duration.tsx
       offering-card.tsx
       session-booking-card.tsx
-    payments/
+    payments/                     # now src/modules/payments/components/
       whish-simulator-form.tsx
     place/
       amenity.tsx

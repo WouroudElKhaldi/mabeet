@@ -46,9 +46,13 @@ export async function SiteHeader() {
           ) : (
             <Link
               href="/sign-in"
-              className="ms-1 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-paper transition-opacity hover:opacity-90"
+              className="group ms-1 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-paper transition-opacity hover:opacity-90"
             >
-              <LogIn className="size-4 rtl:rotate-180" aria-hidden />
+              {/* The arrow steps toward the door on hover. */}
+              <LogIn
+                className="size-4 transition-transform duration-300 ease-(--ease-spring) group-hover:translate-x-1 group-focus-visible:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1 rtl:group-focus-visible:-translate-x-1"
+                aria-hidden
+              />
               {t("signIn")}
             </Link>
           )}
