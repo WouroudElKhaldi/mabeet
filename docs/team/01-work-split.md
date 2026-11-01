@@ -46,19 +46,19 @@ Suggested owner: **Fatima** (strongest on screens).
 | Public data   | `directory-service.ts`, `directory-repository.ts`, `pricing.ts`, `api/public/places/[slug]/rooms/**` (quote, availability)                                                                                               |
 | Guest pages   | `src/app/(site)/**` (home, search, `p/[slug]/**`, the book page, `b/[token]`, `account/**`), `components/place/*`, `listing/*`, `browse/*`, `booking/*` (except `pay-online.tsx`), `components/account/account-tabs.tsx` |
 | Guest routes  | `api/public/places/[slug]/bookings/`, `api/public/bookings/[token]/` (read), `api/me/bookings/`: thin routes that call Core's booking functions                                                                          |
-| Lists         | `src/config/listing.ts`, `amenities.ts`, `regions.ts`, `category-icons.ts`, `appearance.ts`, `brand.ts` (Core started `brand.ts` and the language part of `appearance.ts` for the sign-in emails: build on them)         |
+| Lists         | `src/config/listing.ts`, `regions.ts`, `category-icons.ts`, `appearance.ts`, `brand.ts` (Core started `brand.ts` and the language part of `appearance.ts` for the sign-in emails: build on them)                         |
 
 ### 3. Host side: the dashboard, the demo data and the live site
 
 Owner: **Omar** (he owns the deployment).
 
-| Layer       | Owns                                                                                                                                                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dashboard   | `src/app/dashboard/**` (layout, rooms, photos, place, settings, bookings), `src/components/dashboard/*`, `nav-items.ts`                                                                  |
-| Host data   | `room-service.ts`, `room-repository.ts`, `photo-service.ts`, `photo-repository.ts`, `settings-service.ts`, `calendar-service.ts`, `calendar-repository.ts` (closed dates), `api/images/` |
-| Host routes | `api/workspaces/[businessId]/**` (rooms, photos, settings, bookings, blocks). The bookings routes call Core's functions                                                                  |
-| Demo data   | `prisma/seed.ts`, the `db:seed` script                                                                                                                                                   |
-| Deployment  | `Dockerfile`, `docker-compose.prod.yml`, `.github/workflows/*`, DigitalOcean, Cloudflare R2                                                                                              |
+| Layer       | Owns                                                                                                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard   | `src/app/dashboard/**` (layout, rooms, photos, place, settings, bookings), `src/components/dashboard/*`, `nav-items.ts`                                                                                             |
+| Host data   | `room-service.ts`, `room-repository.ts`, `src/config/amenities.ts`, `photo-service.ts`, `photo-repository.ts`, `settings-service.ts`, `calendar-service.ts`, `calendar-repository.ts` (closed dates), `api/images/` |
+| Host routes | `api/workspaces/[businessId]/**` (rooms, photos, settings, bookings, blocks). The bookings routes call Core's functions                                                                                             |
+| Demo data   | `prisma/seed.ts`, the `db:seed` script                                                                                                                                                                              |
+| Deployment  | `Dockerfile`, `docker-compose.prod.yml`, `.github/workflows/*`, DigitalOcean, Cloudflare R2                                                                                                                         |
 
 ## The rules that prevent conflicts
 
