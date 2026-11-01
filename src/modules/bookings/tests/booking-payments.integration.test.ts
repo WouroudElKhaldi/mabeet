@@ -107,6 +107,31 @@ describe("paying online", () => {
     expect(await prisma.payment.count({ where: { bookingId: booking.id, status: "PAID" } })).toBe(1);
   });
 
+  it("confirms a paid booking once, even when 10 callbacks arrive at the same moment", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    sendPaymentsToTheApp();
+    const place = await placeWithRoom("AUTOMATIC", { baseRateCents: 9_000 });
+    const booking = await requestBooking(requestFor(place, stay(10, 2)));
+    const url = await startBookingCheckout(booking.publicToken, place.guest.id, "WHISH");
+    const [payment] = await paymentsOf(booking.id);
+    // Whish has taken the money; its callbacks have not been answered yet.
+    await prisma.whishSandboxPayment.updateMany({
+      where: { code: codeOf(url) },
+      data: { status: "success", payerPhone: "96170123456" },
+    });
+
+    const answers = await Promise.all(
+      Array.from({ length: 10 }, () => call(callback.GET, { query: { payment: payment!.id } })),
+    );
+
+    expect(answers.every((answer) => answer.status === 200)).toBe(true);
+    expect(await bookingOf(booking.id)).toMatchObject({ status: "CONFIRMED" });
+    expect(await prisma.payment.count({ where: { bookingId: booking.id, status: "PAID" } })).toBe(1);
+    expect(
+      await prisma.auditLog.count({ where: { entityId: booking.id, action: "payment.online_confirmed" } }),
+    ).toBe(1);
+  });
+
   it("mode 2 by card: the signed webhook sends it to the owner with their answer time, and a decline refunds it all", async () => {
     const { stripe } = sendPaymentsToTheApp();
     const place = await placeWithRoom("ONLINE_APPROVAL", { baseRateCents: 12_500 });
