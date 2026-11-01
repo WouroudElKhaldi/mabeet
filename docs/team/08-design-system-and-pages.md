@@ -15,7 +15,8 @@ How to use it:
 ## Part 1. The rules
 
 1. **Tokens only.** Use the colour names in Part 2 (`bg-surface`, `text-muted`, `ring-line`…). Never write a hex
-   code, `rgb()`, or a Tailwind colour like `bg-gray-100` or `text-green-700` in a component.
+   code, `rgb()`, or a Tailwind colour like `bg-gray-100` or `text-green-700` in a component. Tailwind's own colours are
+   switched off in `globals.css` (`--color-*: initial`), so `bg-gray-100` does nothing: a wrong class shows up at once.
 2. **Themes are not chosen by us.** There are 5 palettes (Cedar, Byblos, Batroun, Baalbek, Jounieh), each with a
    light and a dark mode. The platform admin picks the palette for the whole site. Visitors only switch light and
    dark. A component never knows which palette is on: it uses the tokens, and the palette fills them.
@@ -128,6 +129,10 @@ mode, and dark text in dark mode.
 | `--danger-ink` | `#ffffff`          | `#1f0606`           |
 | `--scrim`      | `rgb(0 0 0 / 0.5)` | `rgb(0 0 0 / 0.65)` |
 
+The accent's tint (`--accent-soft`) and its border (`--accent-line`) are not in the tables: `globals.css` derives them
+from each palette's `--accent` and `--surface` (`color-mix`, 12% and 35%), so a palette only chooses its accent. The
+status colours and `--scrim` are in the `:root` block (light) and the `:root[data-mode="dark"]` block (dark).
+
 ### 2.4 How light, dark and the palette are applied
 
 - The `<html>` tag gets `data-palette="cedar"` (the site's palette, from `SiteSetting`) and `data-mode="light"` or
@@ -222,7 +227,7 @@ Tailwind 4: one step = `0.25rem` = 4 pixels. `p-4` = 16px, `gap-6` = 24px. We us
 | Token           | Value                               | Class                  | Use                             |
 | --------------- | ----------------------------------- | ---------------------- | ------------------------------- |
 | `--radius-sm`   | 0.5rem                              | `rounded-sm`           | Small tags                      |
-| `--radius`      | 0.75rem                             | `rounded-md`           | Copy fields, skeleton shapes    |
+| `--radius-md`   | 0.75rem                             | `rounded-md`           | Copy fields, skeleton shapes    |
 | `--radius-lg`   | 1rem                                | `rounded-lg`           | Buttons and inputs              |
 | `--radius-xl`   | 1.5rem                              | `rounded-xl`           | Panels and cards (`panelClass`) |
 | pills           | -                                   | `rounded-full`         | Chips, icon buttons, avatars    |
