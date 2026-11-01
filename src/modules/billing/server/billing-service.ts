@@ -1,6 +1,7 @@
 import type { Plan } from "@prisma/client";
 import { type PaidPlan, PLAN_LIMITS } from "@/config/plans";
 import { findAccountEmail } from "@/modules/accounts/server";
+import { settleOnlinePayment } from "@/modules/bookings/server";
 import { recordAction } from "@/modules/audit/server";
 import {
   createBillingPortalSession,
@@ -179,10 +180,11 @@ async function addPlanMonths(tx: Tx, businessId: string, plan: Plan, months: num
 }
 
 /**
- * A Whish callback. The call itself proves nothing (it is unauthenticated), so it only makes Mabeet ask Whish for
+ * A Whish callback, for a guest's booking payment or a host's plan payment. The call itself proves nothing (it is unauthenticated), so it only makes Mabeet ask Whish for
  * the payment's real status.
  */
-export async function handleWhishCallback(query: { plan?: string }) {
+export async function handleWhishCallback(query: { payment?: string; plan?: string }) {
+  if (query.payment) return settleOnlinePayment(query.payment);
   if (query.plan) return settlePlanPayment(query.plan);
   throw invalid("Missing payment reference");
 }
@@ -312,7 +314,7 @@ export async function handleStripeWebhook(
   const parsed = stripeEvent.safeParse(parseJson(rawBody));
   if (!parsed.success) return "rejected";
   const event = parsed.data;
-  return runInTransaction(async (tx) => {
+  const result = await runInTransaction(async (tx): Promise<WebhookResult> => {
     const first = await billing.recordWebhookEvent(tx, {
       provider: "stripe",
       eventId: event.id,
@@ -322,4 +324,20 @@ export async function handleStripeWebhook(
     await applyEvent(tx, event, now);
     return "applied";
   });
+  // A guest's card payment: settled after the commit, because settling asks Stripe and may refund. If Stripe can't
+  // be reached now, housekeeping checks the payment again within minutes.
+  const paymentId = bookingPaymentOf(event);
+  if (result === "applied" && paymentId) {
+    await settleOnlinePayment(paymentId, now).catch((error: unknown) =>
+      console.error("[payments] card payment not settled yet", error),
+    );
+  }
+  return result;
+}
+
+/** The booking payment behind a finished Stripe Checkout for a booking, or null for any other event. */
+function bookingPaymentOf(event: StripeEvent): string | null {
+  const object = event.data.object;
+  if (event.type !== "checkout.session.completed" || object.mode !== "payment") return null;
+  return object.metadata?.paymentId ?? null;
 }
