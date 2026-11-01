@@ -2,6 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/app/**/{page,layout,route}.{ts,tsx}",
+    "src/components/{ui,shell}/**/*.{ts,tsx}",
     "tests/**/*.test.ts",
     "src/modules/*/tests/**/*.test.ts",
     "scripts/*.ts"
@@ -14,7 +15,6 @@
     "@better-auth/oauth-provider",
     "@modelcontextprotocol/sdk",
     "aws4fetch",
-    "clsx",
     "ical-generator",
     "lucide-react",
     "motion",

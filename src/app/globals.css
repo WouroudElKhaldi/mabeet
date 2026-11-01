@@ -1,4 +1,332 @@
 @import "tailwindcss";
 
-/* The design-system task fills this file with every colour token, the five palettes (light and dark), fonts, radii
-   and shadows, exactly as docs/team/08-design-system-and-pages.md describes. Components use those tokens only. */
+/*
+  The design system's tokens, exactly as docs/team/08-design-system-and-pages.md describes them (Parts 2, 3 and 4.4).
+  Components use these names only (bg-surface, text-muted, ring-line...); a component never knows which palette is on.
+
+  The <html> tag carries data-palette (the site's palette) and data-mode ("light" or "dark"). With neither set, the
+  page is Cedar in light mode.
+*/
+
+:root {
+  /* Status colours: the same in every palette. */
+  --success: #008a05;
+  --warning: #b45309;
+  --danger: #c13515;
+  --danger-ink: #ffffff;
+  --scrim: rgb(0 0 0 / 0.5);
+
+  /* The accent's light tint and its border are derived, so a palette only has to choose its accent. */
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --accent-line: color-mix(in srgb, var(--accent) 35%, var(--surface));
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* How wide headings are set (the display font has a width axis; Arabic headings ignore it). */
+  --heading-stretch: 125%;
+}
+
+/* Light mode. Cedar is the default, so the page is themed even before the palette attribute is set. */
+:root,
+:root[data-palette="cedar"] {
+  --paper: #fbf8f1;
+  --surface: #ffffff;
+  --surface-2: #f3eee3;
+  --ink: #1d2a24;
+  --ink-muted: #5f6b64;
+  --ink-faint: #8c958f;
+  --line: #e7e0d2;
+  --line-strong: #d8cfbd;
+  --accent: #1f5c44;
+  --accent-strong: #154532;
+  --accent-ink: #ffffff;
+  --glow: #b8893b;
+}
+
+:root[data-palette="byblos"] {
+  --paper: #f9f6f0;
+  --surface: #ffffff;
+  --surface-2: #f1ece2;
+  --ink: #16233a;
+  --ink-muted: #5a6577;
+  --ink-faint: #8a93a3;
+  --line: #e6dfd2;
+  --line-strong: #d6cdbd;
+  --accent: #1f3b63;
+  --accent-strong: #152a48;
+  --accent-ink: #ffffff;
+  --glow: #c2603f;
+}
+
+:root[data-palette="batroun"] {
+  --paper: #fcf7f1;
+  --surface: #ffffff;
+  --surface-2: #f5ebe0;
+  --ink: #2e211b;
+  --ink-muted: #6f5f55;
+  --ink-faint: #9b8a80;
+  --line: #ecdccd;
+  --line-strong: #dfcab7;
+  --accent: #a8472a;
+  --accent-strong: #84361f;
+  --accent-ink: #ffffff;
+  --glow: #6d7f3b;
+}
+
+:root[data-palette="baalbek"] {
+  --paper: #f8f5f1;
+  --surface: #ffffff;
+  --surface-2: #efe8e1;
+  --ink: #2a1c26;
+  --ink-muted: #6c5d66;
+  --ink-faint: #9a8b94;
+  --line: #e6dcd3;
+  --line-strong: #d6c9be;
+  --accent: #5c2a4d;
+  --accent-strong: #451f3a;
+  --accent-ink: #ffffff;
+  --glow: #c49a3c;
+}
+
+:root[data-palette="jounieh"] {
+  --paper: #f7f8fa;
+  --surface: #ffffff;
+  --surface-2: #eceff4;
+  --ink: #141b2b;
+  --ink-muted: #5b6475;
+  --ink-faint: #8b93a3;
+  --line: #e1e5ec;
+  --line-strong: #cfd5df;
+  --accent: #23324f;
+  --accent-strong: #161f33;
+  --accent-ink: #ffffff;
+  --glow: #b08a4a;
+}
+
+/* Dark mode: the status colours are shared by every palette; each palette then fills its own tokens. */
+
+:root[data-mode="dark"] {
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --danger-ink: #1f0606;
+  --scrim: rgb(0 0 0 / 0.65);
+}
+
+:root[data-mode="dark"],
+:root[data-mode="dark"][data-palette="cedar"] {
+  --paper: #0e1512;
+  --surface: #151e1a;
+  --surface-2: #1d2823;
+  --ink: #f1efe8;
+  --ink-muted: #a8b1ab;
+  --ink-faint: #74807a;
+  --line: #26332d;
+  --line-strong: #34443c;
+  --accent: #5fbf94;
+  --accent-strong: #82d1ad;
+  --accent-ink: #07140e;
+  --glow: #d8a856;
+}
+
+:root[data-mode="dark"][data-palette="byblos"] {
+  --paper: #0d1220;
+  --surface: #141b2c;
+  --surface-2: #1c2538;
+  --ink: #f1eee8;
+  --ink-muted: #a7aebd;
+  --ink-faint: #737c8f;
+  --line: #263048;
+  --line-strong: #33405c;
+  --accent: #8fb0e4;
+  --accent-strong: #afc6ec;
+  --accent-ink: #0a1426;
+  --glow: #e08867;
+}
+
+:root[data-mode="dark"][data-palette="batroun"] {
+  --paper: #16100d;
+  --surface: #1f1713;
+  --surface-2: #2a201a;
+  --ink: #f5ede6;
+  --ink-muted: #b8a99f;
+  --ink-faint: #85766c;
+  --line: #35281f;
+  --line-strong: #463529;
+  --accent: #e2805f;
+  --accent-strong: #eca086;
+  --accent-ink: #2a0e06;
+  --glow: #a9bd6a;
+}
+
+:root[data-mode="dark"][data-palette="baalbek"] {
+  --paper: #140e13;
+  --surface: #1d151b;
+  --surface-2: #281d25;
+  --ink: #f3ecf0;
+  --ink-muted: #b5a6b0;
+  --ink-faint: #82737d;
+  --line: #33262f;
+  --line-strong: #45343f;
+  --accent: #cf94bb;
+  --accent-strong: #dfb0cf;
+  --accent-ink: #2a0c20;
+  --glow: #e0b75f;
+}
+
+:root[data-mode="dark"][data-palette="jounieh"] {
+  --paper: #0b0f18;
+  --surface: #121826;
+  --surface-2: #1a2233;
+  --ink: #eef1f6;
+  --ink-muted: #a3abba;
+  --ink-faint: #707a8c;
+  --line: #232c3f;
+  --line-strong: #303b52;
+  --accent: #a7bde6;
+  --accent-strong: #c3d2ef;
+  --accent-ink: #0b1426;
+  --glow: #d9b273;
+}
+
+/* Tailwind reads each token from here, so every token is also a class: bg-surface, text-muted, ring-line... */
+@theme inline {
+  /* Only our tokens exist as colours: Tailwind's own palette (bg-gray-100, text-green-700) is switched off. */
+  --color-*: initial;
+
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-muted);
+  --color-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-glow: var(--glow);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-scrim: var(--scrim);
+
+  /* Brand colours: only for that company's logo or channel (docs 08, Part 2.2). They never change with the palette. */
+  --color-brand-whatsapp: #25d366;
+  --color-brand-messenger: #0084ff;
+  --color-brand-facebook: #1877f2;
+  --color-brand-x: #111111;
+  --color-brand-airbnb: #e0565b;
+  --color-brand-booking: #2f6fd6;
+
+  /* The fonts are loaded in layout.tsx. Each stack lists the English font, then the Arabic one: the browser takes the
+     Arabic font by itself for Arabic letters. */
+  --font-sans: var(--font-inter), var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), var(--font-kufi), ui-sans-serif, system-ui, sans-serif;
+  --font-poster: var(--font-archivo), var(--font-kufi), ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme {
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.14);
+  --shadow-lift: 0 4px 12px rgb(0 0 0 / 0.08), 0 24px 48px -16px rgb(0 0 0 / 0.28);
+}
+
+@layer base {
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+  }
+
+  /* Every focusable thing shows the same ring. */
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  :is(h1, h2, h3, h4),
+  .font-display,
+  .font-poster {
+    font-family: var(--font-display);
+    font-stretch: var(--heading-stretch);
+    letter-spacing: -0.02em;
+  }
+
+  :lang(ar) :is(h1, h2, h3, h4, .font-display, .font-poster) {
+    letter-spacing: 0;
+  }
+
+  /* Emphasis in a heading is the accent colour, never italics. */
+  :is(h1, h2, h3) em {
+    color: var(--accent);
+    font-style: normal;
+  }
+
+  p,
+  li,
+  blockquote {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  /* A section fades up when it appears. In a list, set --stagger (0, 1, 2...) on each item. */
+  .rise-in {
+    animation: rise-in 0.5s var(--ease-out) both;
+    animation-delay: calc(var(--stagger, 0) * 60ms);
+  }
+
+  /* The loading shimmer: grey shapes that match the real layout. */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--surface-2) 25%,
+      color-mix(in srgb, var(--surface-2) 55%, var(--surface)) 50%,
+      var(--surface-2) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+    border-radius: var(--radius-md);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Everything that moves stops when the person asks for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
