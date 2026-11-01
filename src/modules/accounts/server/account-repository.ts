@@ -165,3 +165,8 @@ export function findUserByEmail(db: Db, email: string) {
 export function findUserById(db: Db, userId: string) {
   return db.user.findFirst({ where: { id: userId, isDeleted: false }, select: { email: true } });
 }
+
+/** The language a person reads the site and their emails in. */
+export function setLocale(db: Db, userId: string, locale: string) {
+  return db.user.update({ where: { id: userId }, data: { locale }, select: { id: true } });
+}

@@ -1,3 +1,4 @@
+import type { Locale } from "@/config/appearance";
 import { prisma, runInTransaction } from "@/server/db/client";
 import { conflict, invalid, notFound } from "@/server/errors";
 import * as accounts from "./account-repository";
@@ -37,4 +38,9 @@ export function findAccountByEmail(email: string) {
 /** The email of a live account, for another module that needs to write to the person (a checkout's receipt). */
 export async function findAccountEmail(userId: string): Promise<string | null> {
   return (await accounts.findUserById(prisma, userId))?.email ?? null;
+}
+
+/** Saves the language a signed-in person picked, so their emails come in it too. */
+export function setMyLocale(userId: string, locale: Locale) {
+  return accounts.setLocale(prisma, userId, locale);
 }

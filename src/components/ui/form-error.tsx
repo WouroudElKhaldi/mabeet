@@ -1,8 +1,16 @@
-/** A calm message for a whole form. It renders nothing when there is no message. */
-export function FormError({ message }: { message: string | null | undefined }) {
+import { clsx } from "clsx";
+
+/** The one way to show a failed action or form: announced to screen readers, nothing rendered when there's no error. */
+export function FormError({
+  message,
+  className,
+}: {
+  message: string | null | undefined;
+  className?: string;
+}) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger ring-1 ring-danger/30">
+    <p role="alert" className={clsx("text-sm font-semibold text-danger", className)}>
       {message}
     </p>
   );
