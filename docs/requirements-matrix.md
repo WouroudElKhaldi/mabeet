@@ -46,7 +46,7 @@ edge-case scripts come later.
 | Allowed status changes only                | FR F9      | `assertTransition` (`booking-status.ts`)                 | `booking-status.test.ts`, `booking-flow.test.ts` ("never lets a finished booking come back") |
 | Decline, cancel and expiry free the nights | FR F9      | `changeStatus` keeps `Occupancy.active` in step          | `booking-flow.test.ts`, `guest-cancel.test.ts`                                               |
 | Unanswered holds expire                    | FR F9      | Per room on each request + `POST /api/cron/expire-holds` | `booking-flow.test.ts` ("expires a hold nobody answered"); smoke                             |
-| Pricing (full payment, no deposit)         | FR F7      | `quoteStay` (`pricing.ts`), rate overrides               | `pricing.test.ts`, `reviews-and-prices.test.ts`                                              |
+| Pricing (full payment, no deposit)         | FR F7      | `quoteStay` (`pricing.ts`), rate overrides               | `pricing.test.ts`, `special-prices.integration.test.ts`                                      |
 | One review per stay, by the guest          | FR F5      | `review-service`, `review_one_booking` CHECK             | `reviews-and-prices.test.ts`                                                                 |
 
 ## Payments (no commission)
