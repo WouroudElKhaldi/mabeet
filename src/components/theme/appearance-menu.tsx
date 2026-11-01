@@ -34,6 +34,8 @@ function watchMode(onChange: () => void) {
     if (savedMode() === null) document.documentElement.dataset.mode = device.matches ? "dark" : "light";
   };
   device.addEventListener("change", followDevice);
+  // The device may have changed between the boot script and this listener (while the page was loading).
+  followDevice();
   return () => {
     observer.disconnect();
     device.removeEventListener("change", followDevice);

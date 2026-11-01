@@ -99,3 +99,21 @@ export async function deleteRole(db: Db, businessId: string, roleId: string) {
 export function countMembersWithRole(db: Db, roleId: string) {
   return db.membership.count({ where: { roleId, status: { not: "REMOVED" } } });
 }
+
+/** Active members who may decide bookings (owners, and roles holding bookings.decide), with their language. */
+export async function listBookingDeciders(
+  db: Db,
+  businessId: string,
+): Promise<Array<{ id: string; email: string; locale: string }>> {
+  const members = await db.membership.findMany({
+    where: {
+      businessId,
+      status: "ACTIVE",
+      isDeleted: false,
+      user: { isDeleted: false },
+      role: { isDeleted: false, OR: [{ isOwner: true }, { permissions: { has: "bookings.decide" } }] },
+    },
+    select: { user: { select: { id: true, email: true, locale: true } } },
+  });
+  return [...new Map(members.map(({ user }) => [user.id, user])).values()];
+}

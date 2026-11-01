@@ -3,8 +3,8 @@ import { z } from "zod";
 import { env } from "@/server/env";
 import { unavailable } from "@/server/errors";
 
-// A small Stripe client over its REST API: plan checkout, the billing portal, and webhook signatures. No SDK, so
-// there is nothing extra to keep up to date.
+// A small Stripe client over its REST API: plan checkout, the billing portal, card payments for bookings and their
+// refunds, and webhook signatures. No SDK, so there is nothing extra to keep up to date.
 
 const API = "https://api.stripe.com/v1";
 const TIMEOUT_MS = 20_000;
@@ -21,21 +21,27 @@ function formBody(fields: Record<string, string | number | undefined>): string {
   return body.toString();
 }
 
-async function post<T extends z.ZodType>(
+/**
+ * One call to Stripe: a POST with form fields, or a GET when there are none. `idempotencyKey` makes a retried call
+ * return the first one's result instead of doing it again.
+ */
+async function call<T extends z.ZodType>(
   path: string,
-  fields: Record<string, string | number | undefined>,
+  fields: Record<string, string | number | undefined> | null,
   schema: T,
+  idempotencyKey?: string,
 ): Promise<z.infer<T>> {
   if (!env.STRIPE_SECRET_KEY) throw unavailable("Payments are not set up yet.");
   // A timeout or a network failure is an outage like any other: a calm 503, never an internal error.
   const response = await fetch(`${API}${path}`, {
-    method: "POST",
+    method: fields === null ? "GET" : "POST",
     signal: AbortSignal.timeout(TIMEOUT_MS),
     headers: {
       authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
-      "content-type": "application/x-www-form-urlencoded",
+      ...(fields !== null && { "content-type": "application/x-www-form-urlencoded" }),
+      ...(idempotencyKey && { "idempotency-key": idempotencyKey }),
     },
-    body: formBody(fields),
+    body: fields === null ? undefined : formBody(fields),
   }).catch((error: unknown) => {
     console.error("Stripe unreachable", error);
     throw unavailable(NOT_AVAILABLE);
@@ -58,7 +64,7 @@ export function createSubscriptionCheckout(input: {
   successUrl: string;
   cancelUrl: string;
 }) {
-  return post(
+  return call(
     "/checkout/sessions",
     {
       mode: "subscription",
@@ -77,7 +83,60 @@ export function createSubscriptionCheckout(input: {
 }
 
 export function createBillingPortalSession(customerId: string, returnUrl: string) {
-  return post("/billing_portal/sessions", { customer: customerId, return_url: returnUrl }, urlResult);
+  return call("/billing_portal/sessions", { customer: customerId, return_url: returnUrl }, urlResult);
+}
+
+/** Currencies a guest can pay by card. Lebanese pounds go through Whish. */
+const CARD_CURRENCIES = ["USD", "EUR"];
+export const supportsCard = (currency: string) => CARD_CURRENCIES.includes(currency);
+
+/** A one-off card payment on Stripe Checkout, into Mabeet's Stripe account. The payment id travels with it. */
+export function createPaymentCheckout(input: {
+  paymentId: string;
+  amountCents: number;
+  currency: string;
+  description: string;
+  email: string | null;
+  successUrl: string;
+  cancelUrl: string;
+}) {
+  return call(
+    "/checkout/sessions",
+    {
+      mode: "payment",
+      "line_items[0][quantity]": 1,
+      "line_items[0][price_data][currency]": input.currency.toLowerCase(),
+      "line_items[0][price_data][unit_amount]": input.amountCents,
+      "line_items[0][price_data][product_data][name]": input.description,
+      customer_email: input.email ?? undefined,
+      client_reference_id: input.paymentId,
+      "metadata[paymentId]": input.paymentId,
+      "payment_intent_data[metadata][paymentId]": input.paymentId,
+      success_url: input.successUrl,
+      cancel_url: input.cancelUrl,
+    },
+    z.object({ id: z.string(), url: z.string() }),
+    `checkout-${input.paymentId}`,
+  );
+}
+
+/** Reads a checkout back from Stripe: whether it was paid, and the charge to refund later. */
+export function retrieveCheckoutSession(sessionId: string) {
+  return call(
+    `/checkout/sessions/${encodeURIComponent(sessionId)}`,
+    null,
+    z.object({ id: z.string(), payment_status: z.string(), payment_intent: z.string().nullish() }),
+  );
+}
+
+/** Refunds a card payment in full. `refundId` is our Refund row: a retry of the same refund never refunds twice. */
+export function createStripeRefund(paymentIntentId: string, amountCents: number, refundId: string) {
+  return call(
+    "/refunds",
+    { payment_intent: paymentIntentId, amount: amountCents },
+    z.object({ id: z.string(), status: z.string() }),
+    `refund-${refundId}`,
+  );
 }
 
 /**

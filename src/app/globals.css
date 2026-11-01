@@ -250,6 +250,39 @@
   --shadow-lift: 0 6px 20px rgb(var(--shadow-color) / 0.14), 0 1px 3px rgb(var(--shadow-color) / 0.06);
 }
 
+/*
+  The Whish simulator's page (/whish-simulator/pay/[code]) stands in for Whish's own hosted payment page, so it wears
+  Whish's colours and font (whish.money: red #ff0a46, black #0f0f10, light grey #f1f1f1, Source Sans) instead of a
+  palette. The same token names, so its buttons and fields are our shared components. Always light, like Whish's page.
+*/
+[data-provider="whish"] {
+  color-scheme: light;
+  --paper: #f1f1f1;
+  --surface: #ffffff;
+  --surface-2: #f6f6f7;
+  --ink: #0f0f10;
+  --ink-muted: #55555c;
+  --ink-faint: #8a8a91;
+  --line: #e4e4e7;
+  --line-strong: #cfcfd4;
+  --accent: #ff0a46;
+  --accent-strong: #d6003a;
+  --accent-ink: #ffffff;
+  --glow: #a9d614;
+  --success: #008a05;
+  --warning: #b45309;
+  --danger: #c13515;
+  --danger-ink: #ffffff;
+  --shadow-color: 0 0 0;
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --accent-line: color-mix(in srgb, var(--accent) 35%, var(--surface));
+  --font-sans: var(--font-source-sans), var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-source-sans), var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
+  background-color: var(--paper);
+  color: var(--ink);
+}
+
 /* ----------------------------------------------------------------------------
    Base
    ------------------------------------------------------------------------- */
@@ -450,6 +483,65 @@ p {
 }
 .float {
   animation: float 6s ease-in-out infinite;
+}
+
+/*
+  SlideLabel (src/components/ui/slide-label.tsx): on hover or keyboard focus of its `group/slide` parent, the icon hops
+  across to the end and lands with a wiggle, bumping the word off ahead of it. When the pointer leaves, the word
+  springs back with a bounce and the icon glides home.
+*/
+@keyframes slide-hop {
+  0%,
+  50%,
+  100% {
+    translate: 0 -50%;
+  }
+  25% {
+    translate: 0 calc(-50% - 9px);
+  }
+  75% {
+    translate: 0 calc(-50% - 5px);
+  }
+}
+@keyframes slide-land {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: rotate(-16deg) scale(1.25);
+  }
+  60% {
+    transform: rotate(12deg) scale(0.95);
+  }
+  80% {
+    transform: rotate(-5deg);
+  }
+}
+.slide-icon {
+  transition: inset-inline-start 560ms var(--ease-out);
+}
+.slide-word {
+  display: inline-block;
+  transition:
+    translate 460ms var(--ease-spring),
+    scale 460ms var(--ease-spring),
+    opacity 300ms var(--ease-out);
+}
+:is(.group\/slide:hover, .group\/slide:focus-visible) .slide-icon {
+  inset-inline-start: calc(100% - 1rem);
+  animation:
+    slide-hop 560ms var(--ease-out),
+    slide-land 520ms 560ms var(--ease-spring);
+}
+:is(.group\/slide:hover, .group\/slide:focus-visible) .slide-word {
+  translate: 1.5rem 0;
+  scale: 0.85 1.1;
+  opacity: 0;
+  transition-delay: 120ms;
+}
+[dir="rtl"] :is(.group\/slide:hover, .group\/slide:focus-visible) .slide-word {
+  translate: -1.5rem 0;
 }
 
 .skeleton {

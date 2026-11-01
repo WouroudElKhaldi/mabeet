@@ -89,6 +89,7 @@ describe("rooms", () => {
       { ...cedarRoom, baseRateCents: 85.5 },
       { ...cedarRoom, baseRateCents: -1 },
       { ...cedarRoom, amenities: ["helipad"] },
+      { ...cedarRoom, amenities: ["wifi", "wifi"] },
       { ...cedarRoom, name: "   " },
     ];
     for (const body of wrong)
@@ -118,6 +119,18 @@ describe("rooms", () => {
 
     await prisma.business.update({ where: { id: place.business.id }, data: { plan: "PRO" } });
     await expect(createRoom(place.ctx, { ...cedarRoom, ...defaults, name: "Fig" })).resolves.toBeDefined();
+  });
+
+  it("lets only one of several rooms added at the same moment take the plan's last place", async () => {
+    // The Free plan allows 3 rooms: with 2 saved, four added at once must leave exactly 3.
+    for (const name of ["Cedar", "Olive"]) await createRoom(place.ctx, { ...cedarRoom, ...defaults, name });
+    const results = await Promise.allSettled(
+      ["Pine", "Fig", "Oak", "Palm"].map((name) =>
+        createRoom(place.ctx, { ...cedarRoom, ...defaults, name }),
+      ),
+    );
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(await prisma.room.count({ where: { businessId: place.business.id } })).toBe(3);
   });
 
   it("does not count a deleted room against the plan, nor show it", async () => {

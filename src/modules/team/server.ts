@@ -18,3 +18,4 @@ export {
   removeMember,
   updateRole,
 } from "./server/team-service";
+export { listPeopleWhoDecideBookings } from "./server/booking-deciders";

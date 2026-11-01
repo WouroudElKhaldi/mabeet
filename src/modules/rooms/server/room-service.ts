@@ -41,8 +41,9 @@ export function getRoom(ctx: TenantContext, roomId: string) {
 
 export async function createRoom(ctx: TenantContext, input: RoomInput) {
   requirePermission(ctx, "rooms.manage");
-  await assertPlanAllowsAnother(ctx.businessId, "rooms");
   return runInTransaction(async (tx) => {
+    // Counted inside the transaction that adds the room, so two rooms added at once cannot pass the limit together.
+    await assertPlanAllowsAnother(ctx.businessId, "rooms", tx);
     const room = await rooms.createRoom(tx, {
       ...input,
       businessId: ctx.businessId,

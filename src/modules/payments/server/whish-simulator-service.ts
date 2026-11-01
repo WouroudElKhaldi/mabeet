@@ -110,6 +110,20 @@ export async function refundSimulatedPayment(externalId: string): Promise<Envelo
   return ok(null, false);
 }
 
+/** What the payment page shows: the amount, what it is for, whether it can still be paid, and the way back. */
+export async function getPayPage(code: string) {
+  assertOn();
+  const payment = await simulator.findSimulatedPaymentByCode(prisma, code);
+  if (!payment) throw notFound("Payment");
+  return {
+    amount: payment.amount,
+    currency: payment.currency,
+    invoice: payment.invoice,
+    status: payment.status,
+    cancelUrl: payment.failureRedirectUrl,
+  };
+}
+
 /** Calls the merchant's callback by GET, as Whish does. Errors are logged: Whish doesn't retry either. */
 async function callBack(url: string) {
   await fetch(url, { signal: AbortSignal.timeout(CALLBACK_TIMEOUT_MS) }).catch((error: unknown) =>

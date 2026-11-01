@@ -35,7 +35,10 @@ Rules for the online modes (1 and 2):
   (`holdHours`, 24 hours by default) to confirm or decline. If they do not answer, the booking expires and the guest
   gets a full automatic refund. The guest's money is never stuck.
 - **Refunds are always full and automatic.** Whoever cancels, the guest gets the full amount back through Whish or
-  Stripe. The owner accepts this when choosing an online mode (it is written in the payment policy).
+  Stripe.
+- **A stay that has started can no longer be cancelled**, by the guest or the owner. A guest who arrives and leaves
+  early is not refunded: they stayed. This also means a refund never gives back money already paid out to the owner
+  (payouts only release stays that have started). The owner accepts this when choosing an online mode (it is written in the payment policy).
 
 For mode 3, payments made outside the platform are between the owner and the guest. The platform does not record
 or handle them. This is written in the payment policy.

@@ -32,3 +32,12 @@ export function formatDate(
     parseIsoDate(isoDate),
   );
 }
+
+/** A stay's check-in and check-out as one short range, "12 – 15 Nov", read in UTC like every night. */
+export function formatStayDates(checkIn: Date, checkOut: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(dateLocale(locale), {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).formatRange(checkIn, checkOut);
+}

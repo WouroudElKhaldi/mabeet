@@ -567,8 +567,12 @@ Tabs at the top (`AccountTabs`):
 
 ### 8.6 Whish simulator (F4a)
 
-`/whish-simulator/pay/[code]`: the page our Whish simulator shows instead of Whish's: the amount and "Pay" or
-"Cancel" (`WhishSimulatorForm`). It looks plain on purpose, like a payment provider's page.
+`/whish-simulator/pay/[code]`: the page our Whish simulator shows instead of Whish's: the amount, what it is for,
+the sandbox phone and code, and "Confirm payment" or "Cancel and go back" (`WhishSimulatorForm`). It is its own page,
+outside Mabeet's header and footer, dressed as Whish's: their red band and wordmark, light grey, a white card, Source
+Sans (`data-provider="whish"` in `globals.css` gives the same token names Whish's values, always light). The
+"Test mode" badge and banner always stay, so it is never taken for the real Whish. Only in `WHISH_MODE=simulator`;
+otherwise it answers 404.
 
 ---
 

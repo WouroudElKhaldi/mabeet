@@ -103,9 +103,15 @@ export function SceneLayer({
     <motion.div
       className={className}
       style={{ z: depth }}
-      initial={entrance && !reduceMotion ? entrance.initial : false}
+      // The same first frame on the server and in the browser (the server cannot know the visitor's motion setting):
+      // for reduced motion the entrance simply takes no time.
+      initial={entrance ? entrance.initial : false}
       animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-      transition={{ type: "spring", stiffness: 120, damping: 14, delay: entrance?.delay ?? 0 }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : { type: "spring", stiffness: 120, damping: 14, delay: entrance?.delay ?? 0 }
+      }
     >
       <div
         style={{ translate: `calc(var(--px, 0) * ${depth * 0.22}px) calc(var(--py, 0) * ${depth * 0.16}px)` }}
