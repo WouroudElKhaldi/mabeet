@@ -2,6 +2,7 @@ import { LogIn } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { AppearanceMenu } from "@/components/theme/appearance-menu";
+import { SlideLabel, slideParent } from "@/components/ui/slide-label";
 import { getCurrentUser } from "@/server/http/session";
 import { HeaderShell } from "./header-shell";
 import { Wordmark } from "./wordmark";
@@ -46,14 +47,11 @@ export async function SiteHeader() {
           ) : (
             <Link
               href="/sign-in"
-              className="group ms-1 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-paper transition-opacity hover:opacity-90"
+              className={`${slideParent} ms-1 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-paper transition-opacity hover:opacity-90`}
             >
-              {/* The arrow steps toward the door on hover. */}
-              <LogIn
-                className="size-4 transition-transform duration-300 ease-(--ease-spring) group-hover:translate-x-1 group-focus-visible:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1 rtl:group-focus-visible:-translate-x-1"
-                aria-hidden
-              />
-              {t("signIn")}
+              <SlideLabel icon={LogIn} flipInRtl>
+                {t("signIn")}
+              </SlideLabel>
             </Link>
           )}
         </div>

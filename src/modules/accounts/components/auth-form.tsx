@@ -1,12 +1,13 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, LogIn, UserPlus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SlideLabel, slideParent } from "@/components/ui/slide-label";
 import { Field } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { afterSignIn } from "@/utils/sign-in-url";
@@ -122,9 +123,14 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
           </motion.p>
         )}
       </AnimatePresence>
-      <Button type="submit" size="lg" disabled={pending} className="w-full">
-        {pending && <LoaderCircle className="size-5 animate-spin" aria-hidden />}
-        {t(`${mode}.submit`)}
+      <Button type="submit" size="lg" disabled={pending} className={`w-full ${slideParent}`}>
+        <SlideLabel
+          icon={pending ? LoaderCircle : mode === "sign-in" ? LogIn : UserPlus}
+          flipInRtl={mode === "sign-in"}
+          spinning={pending}
+        >
+          {t(`${mode}.submit`)}
+        </SlideLabel>
       </Button>
       <p className="text-center text-sm text-muted">
         {t(`${mode}.switchPrompt`)}{" "}

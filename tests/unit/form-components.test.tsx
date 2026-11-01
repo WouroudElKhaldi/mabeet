@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { PageHeader, Panel } from "@/components/shell/page-header";
 import { LabeledControl } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-error";
+import { SlideLabel, slideParent } from "@/components/ui/slide-label";
+import { LogIn } from "lucide-react";
 
 // The shared form and page parts, rendered: what a screen reader is told, and what keeps a long title on a phone.
 
@@ -50,5 +52,35 @@ describe("PageHeader and Panel", () => {
     expect(header).toContain("min-w-0");
     expect(header).toContain("rise-in");
     expect(renderToStaticMarkup(<Panel title="Rooms">…</Panel>)).toContain("min-w-0");
+  });
+});
+
+describe("SlideLabel", () => {
+  it("keeps the words for screen readers and hides the icon from them", () => {
+    const html = renderToStaticMarkup(<SlideLabel icon={LogIn}>Sign in</SlideLabel>);
+    expect(html).toContain("Sign in");
+    expect(html).toMatch(/<svg[^>]*aria-hidden="true"/);
+  });
+
+  it("slides only under a parent marked with slideParent, and mirrors arrows in Arabic", () => {
+    const html = renderToStaticMarkup(
+      <SlideLabel icon={LogIn} flipInRtl>
+        Sign in
+      </SlideLabel>,
+    );
+    expect(slideParent).toBe("group/slide");
+    expect(html).toContain("group-hover/slide:start-[calc(100%-1rem)]");
+    expect(html).toContain("group-hover/slide:opacity-0");
+    expect(html).toContain("rtl:rotate-180");
+  });
+
+  it("stands still and spins while the button waits", () => {
+    const html = renderToStaticMarkup(
+      <SlideLabel icon={LogIn} spinning>
+        Sign in
+      </SlideLabel>,
+    );
+    expect(html).toContain("animate-spin");
+    expect(html).not.toContain("group-hover/slide");
   });
 });
