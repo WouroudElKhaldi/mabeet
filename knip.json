@@ -5,6 +5,8 @@
     "src/components/{ui,shell,theme}/**/*.{ts,tsx}",
     "tests/**/*.test.ts",
     "src/modules/*/tests/**/*.test.ts",
+    "src/lib/api-client.ts",
+    "src/hooks/*.ts",
     "scripts/*.ts"
   ],
   "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "scripts/**/*.ts", "prisma/**/*.ts"],
