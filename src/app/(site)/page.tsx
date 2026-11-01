@@ -12,7 +12,7 @@ import { stagger } from "@/utils/motion";
 export default async function HomePage() {
   const t = await getTranslations("home");
   return (
-    <section className="mx-auto grid max-w-360 items-center gap-12 px-4 pt-10 pb-6 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-10 lg:pt-14">
+    <section className="mx-auto grid max-w-360 items-center gap-12 overflow-x-clip px-4 pt-10 pb-6 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-10 lg:pt-14">
       <div className="min-w-0">
         <p className="rise-in inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5 text-sm font-semibold text-accent">
           <BadgePercent className="size-4" aria-hidden />

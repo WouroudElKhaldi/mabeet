@@ -19,7 +19,6 @@
     "aws4fetch",
     "ical-generator",
     "node-ical",
-    "sharp",
     "web-push",
     "@types/web-push"
   ]
