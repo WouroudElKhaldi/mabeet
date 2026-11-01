@@ -135,14 +135,18 @@ status colours and `--scrim` are in the `:root` block (light) and the `:root[dat
 
 ### 2.4 How light, dark and the palette are applied
 
-- The `<html>` tag gets `data-palette="cedar"` and `data-mode="light"` or `"dark"`. `layout.tsx` sets the palette from
-  `DEFAULT_PALETTE` until the platform admin's choice (`SiteSetting`, F16) is read there.
+- The `<html>` tag gets `data-palette="cedar"` and `data-mode="light"` or `"dark"`. `layout.tsx` reads the palette
+  with `getSitePalette()` (`@/modules/admin/server`): the platform admin's choice (`SiteSetting`, F16), or
+  `DEFAULT_PALETTE` when none is saved or the saved value is not a palette.
 - A small script in `<head>` (`src/components/theme/appearance-script.tsx`) sets `data-mode` before the page paints, so
   there is no flash of the wrong theme: the visitor's saved choice (`localStorage`, key `mabeet-mode`), else the
   device's setting.
-- `AppearanceMenu` (`src/components/theme/appearance-menu.tsx`) is the language list and the light/dark button, for the
-  top bar. It reads and writes `data-mode` on `<html>` and saves the choice in the browser. The language list calls
-  the `setLocale` server action.
+- `AppearanceMenu` (`src/components/theme/appearance-menu.tsx`) is two round icon buttons for the top bar, as in the
+  reference project: the light/dark switch (the sun and moon turn as they swap, and the page cross-fades) and the
+  language menu (a globe that opens a small list of `appearance.languageNames`, the current one ticked). The switch
+  reads and writes `data-mode` on `<html>` and saves the choice in the browser; until the visitor chooses, the page
+  follows the device when its setting changes. The language list calls the `setLocale` server action, which also
+  saves a signed-in person's language on their account, so their emails follow it.
 - `dark:` follows `data-mode` (`@custom-variant` in `globals.css`), and native controls (scrollbars, an open select)
   follow it too (`color-scheme`). Most things need no `dark:` at all: the tokens change by themselves.
 
@@ -242,6 +246,20 @@ Tailwind 4: one step = `0.25rem` = 4 pixels. `p-4` = 16px, `gap-6` = 24px. We us
 Motion classes in `globals.css`: `rise-in` (a section fades up when it appears; set `--stagger` for lists),
 `skeleton` (the loading shimmer), page changes use the browser's view transition. Everything turns off when the
 person asks for reduced motion. Chat messages use `motion` (`framer-motion`) with a spring.
+
+Depth and movement on the brand art (beyond the reference project, asked for on 2026-11-01):
+
+- `rise-in-sequence` on a form: its fields rise one after another, after the heading.
+- `float`: a slow hover for a card in front of the brand art (the boarding pass). It moves `translate`, so it adds to
+  the card's own rotation and depth.
+- `BrandScene`, `SceneLayer` and `Sheen` (`src/components/brand/brand-scene.tsx`): the brand art as a small 3D scene.
+  The group leans toward the mouse wherever it is on the page (a spring, up to 10 degrees), and sways slowly by
+  itself when the mouse is still. Each `SceneLayer` has a `depth` in pixels: the deeper toward the viewer, the further
+  it slides, so the boarding pass moves more than the window behind it. Inside the arches, `PlaceArt`'s sun and two
+  hills slide by their own distance too (they read `--px` and `--py`, from -1 to 1, which the scene sets). `enter`
+  choreographs the opening: the window rises (`rise`), the pass drops in with a spring (`drop`), the postmark lands
+  like a stamp (`stamp`). `Sheen` is light sliding across the pass as it turns. Used on the sign-in brand panel and
+  the home hero. Touch screens get only the sway and the opening; reduced motion gets none of it.
 
 ### 4.5 Signature shapes (the brand)
 
@@ -481,12 +499,20 @@ payments are between the host and the guest). `/offline` shows `HeroLandscape` a
 
 ### 8.2 Sign in and accounts (F17)
 
+The `(auth)` layout is the form on one side and the brand panel on the other. From `lg` up it is exactly the window's
+height and the page never scrolls: on a short laptop window (the `short:` variant, at least 1024 px wide and at most
+800 px tall) the spacing tightens and the back link and the three reasons hide (the wordmark and the brand panel say
+the same). Only on a window shorter still does the form's own column scroll.
+
 All use `AuthPage` (a narrow centred card, `max-w-md`) with `AuthForm`:
 
 - `/sign-in`: email, password, "Forgot password?", link to sign up.
 - `/sign-up`: name, email, password; then "check your email".
 - `/forgot-password` and `/reset-password`: one field each.
-- `/home`: no screen; it sends owners to their dashboard and guests to the home page.
+- `/home`: no screen; it sends owners to their dashboard and guests to the home page. A confirmation link that has
+  expired or was used comes back with `?error=` and goes on to `/sign-in`, which says so (`auth.linkExpired`).
+- When Better Auth's rate limit answers (a few tries a minute from one address), every sign-in form says to wait
+  (`auth.tooManyAttempts`), never "wrong password", and the forgot-password form does not claim a link was sent.
 - `/host`: "Create your workspace" (`CreateWorkspaceForm`: the place's name and area).
 - `/oauth/consent` and `/oauth/workspace` (F14): "Allow {app} to connect?" and "Which workspace?" when Claude or
   ChatGPT connects.

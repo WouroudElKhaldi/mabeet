@@ -3,6 +3,7 @@
 export {
   acceptInvitation,
   cancelInvitation,
+  getInvitation,
   inviteMember,
   listTeamInvitations,
   registerFromInvitation,

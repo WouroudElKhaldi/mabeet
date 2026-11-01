@@ -1,6 +1,6 @@
 import { useId } from "react";
 import type { ReactNode } from "react";
-import { panelClass } from "../ui/field";
+import { panelClass } from "@/components/ui/field";
 
 /** The title block of a dashboard or admin page: a small bar, the title, an intro, and actions on the end side. */
 export function PageHeader({
@@ -13,8 +13,8 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div>
+    <header className="rise-in mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
         <span aria-hidden className="mb-3 block h-1 w-10 rounded-full bg-glow" />
         <h1 className="text-3xl font-semibold sm:text-4xl">{title}</h1>
         {intro ? <p className="mt-2 max-w-2xl text-muted">{intro}</p> : null}
@@ -39,8 +39,8 @@ export function Panel({
   const titleId = useId();
   return (
     <section aria-labelledby={titleId} className={panelClass}>
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 id={titleId} className="text-xl font-semibold">
             {title}
           </h2>
