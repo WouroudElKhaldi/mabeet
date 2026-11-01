@@ -2,7 +2,7 @@ import { z } from "zod";
 import { env } from "@/server/env";
 import { unavailable } from "@/server/errors";
 
-// A small client for Whish Pay (v1.4.4): create a payment and read its status. Every call answers HTTP 200 with an
+// A small client for Whish Pay (v1.4.4): create a payment, read its status, refund it. Every call answers HTTP 200 with an
 // envelope; `status: true` succeeded, `code: "500"` means the outcome is unknown (pending), any other code failed.
 // The money goes to Mabeet's Whish account.
 
@@ -61,6 +61,10 @@ async function call(path: string, body: unknown): Promise<unknown> {
   return parsed.data.data;
 }
 
+/** Whish only accepts these. */
+const WHISH_CURRENCIES = ["USD", "LBP"];
+export const supportsWhish = (currency: string) => WHISH_CURRENCIES.includes(currency);
+
 /** Whish takes the amount as a string: USD with up to 2 decimals, LBP without decimals. */
 export function whishAmount(cents: number, currency: string): string {
   return currency === "LBP" ? String(Math.round(cents / 100)) : (cents / 100).toFixed(2);
@@ -105,4 +109,13 @@ export async function getWhishStatus(externalId: string, currency: string) {
   const parsed = z.object({ collectStatus: z.string(), payerPhoneNumber: z.string().nullish() }).parse(data);
   const known = COLLECT_STATUSES.find((status) => status === parsed.collectStatus);
   return { status: known ?? "unknown", payerPhone: parsed.payerPhoneNumber ?? null };
+}
+
+/** Refunds the whole payment. Whish refunds each payment once; asking again for the same one changes nothing. */
+export async function refundWhishPayment(
+  externalId: string,
+  currency: string,
+  reason: string,
+): Promise<void> {
+  await call("/payment/whish/refund", { currency, externalId, refundReason: reason });
 }

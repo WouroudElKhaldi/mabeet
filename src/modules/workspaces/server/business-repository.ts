@@ -30,3 +30,18 @@ export async function createBusinessWithOwner(tx: Tx, input: NewBusinessWithOwne
   });
   return business;
 }
+
+/** A place guests can book: live, not deleted, found by its public link. */
+export function findBookableBusinessBySlug(db: Db, slug: string) {
+  return db.business.findFirst({
+    where: { slug, status: "ACTIVE", isDeleted: false },
+    select: {
+      id: true,
+      name: true,
+      currency: true,
+      bookingMode: true,
+      bookingUnit: true,
+      holdHours: true,
+    },
+  });
+}
