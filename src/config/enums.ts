@@ -47,6 +47,10 @@ export const ONLINE_BOOKING_MODES = [
 export const isOnlineMode = (mode: BookingMode): boolean =>
   (ONLINE_BOOKING_MODES as readonly BookingMode[]).includes(mode);
 
+/** How a guest pays online: with Whish, or by card (Stripe Checkout). */
+export const ONLINE_PAYMENT_METHODS = ["WHISH", "CARD"] as const;
+export type OnlinePaymentMethod = (typeof ONLINE_PAYMENT_METHODS)[number];
+
 /** Calendars we read taken nights from. */
 export const FEED_SOURCES = ["AIRBNB", "BOOKING", "OTHER"] as const satisfies readonly FeedSource[];
 
