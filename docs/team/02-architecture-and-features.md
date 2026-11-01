@@ -1223,16 +1223,28 @@ can make or change an owner. Nobody can change their own access. Code: `team-ser
 
 ### Calling the API from the browser
 
-- Use `api.get`, `api.post`, `api.patch`, `api.put`, `api.delete`, `api.upload` from `src/lib/api-client.ts`.
-- If a call fails, it throws `ApiError` with the server's message.
-- Show it with `errorMessage(caught, fallback)` and `FormError`.
-- Never call `fetch` directly.
+- Use `api.get`, `api.post`, `api.patch`, `api.put`, `api.delete`, `api.upload` from `src/lib/api-client.ts`. `api.get`
+  takes the query as a second argument (`api.get(url, { page: 2 })`; empty values are left out). Never call `fetch`
+  directly.
+- If a call fails, it throws `ApiError` with `status`, `code`, `message`, `details`, and `retryAfterSeconds` on a 429. A
+  lost connection is an `ApiError` with status 0 and code `NETWORK`.
+- Show a failure with `errorMessage(caught, fallback)` and `FormError`. It returns the server's own sentence when a
+  person can act on it ("Those dates were just taken"), and the translated `fallback` for a crash (`INTERNAL`), a lost
+  connection or an answer that is not ours. Until `localizeError` exists, a server sentence is in English.
+- For a form, `formFailure(caught, fallback)` also gives `fieldErrors`: the first problem of each wrong field, by field
+  name. Show the text you want under each field, in the visitor's language.
+- `api.run` (slow AI answers) is built with the AI features.
 
 ### Shared hooks
 
-- `useAction()`: calls the API, then refreshes the page. Gives `pending` and `error`.
-- `useRedirectAction(fallback)`: for steps that end on another page (Stripe, Whish, an AI app's sign-in).
-- `useStoredChoice(key, allowed, fallback)`: remembers a choice in this browser, such as the calendar view.
+- `useAction()` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } = useAction()`. `run(() =>
+api.post(...))` calls the API, then refreshes the page, and resolves to `true` when it worked. `pending` covers both
+  steps. After a failure, either `error` (for `FormError`) or `fieldErrors` is set, never both.
+- `useRedirectAction()`: `const { run, pending, error } = useRedirectAction()`, for steps that end on another page
+  (Stripe, Whish, an AI app's sign-in). `run(() => api.post(...))` expects `{ url }` and follows it only if it is a page
+  of this site or an https address (`isSafeRedirect`).
+- `useStoredChoice(key, allowed, fallback)`: `const [view, setView] = useStoredChoice("calendar-view", ["month", "week"]
+as const, "month")`. Remembers a choice in this browser; a saved value that is no longer allowed is ignored.
 - `useConfirm()`: the "are you sure?" dialog, before anything that cannot be undone.
 
 ### Loading, empty and error states
