@@ -343,6 +343,8 @@
       "trust3": "Your room is held while they confirm"
     },
     "notVerified": "Please confirm your email first. We just sent you a new link.",
+    "linkExpired": "This confirmation link has expired or was already used. Sign in and we will send you a new one.",
+    "tooManyAttempts": "Too many attempts in a short time. Wait a minute, then try again.",
     "forgotLink": "Forgot password?",
     "checkInbox": {
       "title": "Check your inbox",
