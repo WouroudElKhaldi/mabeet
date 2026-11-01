@@ -1365,7 +1365,7 @@ paths:
                 baseRateCents:
                   type: integer
                   minimum: 0
-                  maximum: 10000000
+                  maximum: 9007199254740991
                 minNights:
                   default: 1
                   type: integer
@@ -1519,31 +1519,26 @@ paths:
                   minimum: 1
                   maximum: 30
                 bedrooms:
-                  default: 1
                   type: integer
                   minimum: 0
                   maximum: 30
                 beds:
-                  default: 1
                   type: integer
                   minimum: 0
                   maximum: 60
                 bathrooms:
-                  default: 1
                   type: integer
                   minimum: 0
                   maximum: 30
                 baseRateCents:
                   type: integer
                   minimum: 0
-                  maximum: 10000000
+                  maximum: 9007199254740991
                 minNights:
-                  default: 1
                   type: integer
                   minimum: 1
                   maximum: 60
                 amenities:
-                  default: []
                   maxItems: 13
                   type: array
                   items:
@@ -1563,7 +1558,6 @@ paths:
                       - pets
                       - generator
                 active:
-                  default: true
                   type: boolean
       responses:
         "200":
@@ -1684,7 +1678,7 @@ paths:
                   anyOf:
                     - type: integer
                       minimum: 0
-                      maximum: 10000000
+                      maximum: 9007199254740991
                     - type: "null"
               required:
                 - checkIn
