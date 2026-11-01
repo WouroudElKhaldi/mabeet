@@ -26,3 +26,19 @@ export async function recordPersonAndBusiness(db: Db, entry: ActivityEntry & { b
   await logActivity(db, entry);
   await logAudit(db, { ...event, actorId: userId });
 }
+
+/**
+ * Something the system did in a business, with nobody behind it (a hold that ran out, a platform booking clashing
+ * with our nights): it goes in the business's audit log, so the bell shows it.
+ */
+export function recordSystemEvent(
+  db: Db,
+  entry: { businessId: string; action: string; entity: string; entityId: string },
+) {
+  return logAudit(db, { ...entry, actorId: null });
+}
+
+/** Something that happened to a person (their booking was confirmed, declined or ran out): their own timeline. */
+export function notePerson(db: Db, entry: ActivityEntry) {
+  return logActivity(db, entry);
+}
