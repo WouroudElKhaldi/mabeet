@@ -2574,7 +2574,7 @@
     "/api/workspaces/{businessId}/blocks": {
       "post": {
         "tags": ["Calendar"],
-        "summary": "Close dates (maintenance, phone or Kazderni bookings)",
+        "summary": "Close dates (maintenance, or a booking taken by phone)",
         "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
         "security": [
           {
@@ -2603,17 +2603,6 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
-                  },
-                  "source": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "enum": ["AIRBNB", "BOOKING", "OTHER"]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
                   },
                   "note": {
                     "anyOf": [
@@ -2832,7 +2821,7 @@
       },
       "post": {
         "tags": ["Calendar"],
-        "summary": "Connect an Airbnb, Booking.com or Kazderni calendar",
+        "summary": "Connect an Airbnb, Booking.com or other platform calendar",
         "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
         "security": [
           {
@@ -3444,113 +3433,6 @@
             "description": "Rate limited"
           }
         }
-      },
-      "post": {
-        "tags": ["Bookings"],
-        "summary": "Record a payment",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
-        "security": [
-          {
-            "session": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "businessId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {
-                  "amountCents": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 100000000
-                  },
-                  "method": {
-                    "type": "string",
-                    "enum": ["WHISH", "OMT", "CASH", "BANK_TRANSFER", "OTHER"]
-                  },
-                  "note": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 300
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "required": ["amountCents", "method"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Invalid input",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {}
-                      },
-                      "required": ["code", "message"]
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sign-in or key required"
-          },
-          "403": {
-            "description": "Missing permission"
-          },
-          "404": {
-            "description": "Not found, or not yours"
-          },
-          "409": {
-            "description": "Conflict, e.g. dates or seats just taken"
-          },
-          "429": {
-            "description": "Rate limited"
-          }
-        }
       }
     },
     "/api/workspaces/{businessId}/session-bookings/{bookingId}/{action}": {
@@ -3608,115 +3490,6 @@
         },
         "responses": {
           "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Invalid input",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {}
-                      },
-                      "required": ["code", "message"]
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sign-in or key required"
-          },
-          "403": {
-            "description": "Missing permission"
-          },
-          "404": {
-            "description": "Not found, or not yours"
-          },
-          "409": {
-            "description": "Conflict, e.g. dates or seats just taken"
-          },
-          "429": {
-            "description": "Rate limited"
-          }
-        }
-      }
-    },
-    "/api/workspaces/{businessId}/session-bookings/{bookingId}/payments": {
-      "post": {
-        "tags": ["Bookings"],
-        "summary": "Record a payment on a session booking",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
-        "security": [
-          {
-            "session": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "businessId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {
-                  "amountCents": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 100000000
-                  },
-                  "method": {
-                    "type": "string",
-                    "enum": ["WHISH", "OMT", "CASH", "BANK_TRANSFER", "OTHER"]
-                  },
-                  "note": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 300
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "required": ["amountCents", "method"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
             "description": "Success"
           },
           "400": {
