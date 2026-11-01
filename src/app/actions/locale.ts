@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { LOCALE_COOKIE, LOCALES } from "@/config/appearance";
+import { setMyLocale } from "@/modules/accounts/server";
+import { getCurrentUser } from "@/server/http/session";
 
 const localeSchema = z.enum(LOCALES);
 
@@ -19,6 +21,9 @@ export async function setLocale(locale: string) {
     // Only the server reads it, and it holds no secret, so no `secure` flag is needed.
     httpOnly: true,
   });
+  // A signed-in person's emails follow the language they chose here.
+  const user = await getCurrentUser();
+  if (user && user.locale !== checked) await setMyLocale(user.id, checked);
   // Every page already built for the old language is built again.
   revalidatePath("/", "layout");
 }

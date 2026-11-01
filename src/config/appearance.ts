@@ -24,6 +24,11 @@ export const PALETTES = ["cedar", "byblos", "batroun", "baalbek", "jounieh"] as 
 export type Palette = (typeof PALETTES)[number];
 export const DEFAULT_PALETTE: Palette = "cedar";
 
+/** The saved site setting is plain text in the database; anything that is not a palette falls back to the default. */
+export function isPalette(value: string): value is Palette {
+  return (PALETTES as readonly string[]).includes(value);
+}
+
 /** Each visitor chooses light or dark; the choice is kept in this browser. */
 export type Mode = "light" | "dark";
 export const MODE_STORAGE_KEY = "mabeet-mode";
