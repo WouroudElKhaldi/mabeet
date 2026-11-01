@@ -448,7 +448,7 @@ Its one `Occupancy` row takes the nights.
 
 ### Money tables: `Payment`, `Refund`, `Payout`, `PlanPayment`
 
-- A payment belongs to a booking. It has an amount, currency, method, status, an `online` flag, and two provider
+- A payment belongs to a booking. It is always online (Whish or Stripe). It has an amount, currency, method, status, and two provider
   references that mean different things: `providerRef` is the checkout (a Stripe Checkout session id, or
   `whish:<payment id>`), used to look it up and settle it, and unique so it is never settled twice;
   `providerPaymentId` is the charge it produced (Stripe's payment intent), only needed to refund a card payment.
@@ -800,18 +800,22 @@ partners and sponsored listings") are the platform's only income. Code: `billing
 
 ### B. Bookings: the statuses
 
-| Status             | Meaning                                  |
-| ------------------ | ---------------------------------------- |
-| `HELD`             | A request waiting for the host           |
-| `AWAITING_PAYMENT` | Accepted, waiting for the online payment |
-| `CONFIRMED`        | Confirmed                                |
-| `DECLINED`         | The host said no                         |
-| `EXPIRED`          | Nobody answered or nobody paid in time   |
-| `CANCELLED`        | Cancelled by the guest or the host       |
+| Status             | Meaning                                                            |
+| ------------------ | ------------------------------------------------------------------ |
+| `HELD`             | Waiting for the owner's answer (mode 3, or mode 2 once paid)       |
+| `AWAITING_PAYMENT` | Waiting for the guest's online payment (10 minutes, modes 1 and 2) |
+| `CONFIRMED`        | Confirmed                                                          |
+| `DECLINED`         | The host said no                                                   |
+| `EXPIRED`          | Nobody answered or nobody paid in time                             |
+| `CANCELLED`        | Cancelled by the guest or the host                                 |
 
 - The first three hold the nights (`ACTIVE_BOOKING_STATUSES`).
 - The first two end when their time runs out (`EXPIRING_BOOKING_STATUSES`).
 - Allowed changes are in `booking-status.ts` (`assertTransition`). Any other change gives a 409 error.
+- The owner confirms or declines only a `HELD` booking (`assertOwnerCanAnswer`): one still waiting for its
+  payment is the payment's to decide.
+- A status change applies only if the booking is still in the status it was read in, so the clock expiring a hold
+  and the owner answering it at the same moment never overwrite each other ("This booking just changed").
 
 ### B. Bookings: where a new booking starts
 
@@ -847,8 +851,10 @@ handles it:
 ### B. Bookings: the host decides
 
 - `confirmBooking` (modes 2 and 3) first reads the room's Airbnb and Booking.com calendars again
-  (`refreshRoomFeeds`). Then it confirms.
-- `declineBooking` and `cancelBooking` refund everything the guest paid online.
+  (`refreshRoomFeeds`, in `calendar-sync`, once calendar sync is built). Then it confirms, unless a platform stay now
+  covers those nights or the answer time ran out.
+- `declineBooking` and `cancelBooking` refund everything the guest paid online. `cancelBooking` is refused once the
+  stay has started (its money may already be paid out).
 - All three lock the room, check the status change, keep the occupancy's `active` flag correct (`changeStatus`),
   save who decided and when, log the action and tell the guest.
 
@@ -880,7 +886,8 @@ Code: `calendar-board.tsx` (views, selecting), `calendar-side-panel.tsx`, `close
 
 ### C. Closed dates (blocks)
 
-`addBlock` and `removeBlock` in `calendar-service.ts` (no moving by drag and drop). A block is a `MANUAL` occupancy, so the database
+`addBlock` and `removeBlock` in `src/modules/bookings/server/closed-dates-service.ts` (no moving by drag and drop),
+under the same room lock as bookings. A block is a `MANUAL` occupancy, so the database
 refuses it on taken nights (409 "Those nights are already booked or blocked"). Hosts also use blocks for bookings
 taken by phone.
 
@@ -1026,8 +1033,15 @@ platform admins.
 
 ### M. Money: guests paying online
 
-1. `startBookingCheckout` creates a pending payment and returns the Whish or Stripe payment page.
-2. When Whish calls us back, or the guest comes back, we only run `settleOnlinePayment`.
+Code: `src/modules/bookings/server/booking-payments.ts`. Route: `POST /api/public/bookings/{token}/checkout`
+(signed in, rate limited, `method` WHISH or CARD).
+
+1. `startBookingCheckout` creates a pending payment and returns the Whish or Stripe payment page. If the provider
+   refuses, the payment is marked failed and the booking keeps waiting. Whish takes USD and LBP; cards take USD and
+   EUR (`onlinePaymentMethods(currency)` says which are open).
+2. When Whish calls us back, Stripe's webhook arrives, or the guest comes back (`refreshGuestPayments`, for the
+   booking page), we only run `settleOnlinePayment`. Once paid, the booking moves on by its mode: `CONFIRMED` in
+   mode 1 (the hosts are told), `HELD` in mode 2 with the owner's answer time (the owner gets the request).
 3. `settleOnlinePayment` asks Whish or Stripe what really happened. Their answer decides. So a fake callback cannot
    confirm a booking.
 4. Marking a payment as paid happens only once, in a transaction. Calling it many times changes nothing.
@@ -1036,11 +1050,19 @@ platform admins.
 
 ### M. Money: refunds
 
-`refundForEndedBooking(endedBooking, by, now)`:
+Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `sendRefunds`, `retryPendingRefunds`).
 
-- Whoever ends the booking (guest, owner, platform, or the clock): full refund, automatically.
-- Card refunds go through Stripe. Whish refunds go through Whish.
-- If an automatic refund fails, it shows on the admin page to send by hand (`Refund.automatic`, `PENDING`).
+- Whoever ends a paid booking (guest, owner, or the clock), and a payment that lands after the booking ended or on
+  one already paid: full refund, automatically.
+- **A stay that has started can no longer be cancelled, by the owner or the guest.** Payouts only release money
+  for confirmed stays that have started, so a refund can never give back money already paid out to the owner. The
+  payout service must keep to this: available money is confirmed, started, unrefunded stays only.
+- The refund row is written in the same transaction that ends the booking (`PENDING`, the payment marked
+  `REFUNDED`); Whish or Stripe is called after the commit, and the row becomes `DONE` when they confirm it.
+- Card refunds go through Stripe, with the refund's id as Stripe's idempotency key; Whish refunds go through Whish,
+  which refunds a payment once. So sending again never pays twice.
+- A refund the provider refuses stays `PENDING`: housekeeping sends it again for a day, then it waits on the admin
+  page to send by hand.
 
 ### M. Money: payouts to hosts
 
@@ -1340,6 +1362,21 @@ cancelStayAsGuest(publicToken: string, guestUserId: string, reason: string | nul
 // (409) once the stay has started.
 
 getBookingForGuest(publicToken: string, guestUserId: string): Promise<(Booking & { room; business; payments }) | null>
+// business holds only what a guest may see (name, address, contact numbers, times, house rules, how to pay).
+
+getBooking(ctx: TenantContext, bookingId: string): Promise<Booking & { room }>   // bookings.read
+listBookings(ctx: TenantContext, filters: { status?, roomId?, from?: Date, to?: Date, take, skip }): Promise<Booking[]>
+// Staff without guests.contact see the guest's phone and email masked.
+listMyBookings(guestUserId: string): Promise<Booking[]>   // the guest's trips, newest first
+
+getCalendar(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read
+addBlock(ctx: TenantContext, input: { roomId: string; range: DateRange; note: string | null }, now?: Date)   // blocks.manage
+removeBlock(ctx: TenantContext, blockId: string, now?: Date)   // blocks.manage
+// Closing taken nights gives 409 "Those nights are already booked or closed."
+
+// The input checks for these routes are in `@/modules/bookings` (bookingRequestInput, decisionInput,
+// bookingActionParams, bookingFilters, guestCancelInput, bookingTokenParams, blockInput, blockParams, calendarQuery,
+// placeParams). Each hands the service its own shape (a DateRange, Dates, null for missing text).
 
 // Every function that frees or takes our own nights (decide, guest cancel, hold expiry, closed dates) calls
 // recheckImportClashes(businessId, roomId) after it commits, so platform clash flags are right at once.
