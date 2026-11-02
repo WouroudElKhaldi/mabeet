@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AMENITIES } from "@/config/amenities";
-import { PHOTO_AREAS } from "@/config/enums";
+import { BOOKING_UNITS, PHOTO_AREAS } from "@/config/enums";
 import { cents, id, stayDates, workspaceParams } from "@/lib/schemas";
 import { countNights, toDateRange } from "@/utils/dates";
 
@@ -49,6 +49,9 @@ export const specialPriceInput = stayDates
     // Zod still runs this after a field failed; only real dates can be counted.
     when: (payload) => payload.issues.length === 0,
   });
+
+/** How the place is booked: room by room, or the whole place as one unit. */
+export const bookingUnitInput = z.object({ bookingUnit: z.enum(BOOKING_UNITS) });
 
 /** /api/workspaces/{businessId}/photos/{photoId} */
 export const photoParams = workspaceParams.extend({ photoId: id });

@@ -1,8 +1,10 @@
+import type { BookingUnit } from "@prisma/client";
 import type { z } from "zod";
 import { recordAction } from "@/modules/audit/server";
 import { assertPlanAllowsAnother } from "@/modules/billing/server";
+import { saveBookingUnit } from "@/modules/workspaces/server";
 import { requirePermission, type TenantContext } from "@/server/auth/tenant-context";
-import { type Db, prisma, runInTransaction } from "@/server/db/client";
+import { type Db, prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { notFound } from "@/server/errors";
 import { addDays, eachNight, toDateRange, toIsoDate, todayUtc } from "@/utils/dates";
 import { secureToken } from "@/utils/tokens";
@@ -37,6 +39,55 @@ export function listRooms(ctx: TenantContext) {
 export function getRoom(ctx: TenantContext, roomId: string) {
   requirePermission(ctx, "rooms.read");
   return findRoomOrThrow(prisma, ctx, roomId);
+}
+
+/**
+ * Makes sure a place booked as a whole has its one whole-place unit, inside `chooseBookingUnit`'s transaction. A new unit starts from the live rooms added up (guests, beds, bathrooms and
+ * nightly prices), and the host then adjusts it like any room. One that was taken off is brought back, never doubled.
+ * It does not count against the plan's rooms.
+ */
+async function ensureWholePlaceUnit(ctx: TenantContext, name: string, tx: Tx) {
+  requirePermission(ctx, "rooms.manage");
+  const existing = await rooms.findWholePlaceUnit(tx, ctx.businessId);
+  if (existing) {
+    if (existing.active && !existing.isDeleted) return existing.id;
+    await rooms.restoreWholePlaceUnit(tx, ctx.businessId, existing.id);
+    await recordAction(ctx, "room.updated", "room", existing.id, tx);
+    return existing.id;
+  }
+  const { _sum: sum } = await rooms.sumRooms(tx, ctx.businessId);
+  const unit = await rooms.createRoom(tx, {
+    businessId: ctx.businessId,
+    kind: "WHOLE_PLACE",
+    name,
+    capacity: Math.max(1, sum.capacity ?? 0),
+    bedrooms: sum.bedrooms ?? 1,
+    beds: sum.beds ?? 1,
+    bathrooms: sum.bathrooms ?? 1,
+    baseRateCents: sum.baseRateCents ?? 0,
+    minNights: 1,
+    amenities: [],
+    exportToken: secureToken(),
+  });
+  await recordAction(ctx, "room.created", "room", unit.id, tx);
+  return unit.id;
+}
+
+/**
+ * The host chooses how guests book the place: room by room, or the whole place as one unit. Booking it whole gives
+ * it its whole-place unit, which takes turns with the rooms (no night is sold twice); the rooms stay, and are
+ * bookable again when the place goes back to rooms. Bookings already made keep their own unit. One transaction.
+ */
+export async function chooseBookingUnit(ctx: TenantContext, bookingUnit: BookingUnit) {
+  requirePermission(ctx, "settings.manage");
+  requirePermission(ctx, "rooms.manage");
+  return runInTransaction(async (tx) => {
+    const placeName = await saveBookingUnit(ctx.businessId, bookingUnit, tx);
+    const wholePlaceUnitId =
+      bookingUnit === "WHOLE_PLACE" ? await ensureWholePlaceUnit(ctx, placeName, tx) : null;
+    await recordAction(ctx, "settings.booking_unit", "business", ctx.businessId, tx);
+    return { bookingUnit, wholePlaceUnitId };
+  });
 }
 
 export async function createRoom(ctx: TenantContext, input: RoomInput) {

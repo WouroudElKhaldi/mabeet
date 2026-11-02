@@ -21,7 +21,8 @@ export function findBilling(db: Db, businessId: string) {
       planRenewsAt: true,
       _count: {
         select: {
-          rooms: { where: { isDeleted: false } },
+          // The whole-place unit is the place itself, not one more room: it never uses up the plan.
+          rooms: { where: { isDeleted: false, kind: "ROOM" } },
           offerings: { where: { isDeleted: false } },
           memberships: { where: { status: "ACTIVE", isDeleted: false } },
         },

@@ -1,5 +1,5 @@
 import type { Prisma, RoomKind } from "@prisma/client";
-import type { Db } from "@/server/db/client";
+import type { Db, Tx } from "@/server/db/client";
 import { type DateRange, toIsoDate } from "@/utils/dates";
 
 // The calendar link's secret is only for the calendar's own routes, never in a room's ordinary read.
@@ -19,6 +19,30 @@ export function findRoom(db: Db, businessId: string, roomId: string) {
 
 export function createRoom(db: Db, data: Prisma.RoomUncheckedCreateInput) {
   return db.room.create({ data, omit: roomOmit });
+}
+
+/** The place's one whole-place unit, if it ever had one (taken off or deleted included: it is brought back, never doubled). */
+export function findWholePlaceUnit(db: Db, businessId: string) {
+  return db.room.findFirst({
+    where: { businessId, kind: "WHOLE_PLACE" },
+    select: { id: true, active: true, isDeleted: true },
+  });
+}
+
+/** Brings a whole-place unit that was taken off or deleted back into use. */
+export function restoreWholePlaceUnit(tx: Tx, businessId: string, roomId: string) {
+  return tx.room.updateMany({
+    where: { id: roomId, businessId, kind: "WHOLE_PLACE" },
+    data: { active: true, isDeleted: false },
+  });
+}
+
+/** The place's live rooms added up, to start its whole-place unit from. */
+export function sumRooms(db: Db, businessId: string) {
+  return db.room.aggregate({
+    where: { businessId, kind: "ROOM", active: true, isDeleted: false },
+    _sum: { capacity: true, bedrooms: true, beds: true, bathrooms: true, baseRateCents: true },
+  });
 }
 
 export async function updateRoom(

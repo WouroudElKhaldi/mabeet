@@ -92,6 +92,11 @@ const settingsFields = {
   minGuestAge: true,
   latitude: true,
   longitude: true,
+  categories: {
+    where: { isDeleted: false },
+    select: { categorySlug: true },
+    orderBy: { categorySlug: "asc" },
+  },
 } satisfies Prisma.BusinessSelect;
 
 export function findBusinessSettings(db: Db, businessId: string) {
@@ -100,6 +105,24 @@ export function findBusinessSettings(db: Db, businessId: string) {
 
 export function updateBusinessSettings(tx: Tx, businessId: string, data: Prisma.BusinessUpdateInput) {
   return tx.business.update({ where: { id: businessId }, data, select: settingsFields });
+}
+
+/**
+ * Makes the place's categories exactly `slugs`: the others are marked deleted, and a category picked again is
+ * brought back rather than added twice (the business and the slug are the row's key).
+ */
+export async function setBusinessCategories(tx: Tx, businessId: string, slugs: readonly string[]) {
+  await tx.businessCategory.updateMany({
+    where: { businessId, categorySlug: { notIn: [...slugs] }, isDeleted: false },
+    data: { isDeleted: true },
+  });
+  for (const categorySlug of slugs) {
+    await tx.businessCategory.upsert({
+      where: { businessId_categorySlug: { businessId, categorySlug } },
+      create: { businessId, categorySlug },
+      update: { isDeleted: false },
+    });
+  }
 }
 
 /** A place guests can book: live, not deleted, found by its public link. */

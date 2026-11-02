@@ -24,7 +24,8 @@ const clockTime = z.string().regex(/^\d{2}:\d{2}$/, "Use the 24-hour time, e.g. 
 
 /**
  * A change to the place's settings: only the fields sent change. Choosing an online booking mode needs
- * `acceptOnlineTerms` once (the owner accepts that online payments are always refunded in full).
+ * `acceptOnlineTerms` once (the owner accepts that online payments are always refunded in full). `categories` are
+ * the slugs of the admin's place categories, and replace the place's current ones.
  */
 export const settingsInput = z
   .object({
@@ -46,6 +47,10 @@ export const settingsInput = z
     bookingMode: z.enum(BOOKING_MODES),
     acceptOnlineTerms: z.boolean(),
     listedPublicly: z.boolean(),
+    categories: z
+      .array(z.string().trim().min(1).max(40))
+      .max(6)
+      .refine((list) => new Set(list).size === list.length, "List each category once"),
     tags: z.array(z.enum(TAGS)).max(12),
     accessibility: z.array(z.enum(ACCESSIBILITY)).max(6),
     minGuestAge: z.number().int().min(0).max(99).nullable(),
