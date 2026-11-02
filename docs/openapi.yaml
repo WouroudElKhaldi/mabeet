@@ -3083,8 +3083,8 @@ paths:
     post:
       tags:
         - Photos
-      summary: "Upload a photo (multipart: file, optional offeringId); JPEG, PNG or WebP up to 2.5 MB"
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      summary: "Upload a photo (multipart: file, optional roomId, alt, area); JPEG, PNG or WebP up to 2.5 MB"
+      description: "Needs rooms.manage. The file is checked by its bytes and stored as WebP, at most 1600 px. No roomId: the place's own gallery. A gallery holds 20 photos. 60 uploads an hour per member. Non-members get 404."
       security:
         - session: []
       parameters:
@@ -3124,12 +3124,43 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                roomId:
+                  type: string
+                alt:
+                  type: string
+                  maxLength: 160
+                area:
+                  type: string
+                  enum:
+                    - LIVING_ROOM
+                    - KITCHEN
+                    - DINING
+                    - BEDROOM
+                    - BATHROOM
+                    - EXTERIOR
+                    - TERRACE
+                    - GARDEN
+                    - POOL
+                    - VIEW
+                    - OTHER
+              required:
+                - file
   /api/workspaces/{businessId}/photos/{photoId}:
     patch:
       tags:
         - Photos
-      summary: Make a photo the cover
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      summary: Make a photo the cover, or tag its area and caption
+      description: 'Needs rooms.manage. Body: {"cover": true}, or {"area", "alt"}. Non-members get 404.'
       security:
         - session: []
       parameters:
@@ -3174,10 +3205,45 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              anyOf:
+                - type: object
+                  properties:
+                    cover:
+                      const: true
+                  required:
+                    - cover
+                - type: object
+                  properties:
+                    area:
+                      anyOf:
+                        - type: string
+                          enum:
+                            - LIVING_ROOM
+                            - KITCHEN
+                            - DINING
+                            - BEDROOM
+                            - BATHROOM
+                            - EXTERIOR
+                            - TERRACE
+                            - GARDEN
+                            - POOL
+                            - VIEW
+                            - OTHER
+                        - type: "null"
+                    alt:
+                      anyOf:
+                        - type: string
+                          maxLength: 160
+                        - type: "null"
     delete:
       tags:
         - Photos
-      summary: Delete a photo and its stored bytes
+      summary: Delete a photo (its file is kept but no longer served)
       description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
       security:
         - session: []
