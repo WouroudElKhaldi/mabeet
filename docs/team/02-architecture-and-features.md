@@ -1197,13 +1197,15 @@ behind `GET /api/public/places/{slug}/rooms/{roomId}/quote` (no sign-in, 120 a m
 night's price, the total (always the full amount), and `issue`: why the stay cannot be booked as asked, as a code the
 screen translates (`PAST`, `TOO_FAR`, `TOO_LONG`, `MIN_NIGHTS`, `CAPACITY`; the list is in
 `src/config/booking-limits.ts`). A stay with an issue still gets its price, except one longer than the longest stay,
-which is not priced. The rules are `stayIssue` in `quote-rules.ts`, pure and tested, and ask what the booking engine
-asks when a booking is made; the two limits (60 nights, 540 days ahead) are `MAX_STAY_NIGHTS` and `MAX_DAYS_AHEAD` in
-the same config file. A room the place does not book by (a room of a place that books whole) is "Room not found".
+which is not priced. The rule is the booking engine's own: `stayIssue` in `bookings/server/booking-policy.ts`
+(exported from `bookings/server.ts`), pure and tested in `stay-issue.test.ts`. The engine refuses a booking with the
+same function (`assertBookableStay`, which turns the code into the guest's sentence), so the quote and the booking can
+never disagree. The two limits (60 nights, 540 days ahead) are `MAX_STAY_NIGHTS` and `MAX_DAYS_AHEAD` in the same
+config file, and nothing else keeps a copy. A room the place does not book by (a room of a place that books whole) is "Room not found".
 It reads the place, the room and the price through `workspaces`, `rooms` and their `server.ts` doors, so it needs no
-database code of its own. `getPlace`, `checkAvailability` and `getTakenNights` are still to come: they need a public
-place read from `workspaces`, a public rooms and photos read from `rooms`, and an availability read from `bookings`
-(whole-place units count their sibling rooms, so only `bookings` can answer).
+database code of its own. The availability reads exist in `bookings` (`getTakenNights`, `findFreeRooms`, above).
+`getPlace` and `checkAvailability` are still to come: they need a public place read from `workspaces` and a public
+rooms and photos read from `rooms`.
 
 ### P. Pricing
 

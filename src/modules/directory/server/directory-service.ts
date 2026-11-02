@@ -1,13 +1,13 @@
-import type { StayIssue } from "@/config/booking-limits";
-import { BOOKABLE_ROOM_KIND, MAX_STAY_NIGHTS } from "@/config/booking-limits";
+import { BOOKABLE_ROOM_KIND, MAX_STAY_NIGHTS, type StayIssue } from "@/config/booking-limits";
+import { stayIssue } from "@/modules/bookings/server";
 import { findRoomForBooking, priceStay } from "@/modules/rooms/server";
 import { findBookablePlace } from "@/modules/workspaces/server";
 import { notFound } from "@/server/errors";
 import { countNights, type DateRange } from "@/utils/dates";
-import { stayIssue } from "./quote-rules";
 
 // The public side: what a guest can see and ask before signing in. Nothing here takes or frees nights; the booking
-// engine does, and it asks the same questions again when a booking is made.
+// engine does. Whether a stay can be booked is the engine's own rule (`stayIssue`), so a quote never promises what
+// booking would refuse.
 
 interface RoomQuote {
   roomId: string;

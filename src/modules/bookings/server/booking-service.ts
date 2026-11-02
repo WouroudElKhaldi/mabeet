@@ -7,12 +7,12 @@ import { can, requirePermission, type TenantContext } from "@/server/auth/tenant
 import { prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { overlapAsConflict } from "@/server/db/constraint-errors";
 import { conflict, invalid, notFound } from "@/server/errors";
-import { addDays, countNights, type DateRange, todayUtc } from "@/utils/dates";
+import { countNights, type DateRange, todayUtc } from "@/utils/dates";
 import { maskEmail, maskPhone } from "@/utils/privacy";
 import { bookingReference, secureToken } from "@/utils/tokens";
 import { notifyBookingRequested, notifyBookingStatus, notifyGuestCancelled } from "./booking-notifications";
 import { refundPayments, type RefundToSend, sendRefunds } from "./booking-payments";
-import { holdUntil, initialStatus } from "./booking-policy";
+import { assertBookableStay, holdUntil, initialStatus } from "./booking-policy";
 import * as bookings from "./booking-repository";
 import { assertOwnerCanAnswer, assertTransition } from "./booking-status";
 import { recheckImportClashes } from "./import-clashes";
@@ -22,20 +22,14 @@ import { recheckImportClashes } from "./import-clashes";
 // (booking-policy.ts). Every change to a room's nights locks the room first, and every step of one change is one
 // transaction: emails are queued, and platform clashes re-checked, only after it commits.
 
-const MAX_NIGHTS = 60;
-const MAX_DAYS_AHEAD = 540;
-
 const DATES_TAKEN = "Those dates were just taken. Please pick other dates.";
 const JUST_CHANGED = "This booking just changed. Refresh to see where it stands.";
 const STAY_STARTED = "This stay has already started, so it can no longer be cancelled.";
 
+/** The dates alone, before any lock is taken: the room's own limits are checked once it is loaded. */
 function assertBookableRange(range: DateRange, now: Date): void {
-  const nights = countNights(range);
-  if (nights < 1) throw invalid("Check-out must be after check-in");
-  if (nights > MAX_NIGHTS) throw invalid(`Stays are limited to ${MAX_NIGHTS} nights`);
-  const today = todayUtc(now);
-  if (range.checkIn < today) throw invalid("Check-in cannot be in the past");
-  if (range.checkIn > addDays(today, MAX_DAYS_AHEAD)) throw invalid("Those dates are too far ahead");
+  if (countNights(range) < 1) throw invalid("Check-out must be after check-in");
+  assertBookableStay({ range, guests: null }, now);
 }
 
 interface BookingRequest {
@@ -73,10 +67,7 @@ export async function requestBooking(request: BookingRequest, now = new Date()) 
       if (!(await bookings.lockBookableRoom(tx, business.id, request.roomId))) throw notFound("Room");
       const room = await findRoomForBooking(business.id, request.roomId, tx);
       if (!room) throw notFound("Room");
-      if (request.guestCount > room.capacity) throw invalid(`This room sleeps up to ${room.capacity}`);
-      if (countNights(range) < room.minNights) {
-        throw invalid(`This room needs at least ${room.minNights} nights`);
-      }
+      assertBookableStay({ range, guests: request.guestCount, room }, now);
       expired = await bookings.expireStaleHolds(tx, now, room.id);
       if (await bookings.findOverlappingImported(tx, business.id, room.id, range))
         throw conflict(DATES_TAKEN);
