@@ -53,13 +53,24 @@
       "Douma": "دوما",
       "Tyre": "صور"
     },
-    "whereTo": "إلى أين؟"
+    "whereTo": "إلى أين؟",
+    "guestsDecrease": "ضيوف أقل",
+    "guestsIncrease": "ضيوف أكثر"
   },
   "dates": {
     "previousMonth": "الشهر السابق",
     "nextMonth": "الشهر التالي",
     "chooseCheckIn": "اختر تاريخ الوصول",
-    "chooseCheckOut": "الآن اختر تاريخ المغادرة"
+    "chooseCheckOut": "الآن اختر تاريخ المغادرة",
+    "title": "اختر تواريخ إقامتك",
+    "checkIn": "الوصول",
+    "checkOut": "المغادرة",
+    "addDate": "أضف تاريخًا",
+    "nights": "{count, plural, one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلةً} other {# ليلة}}",
+    "clear": "مسح",
+    "apply": "تطبيق",
+    "unavailable": "غير متاح",
+    "minStay": "{count, plural, one {الحد الأدنى للإقامة: ليلة واحدة} two {الحد الأدنى للإقامة: ليلتان} few {الحد الأدنى للإقامة: # ليالٍ} many {الحد الأدنى للإقامة: # ليلةً} other {الحد الأدنى للإقامة: # ليلة}}"
   },
   "place": {
     "save": "حفظ",

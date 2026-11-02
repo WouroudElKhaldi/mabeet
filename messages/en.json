@@ -53,13 +53,24 @@
       "Douma": "Douma",
       "Tyre": "Tyre"
     },
-    "whereTo": "Where to?"
+    "whereTo": "Where to?",
+    "guestsDecrease": "Fewer guests",
+    "guestsIncrease": "More guests"
   },
   "dates": {
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "chooseCheckIn": "Choose check-in",
-    "chooseCheckOut": "Now choose check-out"
+    "chooseCheckOut": "Now choose check-out",
+    "title": "Choose your dates",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "addDate": "Add date",
+    "nights": "{count, plural, one {# night} other {# nights}}",
+    "clear": "Clear",
+    "apply": "Apply",
+    "unavailable": "Not available",
+    "minStay": "{count, plural, one {Minimum stay: # night} other {Minimum stay: # nights}}"
   },
   "place": {
     "save": "Save",

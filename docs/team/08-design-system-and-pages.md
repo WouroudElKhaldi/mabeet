@@ -356,14 +356,38 @@ All buttons: `font-semibold`, shrink a little when pressed (`active:scale-[0.98]
 | `panelClass`           | `rounded-xl bg-surface p-5 ring-1 ring-line`. A raised card.                                                                                                    |
 | `choiceChipClass`      | A pill around a hidden checkbox or radio; it fills with `accent-soft` when checked.                                                                             |
 
-Other controls in `src/components/ui/`: `DateRangePicker`, `GuestCounter`, `CopyField` (a value with a copy
+Other controls in `src/components/ui/`: `CopyField` (a value with a copy
 button), `Rating` (stars), `ChoiceChips` (one choice among a few, as `choiceChipClass` radios with a legend),
 `ChoiceLinks` (the same chips, but each choice is its own address, such as `?plan=PRO`), `StepTrail` (the numbered
 steps of a short process, the current one filled), `CheckList` (what is included, ticked, and what is not, dimmed),
 `Pill` (a small label beside a title: `accent` or `quiet`), `ArrowLink` (an underlined link with an arrow that
-follows the reading way) and `StepList` (how to do something, as numbered steps under a small title). In
+follows the reading way), `StepList` (how to do something, as numbered steps under a small title), and the two pickers below. In
 `src/components/brand/`: `TicketCard` (a public page's one form dressed as a ticket,
 like `BoardingPass`: the title in the accent band with `LogoMark`, a stub, the tear line, then the form).
+
+**`DateRangePicker`** (`date-range-picker.tsx`). A button with two cells (check-in, check-out) that opens a dialog with
+one month and previous/next buttons; a full-screen sheet on phones, a centred box on bigger screens. Nothing changes
+until "Apply"; Esc or the close button cancels, and "Clear" then "Apply" means "no dates".
+
+| Prop                | What it does                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `value`, `onChange` | `{ checkIn, checkOut }` as ISO dates (`"2026-11-14"`) or `null`. A value that does not fit is shown, then dropped on open |
+| `takenNights`       | ISO dates somebody else has or the host closed. They cannot be slept, but a guest can leave on the morning one begins     |
+| `minNights`         | The room's minimum stay. A check-in without enough free nights after it is not offered                                    |
+| `maxNights`         | The longest stay (the booking service refuses more than 60 nights; pass it so the calendar refuses first)                 |
+| `maxDate`           | The last possible check-out. Two years from today by default                                                              |
+| `timeZone`          | Decides what "today" is. Beirut by default (`DEFAULT_TIME_ZONE` in `src/config/time.ts`); pass `Business.timezone`        |
+
+The rules of choosing live in `src/utils/stay-selection.ts` and the month grid in `src/utils/calendar-grid.ts`, both pure
+and tested; the component only draws them. It works with the keyboard (arrows, Page Up/Down, Home/End, Enter), the
+arrows flip on an Arabic page, and the week starts on Monday. Put it inside `LabeledControl` or pass `aria-invalid` and
+`aria-describedby` to it for an error.
+
+**`GuestCounter`** (`guest-counter.tsx`). A number between "−" and "+". `max` is the room's capacity (required), `min` is one by default. A value that does not fit (the guest picked 6, then chose a room for 4) is shown as the nearest one that does, and
+`onChange` is called once with it, so what the guest sees is what is sent.
+
+Buttons that reach a limit use `aria-disabled`, not `disabled` (`Button` styles both the same): a disabled button throws
+the keyboard focus away.
 
 ### 6.3 Messages and states
 
