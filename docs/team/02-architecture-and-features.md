@@ -657,7 +657,7 @@ an AI is cut.
 The place cards under a reply are built from the tool results, not from the model's words. So the model cannot
 invent a place.
 
-The page `/use-with-ai` (built with the guest MCP) tells guests what MCP is, why and how to connect Claude or ChatGPT, and shows the guest
+The page `/assistant` (built with the guest MCP; there is no chat on the website) tells guests what MCP is, why and how to connect Claude or ChatGPT, and shows the guest
 MCP address in a `CopyField`. It has no chat. `SiteFooter` and the home page link to it.
 
 ### A. AI: the format of every answer
@@ -788,6 +788,13 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
 - **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
+- **Choosing a plan before there is a business:** `/pricing` sends a paid plan to `/host?plan=PRO` (checked with
+  `paidPlan`), where it can be changed in place (each plan is its own address). A signed-out visitor keeps it
+  through sign-up or sign-in (`?next=`). `CreateWorkspaceForm` creates
+  the workspace (`POST /api/workspaces`, always on Free), then calls the same checkout route by card or Whish for
+  the new business, offering only the ways `planPaymentMethods()` says are on. The plan starts when the payment is
+  confirmed, as above. If paying fails, trying again only pays (the workspace is not created twice), and "Start on
+  Free for now" goes to the dashboard. With no way to pay switched on, the workspace simply starts on Free.
 - **Card (Stripe):** `POST .../billing/checkout` returns Stripe Checkout; the plan only changes when the signed
   webhook (`POST /api/webhooks/stripe`) says so. Each event is recorded in `WebhookEvent` in the same transaction
   that applies it, so a replay changes nothing and a failure leaves nothing (Stripe retries). Paid invoices are
@@ -947,6 +954,16 @@ slug and kind never change, because links use them.
 
 A guest can email a host from the place page (`POST /api/public/places/{slug}/messages`). It is rate limited. The
 guest's email is the reply address. A host can turn it off and offer WhatsApp only.
+
+### C. Contact the Mabeet team (F24)
+
+The Contact page's form posts to `POST /api/public/contact` (no sign-in; `contactMessage` in
+`src/modules/contact/schemas.ts`: name, email, a topic from `src/config/contact.ts`, the message). The route allows
+five messages an hour per address (`enforceRateLimit`). `sendContactMessage` refuses with 503 while `CONTACT_EMAIL`
+is unset, so a message is never accepted and then lost; otherwise it queues `notify.contact-message`, which emails
+the team's inbox with the sender as Reply-To, the topic and the sender's language in the details, and a per-message
+idempotency key. Nothing is stored. `CONTACT_WHATSAPP` (digits with the country code) adds a WhatsApp button
+(`whatsappLink` in `src/utils/whatsapp.ts`). Tests: `src/modules/contact/tests/contact.integration.test.ts`.
 
 ### D. Dashboard overview
 

@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
+import { LogoMark } from "@/components/site/wordmark";
 
 interface PassField {
   label: string;
@@ -37,15 +38,7 @@ export function BoardingPass({
     >
       <div className="flex items-center justify-between gap-3 bg-accent px-5 py-3 text-accent-ink">
         <span className="text-xs font-bold tracking-[0.16em] uppercase">{kicker}</span>
-        <svg viewBox="0 0 32 32" className="size-5" aria-hidden>
-          <path
-            d="M5 28V15a11 11 0 0 1 22 0v13"
-            className="fill-none stroke-current"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          <path d="M11 28v-8a5 5 0 0 1 10 0v8" className="fill-current" />
-        </svg>
+        <LogoMark className="h-6 w-[1.37rem]" />
       </div>
       <div className="px-5 pt-4 pb-5">
         <p className="font-poster text-2xl">{title}</p>

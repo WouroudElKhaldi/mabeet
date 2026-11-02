@@ -17,7 +17,9 @@
     "dashboard": "Host dashboard",
     "privacy": "Privacy",
     "madeIn": "Made in Beirut",
-    "pricing": "Plans and pricing"
+    "pricing": "Plans and pricing",
+    "aboutUs": "About us",
+    "contact": "Contact us"
   },
   "appearance": {
     "language": "Language",
@@ -416,14 +418,29 @@
       }
     },
     "formTitle": "Create your workspace",
-    "formSubtitle": "Free during the pilot. You can add rooms right after.",
+    "formSubtitle": "Pick a plan, name your place, and you can add rooms right after.",
     "placeName": "Name of your place",
     "area": "Town or area",
     "create": "Create workspace",
     "error": "We could not create your workspace. Please try again.",
     "signUpFirst": "Create an account to start",
     "haveAccount": "I already have an account",
-    "seePlans": "See plans and prices"
+    "paidSubtitle": "Pick a plan, name your place, then pay the first month. Your plan starts as soon as the payment is confirmed.",
+    "payingOff": "Paying online isn't switched on yet, so your workspace starts on Free. You can change plan later.",
+    "payWith": "Pay with",
+    "payMethods": {
+      "card": "Card",
+      "whish": "Whish"
+    },
+    "createAndPay": "Create and pay",
+    "retryPay": "Try paying again",
+    "startFreeInstead": "Start on Free for now",
+    "steps": {
+      "label": "Steps",
+      "place": "Your place",
+      "pay": "Pay",
+      "rooms": "Add rooms"
+    }
   },
   "permissions": {
     "rooms": {
@@ -1308,11 +1325,66 @@
     "home": "Back home",
     "errorTitle": "Something went wrong on our side",
     "errorBody": "Please try again. If it keeps happening, tell the host or write to us.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "reference": "Reference: {digest}"
   },
   "privacy": {
-    "title": "Privacy",
-    "body": "We collect only what a booking needs: your name, phone and, if you give it, your email. Hosts see your contact details only if their role allows it. Calendar feeds we share with Airbnb and Booking.com say only that dates are taken. The Trip Assistant sends your message and public listing data to our AI provider (DeepSeek), never your phone, email or bookings. Owners' AI keys see only what that owner's role permits, and every access is logged. Ask us to delete your account at any time."
+    "title": "Privacy and payments",
+    "intro": "What we keep about you, who sees it, and how paying and refunds work on Mabeet.",
+    "keep": {
+      "title": "What we keep",
+      "body": "For your account: your name, your email and your password, stored protected. For a booking: the name and phone number you give the host, and your email if you add it. We ask for nothing else."
+    },
+    "see": {
+      "title": "Who sees it",
+      "body": "The place you book sees your contact details, so the host can reach you. Their team members see them only if their role allows it; otherwise your phone and email are partly hidden. Other guests never see them."
+    },
+    "calendars": {
+      "title": "Airbnb and Booking.com",
+      "body": "The calendar links we share with Airbnb and Booking.com say only which dates are taken, never who booked them or anything about you."
+    },
+    "ai": {
+      "title": "AI apps",
+      "body": "An AI app connected to Mabeet as a guest reads only public places, dates and prices. A host's AI app sees only what that person's role allows, and every use is recorded."
+    },
+    "paying": {
+      "title": "Paying online",
+      "body": "Online payments go through Whish or Stripe. You enter your card or Whish details on their pages: Mabeet never sees or stores them."
+    },
+    "refunds": {
+      "title": "Refunds",
+      "body": "A booking paid online on Mabeet is always refunded in full when it is cancelled, whoever cancels, or when the host declines it or does not answer in time. Once the stay has started it can no longer be cancelled, and nights already stayed are not refunded."
+    },
+    "direct": {
+      "title": "Paying the host directly",
+      "body": "Some places ask you to arrange payment with the host. That payment happens outside Mabeet, so it is between you and the host: Mabeet does not record it or refund it."
+    },
+    "browser": {
+      "title": "Your browser",
+      "body": "One cookie keeps you signed in and another remembers your language. Light or dark mode is saved only in your browser. There are no advertising or tracking cookies."
+    },
+    "rights": {
+      "title": "Your data, your choice",
+      "body": "From your account you can download everything we hold about you, or delete your account by typing your email. You are signed out everywhere and your email is freed. Your bookings and reviews stay with the host, the reviews without your name."
+    },
+    "groups": {
+      "data": "Your information",
+      "money": "Paying and refunds"
+    },
+    "headline": "Your details stay <em>yours.</em>",
+    "onThisPage": "On this page",
+    "glance": {
+      "title": "At a glance",
+      "card": "We never see your card details",
+      "refunds": "Online bookings are refunded in full",
+      "tracking": "No advertising or tracking cookies",
+      "delete": "Download or delete your data any time",
+      "footer": "Thank you for booking direct"
+    },
+    "intros": {
+      "data": "What we keep, who sees it, and where it goes.",
+      "money": "How paying online, refunds and paying the host directly work."
+    }
   },
   "listing": {
     "tabs": {
@@ -2019,6 +2091,203 @@
       "beirut": "Beirut",
       "bekaa": "Bekaa",
       "south": "South Lebanon"
+    }
+  },
+  "useWithAi": {
+    "title": "Use Mabeet from your AI app",
+    "headline": "Ask your AI app. <em>Get places that are really free.</em>",
+    "intro": "Ask Claude, ChatGPT or any AI app for a place that is free on your dates. It searches Mabeet for you and links straight to the booking page.",
+    "whatTitle": "What is MCP?",
+    "whatBody": "MCP (Model Context Protocol) is a standard way for an AI app to use another service's tools. Ours lets your AI app search Mabeet's places and check their dates and prices, live.",
+    "why": {
+      "app": {
+        "title": "Plan in the app you already use",
+        "body": "Describe the trip the way you would to a friend: who's coming, where, and what you need."
+      },
+      "live": {
+        "title": "Real dates and prices",
+        "body": "Every answer comes from Mabeet's calendars at that moment, never from a guess."
+      },
+      "book": {
+        "title": "One tap to book",
+        "body": "Each place in the answer links to its booking page on Mabeet."
+      }
+    },
+    "connectTitle": "Connect in a minute",
+    "connectIntro": "No sign-in and no key. Copy the address, add it to your AI app, then ask.",
+    "address": "Guest MCP address",
+    "claude": {
+      "title": "In Claude",
+      "steps": {
+        "open": "Open Settings, then Connectors.",
+        "add": "Choose Add custom connector.",
+        "paste": "Name it Mabeet, paste the address and save."
+      }
+    },
+    "chatgpt": {
+      "title": "In ChatGPT",
+      "steps": {
+        "open": "Open Settings, then Connectors.",
+        "add": "Create a new connector (some plans ask you to turn on developer mode first).",
+        "paste": "Name it Mabeet, paste the address and save."
+      }
+    },
+    "tryLabel": "Then try asking",
+    "example": "Find us a place in Batroun for 4 people from 14 to 16 August, with a sea view and parking.",
+    "limitsTitle": "What it can and cannot do",
+    "limitsIntro": "It only reads what anyone can see on Mabeet. Booking and paying always happen here.",
+    "can": {
+      "search": "Search places by town, region, rooms, beds and amenities",
+      "dates": "Check which dates are free and what they cost",
+      "link": "Link to each place's booking page"
+    },
+    "cannot": {
+      "book": "Book or pay for you",
+      "account": "See your account, your trips or anything private"
+    },
+    "cannotLabel": "It can't:",
+    "browse": "Browse places on Mabeet"
+  },
+  "about": {
+    "title": "About Mabeet",
+    "eyebrow": "Made in Beirut",
+    "headline": "Lebanon's guesthouses, <em>booked direct.</em>",
+    "intro": "Mabeet is where you book a guesthouse, B&B or mountain cabin straight from the people who run it. No platform in the middle taking a cut, and never two guests on one night.",
+    "explore": "Explore stays",
+    "host": "Become a host",
+    "glance": {
+      "title": "Our promises",
+      "commission": "No commission on any booking",
+      "refunds": "Online bookings refunded in full",
+      "double": "Never two guests on one night",
+      "direct": "Booked straight from the host",
+      "footer": "Made in Beirut"
+    },
+    "problem": {
+      "title": "What a platform takes from a host",
+      "intro": "Most Lebanese guesthouses also sell on Airbnb or Booking.com, and every night sold there costs the host a cut.",
+      "commission": "of every platform booking can go to commission",
+      "night": "a night can go to commission, on a room at $80",
+      "month": "a month, for 20 nights sold through a platform",
+      "note": "Estimates from public prices, at the top of the usual 15 to 18% commission."
+    },
+    "how": {
+      "title": "How booking direct works",
+      "intro": "From the host's dashboard to a confirmed night, in four steps.",
+      "add": {
+        "title": "The host adds their place",
+        "body": "Rooms, prices per night and photos. The place gets its own booking link for Instagram and WhatsApp."
+      },
+      "pick": {
+        "title": "The guest picks dates",
+        "body": "Nights already booked on Airbnb or Booking.com show as taken, because the calendars stay in sync."
+      },
+      "pay": {
+        "title": "Booked and paid in full",
+        "body": "The guest pays online with Whish or a card, or arranges payment with the host, as the place chooses."
+      },
+      "confirm": {
+        "title": "Confirmed everywhere",
+        "body": "The host confirms from their phone, and the night closes on Airbnb and Booking.com too."
+      }
+    },
+    "modes": {
+      "title": "Three ways to take bookings",
+      "intro": "Each place chooses how it works with its guests.",
+      "automatic": {
+        "title": "Automatic",
+        "body": "The guest pays online in full, and the booking is confirmed the moment the payment is."
+      },
+      "approval": {
+        "title": "Online, with approval",
+        "body": "The guest pays online in full and the host confirms or declines. No answer in time means a full refund."
+      },
+      "offline": {
+        "title": "Arranged with the host",
+        "body": "No payment through Mabeet: the guest and the host arrange it, and the host confirms by hand."
+      }
+    },
+    "promises": {
+      "title": "What we stand by",
+      "double": {
+        "title": "Never double-booked",
+        "body": "The database itself refuses two stays on one room night. Not a promise: a rule."
+      },
+      "refunds": {
+        "title": "Refunds in full",
+        "body": "A booking paid online is refunded in full if it is cancelled, declined or not answered in time."
+      },
+      "commission": {
+        "title": "No commission",
+        "body": "Hosts pay a monthly plan, starting free. The money from every booking is theirs."
+      },
+      "data": {
+        "title": "Your details stay yours",
+        "body": "We keep only what a booking needs, and you can download or delete it any time."
+      },
+      "seePlans": "See the plans",
+      "readPrivacy": "Read our privacy page"
+    },
+    "band": {
+      "title": "Lebanon is better <em>booked direct.</em>",
+      "intro": "Find your next stay, or bring your place to Mabeet."
+    },
+    "chapters": {
+      "problem": "The problem",
+      "how": "How it works",
+      "modes": "Your way",
+      "promises": "Our promises",
+      "arrive": "Your turn"
+    }
+  },
+  "contact": {
+    "title": "Contact us",
+    "eyebrow": "Talk to us",
+    "headline": "Questions? <em>We're here.</em>",
+    "intro": "Planning a stay or listing your place, the Mabeet team is happy to help.",
+    "cardTitle": "Reach the Mabeet team",
+    "cardIntro": "Send us a message and we'll answer by email.",
+    "whatsapp": "Chat on WhatsApp",
+    "unavailable": "Our team inbox is not open yet. For a booking, write to the host from your booking page.",
+    "topics": {
+      "booking": {
+        "title": "About a booking?",
+        "body": "The host knows your stay best. Write to them from your booking page, on WhatsApp or by phone."
+      },
+      "hosting": {
+        "title": "Want to list your place?",
+        "body": "Create your workspace in a few minutes and start on the free plan.",
+        "link": "Become a host"
+      },
+      "privacy": {
+        "title": "About your data?",
+        "body": "See what we keep, who sees it, and how to download or delete it.",
+        "link": "Read our privacy page"
+      }
+    },
+    "orWhatsapp": "Prefer WhatsApp?",
+    "form": {
+      "name": "Your name",
+      "email": "Your email",
+      "topic": "What is it about?",
+      "topics": {
+        "booking": "A booking",
+        "hosting": "Listing a place",
+        "privacy": "Privacy",
+        "other": "Something else"
+      },
+      "message": "Your message",
+      "messageHint": "Up to 2,000 characters.",
+      "send": "Send message",
+      "sending": "Sending…",
+      "sentTitle": "Message sent",
+      "sentBody": "Thank you, {name}. We'll reply to {email}.",
+      "another": "Write another message",
+      "errors": {
+        "name": "Please enter your name.",
+        "email": "Please enter a valid email address.",
+        "message": "Please write at least a few words."
+      }
     }
   }
 }

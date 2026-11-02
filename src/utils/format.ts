@@ -12,11 +12,21 @@ function dateLocale(locale: Locale): string {
 // else reads as thousands. Money is too important to leave to that: both Arabic languages write "99.99".
 const numberLanguage: Record<Locale, string> = { en: "en", ar: "ar", "ar-LB": "ar" };
 
-/** Money is whole minor units (`...Cents`: 9999 is 99.99 in the record's currency): "$99.99", "LBP 9,000,000". */
-export function formatMoney(cents: number, currency: string, locale: Locale): string {
-  return new Intl.NumberFormat(`${numberLanguage[locale]}-u-nu-latn`, { style: "currency", currency }).format(
-    cents / 100,
-  );
+/**
+ * Money is whole minor units (`...Cents`: 9999 is 99.99 in the record's currency): "$99.99", "LBP 9,000,000".
+ * `wholeUnits` drops the cents for a big round figure set large ("$288", not "$288.00"); prices keep them.
+ */
+export function formatMoney(
+  cents: number,
+  currency: string,
+  locale: Locale,
+  { wholeUnits = false }: { wholeUnits?: boolean } = {},
+): string {
+  return new Intl.NumberFormat(`${numberLanguage[locale]}-u-nu-latn`, {
+    style: "currency",
+    currency,
+    ...(wholeUnits ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {}),
+  }).format(cents / 100);
 }
 
 /**

@@ -13,6 +13,7 @@ import {
   getBilling,
   handleStripeWebhook,
   openBillingPortal,
+  planPaymentMethods,
   settlePlanPayment,
   startCheckout,
   startWhishPlanCheckout,
@@ -181,6 +182,7 @@ describe("paying by card (Stripe)", () => {
     try {
       await expect(startCheckout(place.ctx, "PRO")).rejects.toMatchObject({ code: "UNAVAILABLE" });
       expect(await getBilling(place.ctx)).toMatchObject({ cardEnabled: false });
+      expect(planPaymentMethods()).toEqual({ card: false, whish: true });
     } finally {
       env.STRIPE_SECRET_KEY = stripeSettings.STRIPE_SECRET_KEY;
     }

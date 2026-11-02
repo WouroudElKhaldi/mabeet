@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 export const slideParent = "group/slide";
 
 /**
- * A button's label with a bit of fun: on hover (or keyboard focus) the icon hops across to the end and lands with a
+ * A button's label with a bit of fun: on hover (or keyboard focus) the icon hops to the middle and lands with a
  * wiggle, bumping the word off ahead of it. When the pointer leaves, the word springs back.
  * Put it in any `Button`, `ButtonLink` or link with `slideParent`:
  *

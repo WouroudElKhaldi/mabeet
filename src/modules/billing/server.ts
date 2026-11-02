@@ -5,6 +5,7 @@ export {
   handleStripeWebhook,
   handleWhishCallback,
   openBillingPortal,
+  planPaymentMethods,
   runPlanHousekeeping,
   startCheckout,
   startWhishPlanCheckout,

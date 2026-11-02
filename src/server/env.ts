@@ -42,6 +42,10 @@ const schema = z.object({
   WHISH_SECRET: optional(z.string()),
   WHISH_WEBSITE_URL: optional(z.string()),
   EMAIL_FROM: z.string().default("Mabeet <onboarding@resend.dev>"),
+  // How people reach the Mabeet team from the Contact page. Each one that is unset is simply not offered.
+  CONTACT_EMAIL: optional(z.email()),
+  // The team's WhatsApp number with its country code, digits only (96170123456).
+  CONTACT_WHATSAPP: optional(z.string().regex(/^[1-9]\d{7,14}$/)),
   // Web push to phones (`pnpm exec web-push generate-vapid-keys` makes a pair). Without them, the "notify me"
   // buttons stay hidden.
   VAPID_PUBLIC_KEY: optional(z.string()),

@@ -14,14 +14,24 @@ function logoShape(file: string): CSSProperties {
   };
 }
 
+/**
+ * The logo's mark alone, the arch opening onto a landscape, in the current text colour: beside the name in the
+ * wordmark, and in the corner of every ticket. `className` sets its size (keep the logo's 0.57 width to height).
+ */
+export function LogoMark({ className = "h-9 w-[2.05rem]" }: { className?: string }) {
+  return (
+    <span aria-hidden className={`relative shrink-0 ${className}`}>
+      <span className="absolute inset-0 bg-current" style={logoShape("mabeet-arch.png")} />
+      <span className="absolute inset-0 bg-current opacity-70" style={logoShape("mabeet-scene.png")} />
+    </span>
+  );
+}
+
 /** Mabeet's logo: the arch opening onto a landscape, and the name. It reads left to right in every language. */
 export function Wordmark() {
   return (
     <Link href="/" dir="ltr" className="inline-flex items-center gap-2.5 text-accent" aria-label={BRAND.name}>
-      <span aria-hidden className="relative h-9 w-[2.05rem] shrink-0">
-        <span className="absolute inset-0 bg-current" style={logoShape("mabeet-arch.png")} />
-        <span className="absolute inset-0 bg-current opacity-70" style={logoShape("mabeet-scene.png")} />
-      </span>
+      <LogoMark />
       <span
         aria-hidden
         className="h-[1.3rem] w-24 shrink-0 bg-current"

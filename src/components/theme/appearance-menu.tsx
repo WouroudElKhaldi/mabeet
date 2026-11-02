@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { setLocale } from "@/app/actions/locale";
+import { iconMotion, iconMotionParent } from "@/components/ui/icon-motion";
 import { LOCALES, MODE_STORAGE_KEY } from "@/config/appearance";
 import type { Mode } from "@/config/appearance";
 
@@ -83,7 +84,10 @@ function ModeToggle() {
       onClick={() => chooseMode(next)}
       aria-label={t(next === "dark" ? "toDark" : "toLight")}
       title={t(next === "dark" ? "toDark" : "toLight")}
-      className="grid size-10 place-items-center rounded-full text-ink transition-colors hover:bg-surface-2"
+      className={clsx(
+        "grid size-10 place-items-center rounded-full text-ink transition-colors hover:bg-surface-2",
+        iconMotionParent,
+      )}
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
@@ -95,9 +99,9 @@ function ModeToggle() {
           className="grid"
         >
           {mode === "dark" ? (
-            <Moon className="size-[1.15rem]" aria-hidden />
+            <Moon className={clsx("size-[1.15rem]", iconMotion.rock)} aria-hidden />
           ) : (
-            <Sun className="size-[1.15rem]" aria-hidden />
+            <Sun className={clsx("size-[1.15rem]", iconMotion.spin)} aria-hidden />
           )}
         </motion.span>
       </AnimatePresence>
@@ -147,9 +151,12 @@ function LanguageMenu() {
         title={t("language")}
         disabled={pending}
         onClick={() => setOpen((value) => !value)}
-        className="grid size-10 place-items-center rounded-full text-ink transition-colors hover:bg-surface-2 disabled:opacity-40"
+        className={clsx(
+          "grid size-10 place-items-center rounded-full text-ink transition-colors hover:bg-surface-2 disabled:opacity-40",
+          iconMotionParent,
+        )}
       >
-        <Globe className="size-[1.15rem]" aria-hidden />
+        <Globe className={clsx("size-[1.15rem]", iconMotion.turn)} aria-hidden />
       </button>
       <AnimatePresence>
         {open && (

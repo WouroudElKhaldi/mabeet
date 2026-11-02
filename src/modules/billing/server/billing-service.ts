@@ -1,5 +1,5 @@
 import type { Plan } from "@prisma/client";
-import { type PaidPlan, PLAN_LIMITS } from "@/config/plans";
+import { type PaidPlan, PLAN_LIMITS, type PlanPaymentMethod } from "@/config/plans";
 import { findAccountEmail } from "@/modules/accounts/server";
 import { settleOnlinePayment } from "@/modules/bookings/server";
 import { recordAction } from "@/modules/audit/server";
@@ -60,18 +60,30 @@ export async function assertPlanAllowsAnother(businessId: string, what: Counted,
   if (max !== null && used >= max) throw conflict(LIMIT_MESSAGES[what](max));
 }
 
+/**
+ * Which ways to pay for a plan are on. Public: a future host sees them before their business exists, so the
+ * sign-up page offers only what works.
+ */
+export function planPaymentMethods(): Record<PlanPaymentMethod, boolean> {
+  return {
+    card: stripeEnabled() && Boolean(env.STRIPE_PRICE_PRO && env.STRIPE_PRICE_BUSINESS),
+    whish: whishEnabled(),
+  };
+}
+
 /** For the billing page: the plan, what is used against it, and which ways to pay are on. */
 export async function getBilling(ctx: TenantContext) {
   requirePermission(ctx, "settings.manage");
   const row = await loadBilling(ctx.businessId);
+  const methods = planPaymentMethods();
   return {
     plan: row.plan,
     limits: PLAN_LIMITS[row.plan],
     usage: { rooms: row._count.rooms, offerings: row._count.offerings, members: row._count.memberships },
     renewsAt: row.planRenewsAt,
     paysByCard: Boolean(row.stripeSubscriptionId),
-    cardEnabled: stripeEnabled() && Boolean(env.STRIPE_PRICE_PRO && env.STRIPE_PRICE_BUSINESS),
-    whishEnabled: whishEnabled(),
+    cardEnabled: methods.card,
+    whishEnabled: methods.whish,
     canManage: ctx.isOwner,
   };
 }

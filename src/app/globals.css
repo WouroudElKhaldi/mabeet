@@ -487,7 +487,7 @@ p {
 
 /*
   SlideLabel (src/components/ui/slide-label.tsx): on hover or keyboard focus of its `group/slide` parent, the icon hops
-  across to the end and lands with a wiggle, bumping the word off ahead of it. When the pointer leaves, the word
+  to the middle of the button and lands with a wiggle, bumping the word off ahead of it. When the pointer leaves, the word
   springs back with a bounce and the icon glides home.
 */
 @keyframes slide-hop {
@@ -529,7 +529,7 @@ p {
     opacity 300ms var(--ease-out);
 }
 :is(.group\/slide:hover, .group\/slide:focus-visible) .slide-icon {
-  inset-inline-start: calc(100% - 1rem);
+  inset-inline-start: calc(50% - 0.5rem);
   animation:
     slide-hop 560ms var(--ease-out),
     slide-land 520ms 560ms var(--ease-spring);
@@ -542,6 +542,123 @@ p {
 }
 [dir="rtl"] :is(.group\/slide:hover, .group\/slide:focus-visible) .slide-word {
   translate: -1.5rem 0;
+}
+
+/*
+  Icon motions (src/components/ui/icon-motion.ts): on hover or keyboard focus of its `group/icon` parent, a round
+  icon button's icon plays a small motion that suits it: the sun's rays turn, the moon rocks, the globe spins.
+*/
+@keyframes icon-rock {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  25% {
+    rotate: -18deg;
+  }
+  55% {
+    rotate: 12deg;
+  }
+  80% {
+    rotate: -5deg;
+  }
+}
+@keyframes icon-turn {
+  from {
+    transform: perspective(40rem) rotateY(0deg);
+  }
+  to {
+    transform: perspective(40rem) rotateY(360deg);
+  }
+}
+.icon-spin {
+  transition: rotate 600ms var(--ease-spring);
+}
+:is(.group\/icon:hover, .group\/icon:focus-visible) .icon-spin {
+  rotate: 90deg;
+}
+:is(.group\/icon:hover, .group\/icon:focus-visible) .icon-rock {
+  animation: icon-rock 700ms var(--ease-out);
+}
+:is(.group\/icon:hover, .group\/icon:focus-visible) .icon-turn {
+  animation: icon-turn 800ms var(--ease-out);
+}
+
+/*
+  NavLink (src/components/site/nav-link.tsx): a short glow bar grows under the word from the reading side on hover
+  or keyboard focus, with a small spring, and stays under the link of the page you are on.
+*/
+.nav-link {
+  transition: color 200ms var(--ease-out);
+}
+.nav-link::after {
+  content: "";
+  position: absolute;
+  inset-inline: 1rem;
+  bottom: 0.3rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--glow);
+  scale: 0 1;
+  transform-origin: left;
+  transition: scale 420ms var(--ease-spring);
+}
+[dir="rtl"] .nav-link::after {
+  transform-origin: right;
+}
+.nav-link:is(:hover, :focus-visible, [aria-current="page"])::after {
+  scale: 1 1;
+}
+.nav-link:is(:hover, :focus-visible) {
+  color: var(--accent);
+}
+
+/*
+  Reveal (src/components/ui/reveal.tsx): the first time a part scrolls into view, its `reveal-item`s rise in one after
+  another and its `journey-line` draws itself from the reading side. Hidden only when scripts run, so a page without
+  JavaScript still shows everything.
+*/
+@media (scripting: enabled) {
+  .reveal-item {
+    opacity: 0;
+    translate: 0 28px;
+    transition:
+      opacity 700ms var(--ease-out),
+      translate 800ms var(--ease-spring);
+    transition-delay: calc(var(--stagger, 0) * 110ms);
+  }
+  [data-shown] .reveal-item {
+    opacity: 1;
+    translate: 0 0;
+  }
+  .journey-line {
+    scale: 0 1;
+    transition: scale 1400ms var(--ease-out) 200ms;
+  }
+  [data-shown] .journey-line {
+    scale: 1 1;
+  }
+}
+.journey-line {
+  transform-origin: left;
+}
+
+/* StoryChapter's stop on the StoryRail: it fills with the accent and pops when its chapter scrolls into view. */
+.story-stop {
+  transition:
+    background-color 400ms var(--ease-out),
+    color 400ms var(--ease-out),
+    box-shadow 400ms var(--ease-out),
+    scale 600ms var(--ease-spring);
+}
+[data-shown] > .story-stop {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  --tw-ring-color: var(--accent);
+  scale: 1.25;
+}
+[dir="rtl"] .journey-line {
+  transform-origin: right;
 }
 
 .skeleton {

@@ -129,6 +129,10 @@ museums and sponsored experiences, shown near the guest's stay and marked "Spons
 the MCP (cancel a booking, close or reopen dates, confirm or decline a request); and last, our own model (DeepSeek): the assistant in the dashboard, the
 travel assistant on the website, AI reports, and answers shown word by word.
 
+Added with Sami's approval on 2 November: an About page (why booking direct, how it works, our promises) and a
+Contact page (a message form emailed to the team's inbox, and WhatsApp). The website has no chat of its own: "Trip
+Assistant" is the page that connects the guest's own AI app through the guest MCP.
+
 ## 10. The outcome number
 
 Estimate from public prices (to confirm with the host): Beyt El Jabal in Deir el Qamar, 4 suites on Airbnb, from
