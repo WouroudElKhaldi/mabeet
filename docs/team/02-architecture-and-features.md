@@ -1175,8 +1175,16 @@ tens of thousands of them.
 - **On your computer and in tests (no R2 settings):** the bytes are kept in Postgres (`StoredImage.bytes`) and served
   from `/api/images/{id}`, cached forever.
 - Nothing is deleted: removing a photo marks it `isDeleted`; its file stays in R2.
+- **All or nothing with R2:** R2 is never called inside the transaction. The file goes up first, then its
+  `StoredImage` and `Photo` rows are saved in one transaction; if that fails, the file is removed from R2 again
+  (`deleteObject`), so nothing is left behind.
 
-Code: `photo-service.ts`, `photo-repository.ts`.
+The galleries are the place's own (no room) and each room's; both need `rooms.manage`, and a gallery holds 20 photos.
+Routes: `POST /api/workspaces/{businessId}/photos` (multipart through `parseUpload`: `file`, and optional `roomId`,
+`alt`, `area`; 60 uploads an hour per member), `PATCH .../photos/{photoId}` (`{ cover: true }` puts it first,
+`{ area, alt }` tags it for the photo tour), `DELETE .../photos/{photoId}`, and the public `GET /api/images/{id}`.
+Code: `photo-service.ts`, `photo-repository.ts` (in `rooms`), the R2 client and the resizing in `src/server/storage/`.
+Tests: `photos.integration.test.ts` (rooms), with R2 faked and a failed save that must take the upload back down.
 
 ### P. Places and rooms (public)
 
