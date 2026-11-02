@@ -20,4 +20,5 @@ export {
   settleOnlinePayment,
   startBookingCheckout,
 } from "./server/booking-payments";
+export { findFreeRooms, getTakenNights } from "./server/availability-service";
 export { addBlock, getCalendar, removeBlock } from "./server/closed-dates-service";
