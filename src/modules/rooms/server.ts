@@ -9,6 +9,7 @@ export {
   priceStay,
 } from "./server/room-lookup";
 export {
+  chooseBookingUnit,
   createRoom,
   getRoom,
   listRooms,

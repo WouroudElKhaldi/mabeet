@@ -1070,7 +1070,7 @@ paths:
       tags:
         - Workspaces
       summary: Update business settings
-      description: Signed-in member with settings.manage; choosing the booking mode or accepting the payment policy needs an owner. Only the fields sent change. An online mode needs acceptOnlineTerms once. Non-members get 404.
+      description: Signed-in member with settings.manage; choosing the booking mode or accepting the payment policy needs an owner. Only the fields sent change. An online mode needs acceptOnlineTerms once. Booking room by room or as a whole is PUT .../booking-unit. Non-members get 404.
       security:
         - session: []
       parameters:
@@ -1221,6 +1221,14 @@ paths:
                       minimum: -180
                       maximum: 180
                     - type: "null"
+                categories:
+                  maxItems: 6
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 40
+                  description: Slugs of the admin's place categories; replaces the place's current ones.
       responses:
         "200":
           description: Success
@@ -6167,3 +6175,79 @@ paths:
           description: Rate limited
         "503":
           description: No team inbox is set
+  /api/workspaces/{businessId}/booking-unit:
+    put:
+      tags:
+        - Workspaces
+      summary: Book the place room by room, or as a whole
+      description: Needs settings.manage and rooms.manage. WHOLE_PLACE gives the place its one whole-place unit (started from its rooms added up, never doubled, not counted against the plan), which takes turns with the rooms. Non-members get 404.
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingUnit:
+                  type: string
+                  enum:
+                    - ROOMS
+                    - WHOLE_PLACE
+              required:
+                - bookingUnit
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookingUnit:
+                    type: string
+                    enum:
+                      - ROOMS
+                      - WHOLE_PLACE
+                  wholePlaceUnitId:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                required:
+                  - bookingUnit
+                  - wholePlaceUnitId
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+      security:
+        - session: []

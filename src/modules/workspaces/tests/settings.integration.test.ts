@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import * as settingsRoute from "@/app/api/workspaces/[businessId]/settings/route";
 import { createPlace, memberWith, prisma } from "@tests/integration/helpers";
@@ -83,6 +84,44 @@ describe("the place's settings", () => {
 
     const frontDesk = await memberWith(place.business.id, ["bookings.read", "bookings.decide"]);
     await expect(getSettings(frontDesk)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+describe("the place's categories", () => {
+  /** A category the admin made, with a name no other test uses. */
+  const category = (kind: "HOME" | "EXPERIENCE" = "HOME") =>
+    prisma.category.create({
+      data: { slug: `cat-${randomUUID()}`, kind, nameEn: "Mountain", nameAr: "جبل", icon: "mountain" },
+    });
+
+  it("replaces the place's categories with the ones picked, bringing an old one back instead of adding it twice", async () => {
+    const place = await createPlace();
+    const [mountain, sea, village] = await Promise.all([category(), category(), category()]);
+    expect(await updateSettings(place.ctx, { categories: [mountain.slug, sea.slug] })).toMatchObject({
+      categories: [mountain.slug, sea.slug].sort(),
+    });
+    expect((await updateSettings(place.ctx, { categories: [village.slug] })).categories).toEqual([
+      village.slug,
+    ]);
+    expect((await updateSettings(place.ctx, { categories: [mountain.slug] })).categories).toEqual([
+      mountain.slug,
+    ]);
+    // Three slugs were ever picked: three rows, the old ones marked deleted, none doubled.
+    expect(await prisma.businessCategory.count({ where: { businessId: place.business.id } })).toBe(3);
+    expect((await getSettings(place.ctx)).categories).toEqual([mountain.slug]);
+  });
+
+  it("refuses an unknown category, an experience's category and a deleted one", async () => {
+    const place = await createPlace();
+    const experience = await category("EXPERIENCE");
+    const removed = await category();
+    await prisma.category.update({ where: { slug: removed.slug }, data: { isDeleted: true } });
+    for (const slug of ["no-such-category", experience.slug, removed.slug]) {
+      await expect(updateSettings(place.ctx, { categories: [slug] })).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+    }
+    expect((await getSettings(place.ctx)).categories).toEqual([]);
   });
 });
 

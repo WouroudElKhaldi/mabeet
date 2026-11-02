@@ -783,7 +783,7 @@ partners and sponsored listings") are the platform's only income. Code: `billing
 
 - **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members", tx)` inside the transaction that
   adds one: with `tx` it locks the business first, so two additions at the same moment cannot both take the last
-  place. Deleted
+  place. The whole-place unit is the place itself, so it never counts. Deleted
   rooms and experiences and removed members do not count. Inviting and joining a team call it (joining checks
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
@@ -1275,9 +1275,19 @@ text box is saved as nothing. How money flows is the owner's alone, so changing 
 owner has accepted "online payments are always refunded in full" once (`acceptOnlineTerms: true` saves
 `onlineTermsAcceptedAt`); bookings already made keep their own mode. The region is the host's pick, or the one the
 town they typed is in (`regionOfArea`, `src/config/regions.ts`). Tags and accessibility come from
-`src/config/listing.ts`, currencies from `CURRENCIES` in `enums.ts`. Not here yet: the place's categories (with the
-admin's category list) and switching between booking by room and as a whole (it needs the whole-place unit; it
-comes with the place screen). Tests: `settings.integration.test.ts` (workspaces).
+`src/config/listing.ts`, currencies from `CURRENCIES` in `enums.ts`. `categories` are slugs of the admin's place
+categories (`listCategories("HOME")` from `admin/server`), checked first and saved as the place's exact set: the
+others are marked deleted and a category picked again is brought back, never added twice. Tests:
+`settings.integration.test.ts` (workspaces).
+
+Booking room by room or as a whole is its own route, `PUT /api/workspaces/{businessId}/booking-unit`
+(`chooseBookingUnit` in `rooms`, for the place screen), because it needs the whole-place unit, and settings calling
+`rooms` would close a circle between modules. It needs `settings.manage` and `rooms.manage`. In one transaction it
+saves the choice (`saveBookingUnit` from `workspaces`) and, for a whole place, makes sure the one whole-place unit
+exists: a new one starts from the live rooms added up (guests, bedrooms, beds, bathrooms, nightly prices) and is then
+adjusted like any room; one taken off or deleted is brought back, never doubled. The rooms stay, and are bookable
+again when the place goes back to rooms; bookings already made keep their own unit. The whole-place unit never uses
+up the plan's rooms. Tests: `booking-unit.integration.test.ts` (rooms).
 
 ### T. Team and roles
 
