@@ -14,3 +14,8 @@ export function afterSignIn(next: string | null | undefined): string {
 export function signInUrl(next: string): string {
   return `/sign-in?next=${encodeURIComponent(afterSignIn(next))}`;
 }
+
+/** The sign-up page, coming back to `next` once the new account's email is confirmed. */
+export function signUpUrl(next: string): string {
+  return `/sign-up?next=${encodeURIComponent(afterSignIn(next))}`;
+}
