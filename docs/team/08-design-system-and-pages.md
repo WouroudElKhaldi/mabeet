@@ -499,6 +499,21 @@ accessibility). Filters live in the web address, so a search can be shared. Resu
 **New:** no deposit and no refund policy in the booking box. It says how this place works in one line (the mode):
 "Pay online, confirmed at once", "Pay online, the host confirms", or "Arrange payment with the host".
 
+**Built so far** (`src/modules/directory/components/`, the page itself waits for `getPlace`): `PlaceView` puts the
+page together from a `PublicPlace` (`types.ts`) and is all the page file will need; it is made of `PlaceHeader`,
+`PhotoGallery` (one large and four small photos, the large one alone on a phone, "Show all photos" in a dialog, a drawn
+postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the rooms of a place booked whole shown
+without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
+`ThingsToKnow` and `BookingBox`. Not built yet: reviews, the map, "Meet your host", the photo tour, share and
+favourite, and "Near your stay".
+
+`BookingBox` (a client component) holds the room, the dates and the guests; it asks the quote route when both dates are
+picked (`useLiveQuery`, so a late answer to old dates is never shown), and shows the price, or the reason the stay
+cannot be booked (a code turned into a sentence by `booking.issues.*`), or a calm error with "Try again". "Book" is a
+link to `/p/{slug}/book?room=&guests=&checkIn=&checkOut=`, which the book page reads. It takes `initial` (the room,
+dates and guests of the page's address) and sends only a stay that fits: the calendar drops anything that does not.
+On a phone a bar fixed at the bottom shows the "from" price and leads to the box (`#booking`).
+
 #### `/p/[slug]/photos` Photo tour (F2)
 
 Photos grouped by area and room, with a Back button to the place.
