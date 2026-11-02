@@ -717,7 +717,6 @@ src/
       guest-cancel-button.tsx
       guest-details-form.tsx
       hold-countdown.tsx
-      pay-online.tsx
       price-breakdown.tsx
       use-room-calendar.ts
     brand/
@@ -777,6 +776,7 @@ src/
       offering-card.tsx
       session-booking-card.tsx
     payments/                     # now src/modules/payments/components/
+      pay-online.tsx              # PayOnline: the guest's Whish and card buttons on the booking page
       whish-simulator-form.tsx
     place/
       amenity.tsx
