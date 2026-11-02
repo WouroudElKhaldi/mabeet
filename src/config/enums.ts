@@ -47,6 +47,9 @@ export const ONLINE_BOOKING_MODES = [
 export const isOnlineMode = (mode: BookingMode): boolean =>
   (ONLINE_BOOKING_MODES as readonly BookingMode[]).includes(mode);
 
+/** The currencies a place can price in. Whish takes USD and LBP; cards take USD and EUR. */
+export const CURRENCIES = ["USD", "LBP", "EUR"] as const;
+
 /** How a guest pays online: with Whish, or by card (Stripe Checkout). */
 export const ONLINE_PAYMENT_METHODS = ["WHISH", "CARD"] as const;
 export type OnlinePaymentMethod = (typeof ONLINE_PAYMENT_METHODS)[number];
