@@ -34,8 +34,9 @@ export async function quoteRoom(
   const place = await findBookablePlace(slug);
   if (!place) throw notFound("Place");
   const room = await findRoomForBooking(place.id, roomId);
-  // A room the place does not book by (a room of a place that books whole) cannot be priced or booked.
-  if (!room || room.kind !== BOOKABLE_ROOM_KIND[place.bookingUnit]) throw notFound("Room");
+  // A room the host switched off, or one the place does not book by (a room of a place that books whole), cannot be
+  // booked, so it is not priced either: the booking engine refuses both in the same way.
+  if (!room?.active || room.kind !== BOOKABLE_ROOM_KIND[place.bookingUnit]) throw notFound("Room");
 
   const nightCount = countNights(range);
   const issue = stayIssue({ range, guests, room }, now);

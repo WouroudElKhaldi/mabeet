@@ -79,6 +79,7 @@ export function findRoomForBooking(db: Db, businessId: string, roomId: string) {
       businessId: true,
       name: true,
       kind: true,
+      active: true,
       capacity: true,
       minNights: true,
       baseRateCents: true,

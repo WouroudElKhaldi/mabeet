@@ -1208,7 +1208,7 @@ which is not priced. The rule is the booking engine's own: `stayIssue` in `booki
 (exported from `bookings/server.ts`), pure and tested in `stay-issue.test.ts`. The engine refuses a booking with the
 same function (`assertBookableStay`, which turns the code into the guest's sentence), so the quote and the booking can
 never disagree. The two limits (60 nights, 540 days ahead) are `MAX_STAY_NIGHTS` and `MAX_DAYS_AHEAD` in the same
-config file, and nothing else keeps a copy. A room the place does not book by (a room of a place that books whole) is "Room not found".
+config file, and nothing else keeps a copy. A room the host switched off, or one the place does not book by (a room of a place that books whole), is "Room not found", as booking it would be.
 It reads the place, the room and the price through `workspaces`, `rooms` and their `server.ts` doors, so it needs no
 database code of its own. The availability reads exist in `bookings` (`getTakenNights`, `findFreeRooms`, above).
 
