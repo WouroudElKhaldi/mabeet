@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { bookingHref } from "../booking-link";
-import { amenitiesOf, hasUniformRate, lowestRateCents, summarizeUnits } from "../summary";
+import {
+  amenitiesOf,
+  hasUniformRate,
+  initialStay,
+  lowestRateCents,
+  stayHitsTakenNights,
+  summarizeUnits,
+} from "../summary";
 import type { PublicUnit } from "../types";
 
 const unit = (overrides: Partial<PublicUnit> = {}): PublicUnit => ({
@@ -86,5 +93,54 @@ describe("bookingHref", () => {
     expect(href.startsWith("/p/a%20b%2F..%2Fc/book?")).toBe(true);
     expect(new URL(href, "http://x").searchParams.get("room")).toBe("x&guests=99");
     expect(new URL(href, "http://x").searchParams.get("guests")).toBe("1");
+  });
+});
+
+describe("initialStay", () => {
+  it("reads a well-formed address", () => {
+    expect(initialStay({ room: "r1", checkIn: "2026-11-14", checkOut: "2026-11-17", guests: "3" })).toEqual({
+      roomId: "r1",
+      checkIn: "2026-11-14",
+      checkOut: "2026-11-17",
+      guests: 3,
+    });
+  });
+
+  it("keeps nothing from an empty address", () => {
+    expect(initialStay({})).toEqual({});
+  });
+
+  it("drops dates that are not dates, back to front, or only half there", () => {
+    expect(initialStay({ checkIn: "soon", checkOut: "2026-11-17" })).toEqual({});
+    expect(initialStay({ checkIn: "2026-02-31", checkOut: "2026-03-02" })).toEqual({});
+    expect(initialStay({ checkIn: "2026-11-17", checkOut: "2026-11-14" })).toEqual({});
+    expect(initialStay({ checkIn: "2026-11-17", checkOut: "2026-11-17" })).toEqual({});
+    expect(initialStay({ checkIn: "2026-11-14" })).toEqual({});
+  });
+
+  it("drops guest counts that are not a whole number from 1 to 30", () => {
+    for (const guests of ["0", "31", "-2", "2.5", "many", ""]) expect(initialStay({ guests })).toEqual({});
+    expect(initialStay({ guests: "30" })).toEqual({ guests: 30 });
+  });
+
+  it("ignores a value given twice in the address, and a room name too long to be real", () => {
+    expect(initialStay({ room: ["a", "b"], guests: ["2", "3"], checkIn: ["2026-11-14"] })).toEqual({});
+    expect(initialStay({ room: "x".repeat(65) })).toEqual({});
+  });
+});
+
+describe("stayHitsTakenNights", () => {
+  const stay = { checkIn: "2026-11-14", checkOut: "2026-11-17" };
+
+  it("is true when a night of the stay is taken", () => {
+    expect(stayHitsTakenNights(stay, ["2026-11-15"])).toBe(true);
+    expect(stayHitsTakenNights(stay, ["2026-11-14"])).toBe(true);
+    expect(stayHitsTakenNights(stay, ["2026-11-16"])).toBe(true);
+  });
+
+  it("ignores the check-out night, which is free, and nights outside the stay", () => {
+    expect(stayHitsTakenNights(stay, ["2026-11-17"])).toBe(false);
+    expect(stayHitsTakenNights(stay, ["2026-11-13", "2026-11-20"])).toBe(false);
+    expect(stayHitsTakenNights(stay, [])).toBe(false);
   });
 });

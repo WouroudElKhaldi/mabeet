@@ -16,6 +16,12 @@ export interface RoomQuote {
   issue: StayIssue | null;
 }
 
+export interface RoomAvailability {
+  roomId: string;
+  /** ISO dates a guest cannot sleep there. A guest can still leave on the morning one begins. */
+  takenNights: string[];
+}
+
 export interface PublicPhoto {
   id: string;
   url: string;

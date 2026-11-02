@@ -9,15 +9,15 @@ import { FormError } from "@/components/ui/form-error";
 import { GuestCounter } from "@/components/ui/guest-counter";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/config/appearance";
-import { MAX_DAYS_AHEAD, MAX_STAY_NIGHTS } from "@/config/booking-limits";
+import { MAX_STAY_NIGHTS } from "@/config/booking-limits";
 import { useLiveQuery } from "@/hooks/use-live-query";
-import { addDays, toIsoDate, todayUtc } from "@/utils/dates";
 import { clampGuests } from "@/utils/guest-count";
 import { formatMoney } from "@/utils/format";
 import { isCompleteStay } from "@/utils/stay-selection";
+import { availabilityWindow } from "../availability-window";
 import { bookingHref } from "../booking-link";
-import { hasUniformRate } from "../summary";
-import type { PublicPlace, PublicUnit, RoomQuote } from "../types";
+import { hasUniformRate, stayHitsTakenNights } from "../summary";
+import type { PublicPlace, PublicUnit, RoomAvailability, RoomQuote } from "../types";
 
 interface BookingBoxProps {
   place: Pick<PublicPlace, "slug" | "currency" | "bookingMode">;
@@ -46,7 +46,17 @@ export function BookingBox({ place, units, initial = {} }: BookingBoxProps) {
   });
   const [guests, setGuests] = useState(initial.guests ?? DEFAULT_GUESTS);
 
+  // What is taken is read once for the year ahead, for the room chosen; the calendar shows those nights as taken.
+  const [window] = useState(() => availabilityWindow());
+  const availability = useLiveQuery<RoomAvailability>(
+    unit ? `/api/public/places/${encodeURIComponent(place.slug)}/rooms/${roomId}/availability` : null,
+    window,
+  );
+  const takenNights = availability.data?.takenNights;
+
   const complete = isCompleteStay(dates);
+  // The room was switched, or somebody booked while the page was open: the stay picked may now cross a taken night.
+  const taken = isCompleteStay(dates) && takenNights !== undefined && stayHitsTakenNights(dates, takenNights);
   const quote = useLiveQuery<RoomQuote>(
     complete && unit ? `/api/public/places/${encodeURIComponent(place.slug)}/rooms/${roomId}/quote` : null,
     complete ? { checkIn: dates.checkIn, checkOut: dates.checkOut, guests } : undefined,
@@ -56,7 +66,7 @@ export function BookingBox({ place, units, initial = {} }: BookingBoxProps) {
   const capacity = Math.max(1, unit.capacity);
   const shownGuests = clampGuests(guests, 1, capacity);
   const result = quote.data;
-  const bookable = result !== null && result.issue === null;
+  const bookable = result !== null && result.issue === null && !taken;
   const money = (cents: number) => formatMoney(cents, place.currency, locale);
 
   return (
@@ -84,14 +94,17 @@ export function BookingBox({ place, units, initial = {} }: BookingBoxProps) {
           onChange={setDates}
           minNights={unit.minNights}
           maxNights={MAX_STAY_NIGHTS}
-          maxDate={toIsoDate(addDays(todayUtc(), MAX_DAYS_AHEAD + MAX_STAY_NIGHTS))}
+          maxDate={window.to}
+          takenNights={takenNights}
         />
       </div>
 
       <GuestCounter value={shownGuests} onChange={setGuests} max={capacity} />
 
+      {taken ? <FormError message={t("justTaken")} /> : null}
+
       <Quote
-        complete={complete}
+        complete={complete && !taken}
         loading={quote.loading}
         error={quote.error}
         onRetry={quote.reload}

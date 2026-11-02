@@ -1248,7 +1248,12 @@ The public page reads, for `getPlace` (all without sign-in, each through its mod
   the gallery and the photo tour.
 
 Tests: `public-place.integration.test.ts` (workspaces) and `public-units.integration.test.ts` (rooms).
-`getPlace` and `checkAvailability` themselves are the directory's, built on these.
+`getPlace(slug)` (directory) puts them together as a `PublicPlace`: the place's public fields, its bookable `units` (the
+rooms, or the one whole-place unit) with their photos, its `rooms` to show (at a place booked whole, the rooms inside it),
+and its photos (the rooms' photos when it has none of its own). `getRoomAvailability(slug, roomId, range)` is the calendar's
+read, behind `GET /api/public/places/{slug}/rooms/{roomId}/availability` (no sign-in, 120 a minute from one address): the
+taken nights as dates, for the year ahead by default (`AVAILABILITY_DAYS`), for the same rooms a quote accepts. The place page's parts and the
+booking box are built too (see `08`, "Built so far").
 
 ### P. Pricing
 

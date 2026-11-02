@@ -176,8 +176,8 @@
     "/api/public/places/{slug}/rooms/{roomId}/availability": {
       "get": {
         "tags": ["Guests"],
-        "summary": "Taken nights of a room (no guest details)",
-        "description": "No sign-in.",
+        "summary": "Taken nights of a room (dates only, no guest details)",
+        "description": "No sign-in. Confirmed stays, held rooms, platform stays and closed dates, as ISO dates; the check-out night of a stay is free. By default from today for a year (`to` is a check-out day, at most 366 nights after `from`). Not found for a room the place does not book by or one the host switched off.",
         "security": [],
         "parameters": [
           {
@@ -203,7 +203,8 @@
               "type": "string",
               "format": "date",
               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-            }
+            },
+            "description": "First night asked about. Today by default."
           },
           {
             "name": "to",
@@ -212,12 +213,33 @@
               "type": "string",
               "format": "date",
               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-            }
+            },
+            "description": "Check-out day of the window. A year after `from` by default."
           }
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roomId": {
+                      "type": "string"
+                    },
+                    "takenNights": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "date"
+                      }
+                    }
+                  },
+                  "required": ["roomId", "takenNights"]
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid input",

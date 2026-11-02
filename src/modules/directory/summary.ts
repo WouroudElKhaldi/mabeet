@@ -1,4 +1,6 @@
 import { AMENITIES } from "@/config/amenities";
+import { eachNight, toDateRange, toIsoDate } from "@/utils/dates";
+import { isIsoDate } from "@/utils/stay-selection";
 import type { BookingUnit } from "@prisma/client";
 import type { PublicUnit } from "./types";
 
@@ -31,4 +33,38 @@ export function amenitiesOf(units: readonly PublicUnit[]) {
 /** Every night costs the same, so a stay can be shown as "3 nights × $90". */
 export function hasUniformRate(nights: readonly { rateCents: number }[]): boolean {
   return nights.length > 0 && nights.every((night) => night.rateCents === nights[0]?.rateCents);
+}
+
+/**
+ * The stay a page's address asks for (/p/{slug}?room=&checkIn=&checkOut=&guests=), keeping only what is well formed:
+ * a link can say anything, and what does not fit is dropped rather than shown. Whether the dates can be booked is the
+ * calendar's question, asked when it opens.
+ */
+export function initialStay(query: Record<string, string | string[] | undefined>) {
+  const text = (key: string) => {
+    const value = query[key];
+    return typeof value === "string" ? value : undefined;
+  };
+  const stay: { roomId?: string; checkIn?: string; checkOut?: string; guests?: number } = {};
+  const room = text("room");
+  if (room && room.length <= 64) stay.roomId = room;
+  const checkIn = text("checkIn") ?? null;
+  const checkOut = text("checkOut") ?? null;
+  if (isIsoDate(checkIn) && isIsoDate(checkOut) && checkOut > checkIn) {
+    stay.checkIn = checkIn;
+    stay.checkOut = checkOut;
+  }
+  const guests = Number(text("guests"));
+  if (Number.isInteger(guests) && guests >= 1 && guests <= 30) stay.guests = guests;
+  return stay;
+}
+
+/** Whether any night of the stay is in the taken nights (the check-out night is not slept, so it does not count). */
+export function stayHitsTakenNights(
+  stay: { checkIn: string; checkOut: string },
+  taken: readonly string[],
+): boolean {
+  if (taken.length === 0) return false;
+  const takenSet = new Set(taken);
+  return eachNight(toDateRange(stay)).some((night) => takenSet.has(toIsoDate(night)));
 }
