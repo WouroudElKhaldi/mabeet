@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma, RoomKind } from "@prisma/client";
 import type { Db } from "@/server/db/client";
 import { type DateRange, toIsoDate } from "@/utils/dates";
 
@@ -91,6 +91,47 @@ export function findRoomUnits(db: Db, roomIds: string[]) {
   return db.room.findMany({
     where: { id: { in: roomIds }, active: true, isDeleted: false },
     select: { id: true, businessId: true, kind: true },
+  });
+}
+
+/** What a visitor may see of a photo, in the host's order. */
+const publicPhoto = {
+  where: { isDeleted: false },
+  orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+  select: { id: true, url: true, alt: true, area: true },
+} satisfies Prisma.Room$photosArgs;
+
+/**
+ * A place's units guests can see, of one kind (its rooms, or its whole-place unit), with their photos. Never the
+ * calendar export token: it is the room's private link to Airbnb and Booking.com.
+ */
+export function listPublicUnits(db: Db, businessId: string, kind: RoomKind) {
+  return db.room.findMany({
+    where: { businessId, kind, active: true, isDeleted: false },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      kind: true,
+      capacity: true,
+      bedrooms: true,
+      beds: true,
+      bathrooms: true,
+      baseRateCents: true,
+      minNights: true,
+      amenities: true,
+      photos: publicPhoto,
+    },
+  });
+}
+
+/** The photos of the place itself (not of a room or an experience), in the host's order. */
+export function listPlacePhotos(db: Db, businessId: string) {
+  return db.photo.findMany({
+    where: { businessId, roomId: null, offeringId: null, isDeleted: false },
+    orderBy: publicPhoto.orderBy,
+    select: publicPhoto.select,
   });
 }
 
