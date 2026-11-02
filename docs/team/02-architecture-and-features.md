@@ -867,6 +867,20 @@ handles it:
 - All three lock the room, check the status change, keep the occupancy's `active` flag correct (`changeStatus`),
   save who decided and when, log the action and tell the guest.
 
+The dashboard's routes, each a thin call to one of these services (`tenantRoute`, so a non-member gets 404):
+
+| Route                                                                             | Service                                             | Needs                                 |
+| --------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------- |
+| `GET /api/workspaces/{businessId}/bookings` (status, room, dates, `take`, `skip`) | `listBookings`                                      | `bookings.read`                       |
+| `GET .../bookings/{bookingId}`                                                    | `getBooking`                                        | `bookings.read`                       |
+| `POST .../bookings/{bookingId}/{confirm\|decline\|cancel}` (optional `reason`)    | `confirmBooking`, `declineBooking`, `cancelBooking` | `bookings.decide`                     |
+| `GET .../bookings/{bookingId}/payments`                                           | `listBookingPayments`                               | the owner (money is not a permission) |
+| `GET .../calendar` (`from`, `to`, `roomId`; six weeks from today by default)      | `getCalendar`                                       | `calendar.read`                       |
+| `POST .../blocks`, `DELETE .../blocks/{blockId}`                                  | `addBlock`, `removeBlock`                           | `blocks.manage`                       |
+
+A guest's phone and email come back masked to a member without `guests.contact`. Tests:
+`host-routes.integration.test.ts`.
+
 ### B. Bookings: the guest cancels
 
 Signed in, from their booking (`POST /api/public/bookings/{token}/cancel`; the link opens only for the guest who made

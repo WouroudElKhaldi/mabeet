@@ -63,6 +63,24 @@ export async function hasOtherPaidPayment(tx: Tx, bookingId: string, paymentId: 
   return count > 0;
 }
 
+/** A booking's payments for its owner, oldest first: what was paid, how, and what went back. */
+export function listPaymentsForBooking(db: Db, businessId: string, bookingId: string) {
+  return db.payment.findMany({
+    where: { businessId, bookingId, isDeleted: false },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      amountCents: true,
+      refundedCents: true,
+      currency: true,
+      method: true,
+      status: true,
+      paidAt: true,
+      createdAt: true,
+    },
+  });
+}
+
 export function listPendingForBooking(db: Db, bookingId: string) {
   return db.payment.findMany({
     where: { bookingId, status: "PENDING", isDeleted: false },
