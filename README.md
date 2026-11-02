@@ -88,8 +88,14 @@ pnpm dev                    # the website on http://localhost:3000 and the job w
 Every setting is in [.env.example](.env.example), grouped and explained. To start, only the database URLs,
 `BETTER_AUTH_SECRET` and `CRON_SECRET` are needed. Without the others the app still runs: emails are printed to the
 log, Whish runs on its simulator, rate limits count in memory, push is off, and photos are kept in Postgres. The live site
-stores photos in Cloudflare R2 (free tier). Live values go in DigitalOcean's
-settings and GitHub secrets, never in the repository.
+stores photos in Cloudflare R2 (free tier). Live values go in GitHub's `production` environment, never in the
+repository.
+
+## The live site
+
+Every merge to `main` that passes the checks goes live by itself: GitHub Actions builds the image and starts it on
+our DigitalOcean server, behind nginx. [docs/deployment.md](docs/deployment.md) explains how it works, how to set up
+the server and GitHub once, how to add the domain, and how to undo a bad release.
 
 ## Useful commands
 

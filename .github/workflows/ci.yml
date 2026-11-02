@@ -4,10 +4,13 @@ on:
   pull_request:
   push:
     branches: [main, development]
+  # "Run workflow" on main checks and deploys main again, for example after a secret changed.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push replaces older checks, but never stops a deploy halfway: on main, runs wait their turn.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   checks:
@@ -77,5 +80,133 @@ jobs:
       # race tests, tenant isolation over HTTP and MCP.
       - run: pnpm test:integration
 
-  # The deploy to DigitalOcean (only a push to main that passed both jobs above, never development) comes with the
-  # deployment work (docs/team/01-work-split.md, host side).
+  # The live site on the DigitalOcean server: only main, only after both jobs above passed, never development or a
+  # pull request. It builds the image once, pushes it to GitHub's registry, copies the server's files and settings,
+  # and starts the new version there. docs/deployment.md lists every secret and variable it reads.
+  deploy:
+    name: Build and deploy the live site
+    needs: [checks, integration]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.names.outputs.url }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Name the image and the site
+        id: names
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+          SERVER_IP: ${{ vars.SERVER_IP }}
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
+          # Before the domain, the site answers on the server's IP address over plain HTTP.
+          if [ -n "$DOMAIN" ]; then
+            echo "url=https://$DOMAIN" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=http://$SERVER_IP" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Every setting the server needs, checked before anything is built, then written to the .env it will run with.
+      # An empty one is left out, so it is unset there and its default applies (an empty WHISH_MODE would be refused).
+      - name: Write the server's settings
+        env:
+          IMAGE: ${{ steps.names.outputs.image }}
+          IMAGE_TAG: ${{ steps.names.outputs.tag }}
+          BETTER_AUTH_URL: ${{ steps.names.outputs.url }}
+          NGINX_SITE: ${{ vars.DOMAIN && 'https' || 'http' }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          SERVER_IP: ${{ vars.SERVER_IP }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          AI_MONTHLY_BUDGET_USD: ${{ vars.AI_MONTHLY_BUDGET_USD }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+          CONTACT_WHATSAPP: ${{ vars.CONTACT_WHATSAPP }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_PRICE_PRO: ${{ vars.STRIPE_PRICE_PRO }}
+          STRIPE_PRICE_BUSINESS: ${{ vars.STRIPE_PRICE_BUSINESS }}
+          WHISH_MODE: ${{ vars.WHISH_MODE }}
+          WHISH_CHANNEL: ${{ secrets.WHISH_CHANNEL }}
+          WHISH_SECRET: ${{ secrets.WHISH_SECRET }}
+          WHISH_WEBSITE_URL: ${{ vars.WHISH_WEBSITE_URL }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_PUBLIC_BUCKET: ${{ vars.R2_PUBLIC_BUCKET }}
+          R2_PUBLIC_URL: ${{ vars.R2_PUBLIC_URL }}
+        run: |
+          for name in SERVER_IP SSH_USER SSH_PRIVATE_KEY POSTGRES_PASSWORD BETTER_AUTH_SECRET CRON_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set in the production environment (docs/deployment.md)"
+              exit 1
+            fi
+          done
+          mkdir -p staging/deploy/nginx
+          cp docker-compose.prod.yml staging/
+          cp deploy/*.sh staging/deploy/
+          cp deploy/nginx/*.template staging/deploy/nginx/
+          {
+            echo "COMPOSE_FILE=docker-compose.prod.yml"
+            echo "COMPOSE_PROFILES=server"
+            # Single quotes keep every value exactly as written (no value may contain one).
+            for name in IMAGE IMAGE_TAG NGINX_SITE DOMAIN POSTGRES_PASSWORD BETTER_AUTH_URL BETTER_AUTH_SECRET \
+              CRON_SECRET DEEPSEEK_API_KEY AI_MONTHLY_BUDGET_USD RESEND_API_KEY EMAIL_FROM CONTACT_EMAIL \
+              CONTACT_WHATSAPP STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_PRICE_PRO STRIPE_PRICE_BUSINESS \
+              WHISH_MODE WHISH_CHANNEL WHISH_SECRET WHISH_WEBSITE_URL VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY \
+              VAPID_SUBJECT R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_PUBLIC_BUCKET R2_PUBLIC_URL; do
+              if [ -n "${!name}" ]; then printf "%s='%s'\n" "$name" "${!name}"; fi
+            done
+          } > staging/.env
+          chmod 600 staging/.env
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # The photo bucket's address is fixed into the build (next.config.ts), so it is a build argument.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.names.outputs.image }}:${{ steps.names.outputs.tag }}
+          build-args: R2_PUBLIC_URL=${{ vars.R2_PUBLIC_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Trust the server's key
+        run: ssh-keyscan -H "${{ vars.SERVER_IP }}" >> ~/.ssh/known_hosts
+
+      # Only these files reach the server; it never sees the code, it pulls the built image. The database backups
+      # in /opt/mabeet/backups are kept.
+      - name: Copy the files to the server
+        run: rsync -az --delete --exclude=/backups/ staging/ "${{ vars.SSH_USER }}@${{ vars.SERVER_IP }}:/opt/mabeet/"
+
+      # The job's own token lets the server pull the image; it goes on standard input and expires with the job.
+      - name: Start the new version
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | ssh "${{ vars.SSH_USER }}@${{ vars.SERVER_IP }}" \
+            bash /opt/mabeet/deploy/remote-deploy.sh "${{ github.actor }}"
+
+      # Retries: the site answers 502 for the few seconds the new website takes to start.
+      - name: The site answers
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors --max-time 10 "${{ steps.names.outputs.url }}/" > /dev/null

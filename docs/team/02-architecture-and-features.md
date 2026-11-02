@@ -78,8 +78,9 @@ Our product gives the host one booking page, one calendar, and a database that r
 - **DeepSeek:** our own AI model, for the last bonuses only (the dashboard assistant, the website travel
   assistant, the AI report). Changing to another AI provider means changing one file.
 - **Vitest:** unit tests (no database) and integration tests (real database).
-- **DigitalOcean with Docker:** hosting for the website and the PostgreSQL database. One Docker image runs twice: as
-  the website (`pnpm start`) and as the job worker (`pnpm worker`). Real emails are sent with Resend from our own
+- **DigitalOcean with Docker:** hosting for the website and the PostgreSQL database, on one server (a droplet)
+  behind nginx (`docs/deployment.md`). One Docker image runs twice: as the website (`pnpm start`) and as the job
+  worker (`pnpm worker`). Real emails are sent with Resend from our own
   domain.
 - **pg-boss:** job queues kept in our own PostgreSQL (in a `pgboss` schema), so slow AI work, emails and scheduled
   jobs run in the worker, not in the web request. The queues need no Redis.
@@ -93,8 +94,10 @@ Our product gives the host one booking page, one calendar, and a database that r
 - An optional setting uses the `optional(...)` helper, so an empty value in a copied `.env.example` counts as unset.
   Give it a sensible default or a clear fallback (Redis: count in memory; Resend: print emails to the log).
 - Add it to `.env.example` with a comment saying what it is for and what happens without it.
-- If production needs it, add it to `docker-compose.prod.yml` (a service address such as `REDIS_URL` points at the
-  service by name). Only a setting the build itself checks needs a placeholder in the `Dockerfile` build step.
+- If the live site needs it, add its name to the deploy job's list in `.github/workflows/ci.yml` and its value to
+  GitHub's `production` environment (`docs/deployment.md`). A service address such as `REDIS_URL` goes in
+  `docker-compose.prod.yml` instead, pointing at the service by name. Only a setting the build itself checks needs a
+  placeholder in the `Dockerfile` build step.
 - Tests set their own values in `tests/integration/setup-env.ts` (their own database, no real email, jobs inline).
 
 ### The checks CI runs
@@ -1436,7 +1439,8 @@ They are only for a manual or outside run: on DigitalOcean the worker runs every
 - API keys are stored as hashes and shown only once. Read-only keys lose every write permission.
 - Raw SQL only with safe `$queryRaw` templates (values are never pasted into the SQL text).
 - Webhooks (calls from Stripe) are checked by signature and applied only once.
-- No secrets in the repository. Live secrets are in the DigitalOcean server's settings and in GitHub secrets.
+- No secrets in the repository. Live secrets are in GitHub's `production` environment; each deploy writes them to
+  the server's `.env` (`docs/deployment.md`).
 
 ---
 

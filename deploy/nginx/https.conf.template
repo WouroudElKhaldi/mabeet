@@ -1,0 +1,51 @@
+# With the domain: the website on https://${DOMAIN}, with the certificate deploy/request-certificate.sh requested.
+# Plain HTTP only answers Let's Encrypt's renewal check and sends everything else to https. The security headers
+# (HSTS, CSP...) come from next.config.ts, not from here.
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    server_tokens off;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://${DOMAIN}$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+    server_tokens off;
+
+    # Docker's own DNS. Through a variable, nginx looks the website up again every 10 seconds, so a website
+    # container that restarted (and got a new address) is found without restarting nginx.
+    resolver 127.0.0.11 valid=10s;
+    set $website http://web:3000;
+
+    # Photos are at most 2.5 MB (photo-service.ts); nginx's own limit is 1 MB.
+    client_max_body_size 10m;
+
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    location / {
+        proxy_pass $website;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # nginx is the only proxy: both carry the real visitor address (rate limits read it), never one a visitor sent.
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

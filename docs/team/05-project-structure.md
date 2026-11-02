@@ -119,7 +119,8 @@ Names:
 | Folder                            | What goes there                                                                                                                     |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `.github/workflows/`              | The checks that run on every pull request, the deploy, and the scheduled jobs (until the worker runs them)                          |
-| `docs/`                           | Documents for reviewers: architecture, requirements, data model, database diagram, API contract                                     |
+| `deploy/`                         | What the live server needs besides the image: the deploy script, the certificate script, the nginx configurations                   |
+| `docs/`                           | Documents for reviewers: architecture, requirements, data model, database diagram, API contract, deployment                         |
 | `messages/`                       | All text on screen, in English, Arabic and Lebanese Arabic. Every key must be in all three (a test checks)                          |
 | `prisma/`                         | The database tables, the migrations (including hand-written database rules), and the demo data                                      |
 | `prisma/migrations/`              | Never edit a migration after it is merged. Add a new one                                                                            |
