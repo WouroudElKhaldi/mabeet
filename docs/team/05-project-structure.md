@@ -79,8 +79,9 @@ climbing into another module, or the kernel importing a module fails `pnpm lint`
 | `housekeeping`  | The scheduled tidy-up: expiring holds and plan months                                                                                                                   |
 | `admin`         | The platform admin area                                                                                                                                                 |
 | `partners`      | Partner businesses                                                                                                                                                      |
+| `contact`       | Messages to the Mabeet team from the Contact page: the input check, the email job and the form                                                                          |
 
-`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit` and `housekeeping` exist today, and `rooms` has begun (the reads a booking needs). The others are
+`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping` and `contact` exist today, and `rooms` has begun (the reads a booking needs). The others are
 created by the first feature that needs them, in this shape.
 
 ## Where each kind of file goes
@@ -301,6 +302,8 @@ src/
       sign-up/
         page.tsx
     (site)/
+      about/                      # F24: why booking direct, on one journey line (StoryRail)
+        page.tsx
       account/
         activity/
           page.tsx
@@ -313,12 +316,14 @@ src/
         page.tsx
         privacy/
           page.tsx
-      assistant/
+      assistant/                  # F6: use Mabeet from your AI app (the guest MCP); no chat on the website
         page.tsx
       b/
         [token]/
           loading.tsx
           page.tsx
+      contact/                    # F24: a message form to the Mabeet team, and WhatsApp
+        page.tsx
       host/
         page.tsx
       layout.tsx
@@ -472,6 +477,8 @@ src/
           callback/
             route.ts
       public/
+        contact/                  # F24: a message to the Mabeet team, emailed to CONTACT_EMAIL
+          route.ts
         bookings/
           [token]/
             cancel/

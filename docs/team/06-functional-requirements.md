@@ -191,6 +191,11 @@ submission (Friday 13 November).
   would be emailed. Guests get their bookings' updates on every device of their account.
 - **F20. Install the app.** The site can be added to a phone's home screen and opens like an app, with an offline
   page when there is no signal.
+- **F24. About and Contact (bonus, approved by Sami on 2 November).** An About page tells why booking direct
+  matters, how a booking works, the three booking modes and our promises. A Contact page lets anyone send the
+  Mabeet team a message (name, email, topic, message): it is emailed to the team's inbox with the sender as the
+  reply address, nothing is stored, and one address can send five an hour. It also offers a WhatsApp chat. Each
+  way shows only when its setting (`CONTACT_EMAIL`, `CONTACT_WHATSAPP`) is set.
 
 ---
 

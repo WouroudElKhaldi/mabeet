@@ -955,6 +955,16 @@ slug and kind never change, because links use them.
 A guest can email a host from the place page (`POST /api/public/places/{slug}/messages`). It is rate limited. The
 guest's email is the reply address. A host can turn it off and offer WhatsApp only.
 
+### C. Contact the Mabeet team (F24)
+
+The Contact page's form posts to `POST /api/public/contact` (no sign-in; `contactMessage` in
+`src/modules/contact/schemas.ts`: name, email, a topic from `src/config/contact.ts`, the message). The route allows
+five messages an hour per address (`enforceRateLimit`). `sendContactMessage` refuses with 503 while `CONTACT_EMAIL`
+is unset, so a message is never accepted and then lost; otherwise it queues `notify.contact-message`, which emails
+the team's inbox with the sender as Reply-To, the topic and the sender's language in the details, and a per-message
+idempotency key. Nothing is stored. `CONTACT_WHATSAPP` (digits with the country code) adds a WhatsApp button
+(`whatsappLink` in `src/utils/whatsapp.ts`). Tests: `src/modules/contact/tests/contact.integration.test.ts`.
+
 ### D. Dashboard overview
 
 `/dashboard/{id}`: arrivals and departures today, waiting requests, upcoming bookings, the channels of the last 90

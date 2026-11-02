@@ -369,6 +369,10 @@ like `BoardingPass`: the title in the accent band with `LogoMark`, a stub, the t
 | `SiteHeader`, `SiteFooter`, `SearchBar` | `site/`                   | The public site's header, footer and search                                                                                        |
 | `NavLink`, `LogoMark`                   | `site/`                   | A header link with the glow bar on hover and on the current page; the logo's arch alone, in the text colour                        |
 | `Section`, `ExamplePrompt`              | `site/`                   | A titled part of a public page; something to try typing into an AI app, shown as a chat message                                    |
+| `StoryRail`, `StoryChapter`             | `site/`                   | One journey line through a long page, filling as you scroll with the Mabeet mark travelling; a chapter with its stop on it         |
+| `StatBand`, `BigStat`, `Journey`        | `site/`                   | A dark band of striking figures; one figure (put a `CountUp` in it); a path of numbered stops on a dashed line that draws itself   |
+| `Eyebrow`, `LandscapeBand`              | `site/`                   | The tinted pill above a big title; the closing band with Mount Lebanon behind a title and actions                                  |
+| `WhatsAppLink`, `CountUp`, `Reveal`     | `site/`, `ui/`            | A button opening a WhatsApp chat; a number that counts up when seen; plays its children's motion once when scrolled into view      |
 | `TopicCard`, `OnThisPage`               | `site/`                   | A numbered topic card that leans in 3D (glow bar, filled tile on hover); links to a long page's sections                           |
 | `TiltCard`, `ReceiptCard`               | `brand/`                  | Any card leaning toward the mouse in 3D (`--px`/`--py` for `Sheen`); promises on a till receipt in a `BrandScene`, with a postmark |
 | `PageIntro`, `PageNote`                 | `site/page-intro.tsx`     | A public page's centred poster title and line; the small print at its end                                                          |
@@ -517,6 +521,31 @@ No sign-in on this page. Every text in the three message files.
    or "Your plan" where `current` is passed) and the button for each. Free goes to `/host`; Pro and Business go to
    `/host?plan=PRO` or `?plan=BUSINESS`.
 3. `PageNote`: no commission on any plan.
+
+#### `/about` About Mabeet (F24, approved by Sami)
+
+1. **Opening:** two columns from `lg`. `Eyebrow` "Made in Beirut", `HeroHeading`, "Explore stays" and "Become a host".
+   On the end side a `BrandScene`: the `ArchWindow`, a `Receipt` of our promises floating in front (from `sm`; on a
+   phone it would cover the text) and a stamped `Postmark`.
+2. **The journey:** a `StoryRail` runs through every chapter below: a dashed line on the reading side that fills
+   with the accent as the visitor scrolls, with the Mabeet mark (`LogoMark`) travelling along it. Each chapter is a
+   `StoryChapter`: its stop on the line fills and pops when the chapter scrolls into view, a "01 · The problem"
+   kicker in the glow colour, then the chapter rising in.
+   - 01 The problem: a `StatBand` of three `BigStat`s that count up (`CountUp`): up to 18% commission, $14.40 a
+     night and $288 a month on an $80 room (the estimate in `scope-lock.md` section 4).
+   - 02 How it works: the `Journey` of a booking in four stops, its dashed line drawing itself.
+   - 03 Your way: the three booking modes as `TopicCard`s.
+   - 04 Our promises: four `TopicCard`s (never double-booked, highlighted; refunds in full; no commission, with "See
+     the plans"; your details stay yours, with the privacy link).
+   - 05 Your turn: the `LandscapeBand` with "Explore stays" and "Become a host".
+
+#### `/contact` Contact us (F24, approved by Sami)
+
+Two columns from `lg`, like `/host`. Start side: `Eyebrow`, `HeroHeading`, and `TopicCard`s for where each question
+is answered best (a booking: the host; listing a place: "Become a host"; your data: the privacy page). End side: a
+sticky `TicketCard` "Reach the Mabeet team" with the `ContactForm` (name, email, topic as `ChoiceChips`, message;
+then "Message sent" with where the answer will arrive) when `CONTACT_EMAIL` is set, and the `WhatsAppLink` when
+`CONTACT_WHATSAPP` is set. With neither, the ticket says the team inbox is not open yet.
 
 #### `/privacy`, `/offline`, not found and error pages (the privacy page: F17)
 
