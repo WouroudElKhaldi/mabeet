@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import type { LucideIcon } from "lucide-react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Sheen } from "@/components/brand/brand-scene";
 import { TiltCard } from "@/components/brand/tilt-card";
 
@@ -16,6 +16,7 @@ export function TopicCard({
   title,
   body,
   highlight = false,
+  action,
   style,
 }: {
   icon: LucideIcon;
@@ -24,6 +25,8 @@ export function TopicCard({
   title: string;
   body: string;
   highlight?: boolean;
+  /** A link at the foot of the card, such as an `ArrowLink` to read more. */
+  action?: ReactNode;
   /** For its place in a `rise-in` sequence (`stagger`). */
   style?: CSSProperties;
 }) {
@@ -62,6 +65,7 @@ export function TopicCard({
         </div>
         <h3 className="mt-5 [transform:translateZ(24px)] text-lg font-semibold">{title}</h3>
         <p className="mt-2 [transform:translateZ(12px)] text-sm leading-relaxed text-muted">{body}</p>
+        {action ? <div className="mt-auto [transform:translateZ(20px)] pt-5">{action}</div> : null}
         <Sheen />
       </TiltCard>
     </div>

@@ -613,6 +613,54 @@ p {
   color: var(--accent);
 }
 
+/*
+  Reveal (src/components/ui/reveal.tsx): the first time a part scrolls into view, its `reveal-item`s rise in one after
+  another and its `journey-line` draws itself from the reading side. Hidden only when scripts run, so a page without
+  JavaScript still shows everything.
+*/
+@media (scripting: enabled) {
+  .reveal-item {
+    opacity: 0;
+    translate: 0 28px;
+    transition:
+      opacity 700ms var(--ease-out),
+      translate 800ms var(--ease-spring);
+    transition-delay: calc(var(--stagger, 0) * 110ms);
+  }
+  [data-shown] .reveal-item {
+    opacity: 1;
+    translate: 0 0;
+  }
+  .journey-line {
+    scale: 0 1;
+    transition: scale 1400ms var(--ease-out) 200ms;
+  }
+  [data-shown] .journey-line {
+    scale: 1 1;
+  }
+}
+.journey-line {
+  transform-origin: left;
+}
+
+/* StoryChapter's stop on the StoryRail: it fills with the accent and pops when its chapter scrolls into view. */
+.story-stop {
+  transition:
+    background-color 400ms var(--ease-out),
+    color 400ms var(--ease-out),
+    box-shadow 400ms var(--ease-out),
+    scale 600ms var(--ease-spring);
+}
+[data-shown] > .story-stop {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  --tw-ring-color: var(--accent);
+  scale: 1.25;
+}
+[dir="rtl"] .journey-line {
+  transform-origin: right;
+}
+
 .skeleton {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
