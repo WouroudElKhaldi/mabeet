@@ -25,8 +25,8 @@ paths:
     get:
       tags:
         - Guests
-      summary: Price and availability for a stay
-      description: No sign-in.
+      summary: Price of a stay in a room, and whether it can be booked as asked
+      description: No sign-in. A stay that cannot be booked still gets its price, with the reason in `issue`; one longer than the longest stay is not priced.
       security: []
       parameters:
         - name: slug
@@ -45,15 +45,68 @@ paths:
             type: string
             format: date
             pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          required: true
         - name: checkOut
           in: query
           schema:
             type: string
             format: date
             pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          required: true
+        - name: guests
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 30
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roomId:
+                    type: string
+                  currency:
+                    type: string
+                  nights:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        rateCents:
+                          type: integer
+                      required:
+                        - date
+                        - rateCents
+                  nightCount:
+                    type: integer
+                  totalCents:
+                    type: integer
+                    description: What the guest pays, in full. Whole minor units.
+                  issue:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - PAST
+                      - TOO_FAR
+                      - TOO_LONG
+                      - MIN_NIGHTS
+                      - CAPACITY
+                      - null
+                required:
+                  - roomId
+                  - currency
+                  - nights
+                  - nightCount
+                  - totalCents
+                  - issue
         "400":
           description: Invalid input
           content:

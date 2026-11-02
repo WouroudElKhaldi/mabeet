@@ -1192,6 +1192,19 @@ Availability itself lives in `bookings` (it owns the night rows), behind `bookin
 
 The website search, the guest's AI and the guest MCP all use it, so they always agree.
 
+**What exists today:** `quoteRoom(slug, roomId, { range, guests }, now?)` in `src/modules/directory/server/directory-service.ts`,
+behind `GET /api/public/places/{slug}/rooms/{roomId}/quote` (no sign-in, 120 a minute from one address). It gives each
+night's price, the total (always the full amount), and `issue`: why the stay cannot be booked as asked, as a code the
+screen translates (`PAST`, `TOO_FAR`, `TOO_LONG`, `MIN_NIGHTS`, `CAPACITY`; the list is in
+`src/config/booking-limits.ts`). A stay with an issue still gets its price, except one longer than the longest stay,
+which is not priced. The rules are `stayIssue` in `quote-rules.ts`, pure and tested, and ask what the booking engine
+asks when a booking is made; the two limits (60 nights, 540 days ahead) are `MAX_STAY_NIGHTS` and `MAX_DAYS_AHEAD` in
+the same config file. A room the place does not book by (a room of a place that books whole) is "Room not found".
+It reads the place, the room and the price through `workspaces`, `rooms` and their `server.ts` doors, so it needs no
+database code of its own. `getPlace`, `checkAvailability` and `getTakenNights` are still to come: they need a public
+place read from `workspaces`, a public rooms and photos read from `rooms`, and an availability read from `bookings`
+(whole-place units count their sibling rooms, so only `bookings` can answer).
+
 ### P. Pricing
 
 `quoteStay` in `pricing.ts`:
