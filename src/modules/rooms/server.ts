@@ -17,3 +17,11 @@ export {
   setSpecialPrice,
   updateRoom,
 } from "./server/room-service";
+export {
+  describePhoto,
+  getImage,
+  listGallery,
+  removePhoto,
+  setCoverPhoto,
+  uploadPhoto,
+} from "./server/photo-service";

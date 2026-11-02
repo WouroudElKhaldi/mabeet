@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AMENITIES } from "@/config/amenities";
-import { BOOKING_UNITS } from "@/config/enums";
+import { BOOKING_UNITS, PHOTO_AREAS } from "@/config/enums";
 import { cents, id, stayDates, workspaceParams } from "@/lib/schemas";
 import { countNights, toDateRange } from "@/utils/dates";
 
@@ -52,3 +52,22 @@ export const specialPriceInput = stayDates
 
 /** How the place is booked: room by room, or the whole place as one unit. */
 export const bookingUnitInput = z.object({ bookingUnit: z.enum(BOOKING_UNITS) });
+
+/** /api/workspaces/{businessId}/photos/{photoId} */
+export const photoParams = workspaceParams.extend({ photoId: id });
+
+/** The form fields sent with a photo's file: a room's photo, or (no room) the place's own. */
+export const photoUploadFields = z.object({
+  roomId: id.nullable().default(null),
+  alt: z.string().trim().max(160).nullable().default(null),
+  area: z.enum(PHOTO_AREAS).nullable().default(null),
+});
+
+/** `{ "cover": true }` puts the photo first; `{ area, alt }` tags it for the photo tour. */
+export const photoChange = z.union([
+  z.object({ cover: z.literal(true) }),
+  z.object({ area: z.enum(PHOTO_AREAS).nullable().optional(), alt: z.string().trim().max(160).nullish() }),
+]);
+
+/** An uploaded file's id in /api/images/{imageId}. */
+export const imageParams = z.object({ imageId: z.string().regex(/^[a-z0-9]{10,40}$/) });
