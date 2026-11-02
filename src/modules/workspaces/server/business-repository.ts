@@ -66,6 +66,42 @@ export function findPublicBusinessBySlug(db: Db, slug: string) {
   });
 }
 
+/** The settings the dashboard edits, with when the owner accepted full refunds for online payments. */
+const settingsFields = {
+  name: true,
+  description: true,
+  area: true,
+  region: true,
+  address: true,
+  phone: true,
+  whatsapp: true,
+  currency: true,
+  lbpRate: true,
+  commissionRateBps: true,
+  holdHours: true,
+  paymentInstructions: true,
+  checkInTime: true,
+  checkOutTime: true,
+  houseRules: true,
+  bookingUnit: true,
+  bookingMode: true,
+  onlineTermsAcceptedAt: true,
+  listedPublicly: true,
+  tags: true,
+  accessibility: true,
+  minGuestAge: true,
+  latitude: true,
+  longitude: true,
+} satisfies Prisma.BusinessSelect;
+
+export function findBusinessSettings(db: Db, businessId: string) {
+  return db.business.findFirst({ where: { id: businessId, isDeleted: false }, select: settingsFields });
+}
+
+export function updateBusinessSettings(tx: Tx, businessId: string, data: Prisma.BusinessUpdateInput) {
+  return tx.business.update({ where: { id: businessId }, data, select: settingsFields });
+}
+
 /** A place guests can book: live, not deleted, found by its public link. */
 export function findBookableBusinessBySlug(db: Db, slug: string) {
   return db.business.findFirst({

@@ -1070,7 +1070,7 @@ paths:
       tags:
         - Workspaces
       summary: Update business settings
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      description: Signed-in member with settings.manage; choosing the booking mode or accepting the payment policy needs an owner. Only the fields sent change. An online mode needs acceptOnlineTerms once. Non-members get 404.
       security:
         - session: []
       parameters:
@@ -1173,18 +1173,6 @@ paths:
                   description: "Required (true) to switch to AUTOMATIC or ONLINE_APPROVAL: the owner accepts that online payments are always refunded in full."
                 listedPublicly:
                   type: boolean
-                bookingUnit:
-                  type: string
-                  enum:
-                    - ROOMS
-                    - WHOLE_PLACE
-                categories:
-                  maxItems: 6
-                  type: array
-                  items:
-                    type: string
-                    minLength: 1
-                    maxLength: 40
                 tags:
                   maxItems: 12
                   type: array

@@ -1267,8 +1267,17 @@ schema with `.catch`).
 
 Business settings: contact, currency, hold hours, commission rate, the booking mode (automatic, online with
 approval, or offline; an online mode needs the owner to accept the payment policy first), and whether the place is
-listed. Needs `settings.manage`. Code: `settings-service.ts`,
-`settings-form.tsx`.
+listed. Needs `settings.manage`. Code: `settings-service.ts` (in `workspaces`), `settings-form.tsx`.
+
+`GET` and `PATCH /api/workspaces/{businessId}/settings` (`settingsInput`): only the fields sent change, and an emptied
+text box is saved as nothing. How money flows is the owner's alone, so changing `bookingMode`, or sending
+`acceptOnlineTerms`, also needs the owner. An online mode (`AUTOMATIC`, `ONLINE_APPROVAL`) is refused until the
+owner has accepted "online payments are always refunded in full" once (`acceptOnlineTerms: true` saves
+`onlineTermsAcceptedAt`); bookings already made keep their own mode. The region is the host's pick, or the one the
+town they typed is in (`regionOfArea`, `src/config/regions.ts`). Tags and accessibility come from
+`src/config/listing.ts`, currencies from `CURRENCIES` in `enums.ts`. Not here yet: the place's categories (with the
+admin's category list) and switching between booking by room and as a whole (it needs the whole-place unit; it
+comes with the place screen). Tests: `settings.integration.test.ts` (workspaces).
 
 ### T. Team and roles
 
