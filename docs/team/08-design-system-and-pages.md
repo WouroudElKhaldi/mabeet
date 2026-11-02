@@ -229,6 +229,28 @@ Tailwind 4: one step = `0.25rem` = 4 pixels. `p-4` = 16px, `gap-6` = 24px. We us
 - **Phone menu:** a drawer from the start side, `w-[86%] max-w-80`, over a `bg-ink/40` layer.
 - **Back button:** `BackLink` at the top of every page (`mb-4`). It goes to the parent page.
 
+How a page uses the frame (`src/components/shell/app-shell.tsx`): the layout builds the menu, already filtered by the
+member's permissions (`can(ctx, ...)`) and already translated, and passes it in:
+
+```tsx
+const nav: NavGroup[] = [
+  {
+    label: t("today"),
+    items: [{ href: base, label: t("overview"), icon: "overview", end: true, tab: true }],
+  },
+  { label: t("listings"), items: [{ href: `${base}/rooms`, label: t("rooms"), icon: "rooms", tab: true }] },
+];
+return <AppShell nav={nav}>{children}</AppShell>;
+```
+
+- An item has `href`, `label`, `icon` (a name from `nav-icons.ts`: add one there if a page needs another), `end` (on only
+  for exactly this address: the menu's home page) and `tab` (also in the bar at the bottom of a phone; the first four
+  marked, the rest are behind "More"). The page being shown is marked from the address, and the top bar names it.
+- `area="admin"` is the platform admin area, and `adminVisiting` adds the "Platform admin" badge when an admin is in
+  someone else's business. The frame adds `BackLink` above the page, and `pb-24` on phones so nothing hides behind the bar.
+- The top bar has the area and page name, "View site", the theme and language menu, and the member's initial with
+  "Sign out" (in the drawer on phones). The bell and "Ask AI" join it with notifications (F14a) and the assistants.
+
 ### 4.4 Radius, shadows and motion
 
 | Token           | Value                               | Class                  | Use                             |
