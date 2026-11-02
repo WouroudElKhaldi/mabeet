@@ -5,6 +5,7 @@ import { AppearanceMenu } from "@/components/theme/appearance-menu";
 import { SlideLabel, slideParent } from "@/components/ui/slide-label";
 import { getCurrentUser } from "@/server/http/session";
 import { HeaderShell } from "./header-shell";
+import { NavLink } from "./nav-link";
 import { Wordmark } from "./wordmark";
 
 export async function SiteHeader() {
@@ -14,23 +15,14 @@ export async function SiteHeader() {
       <div className="mx-auto flex h-20 max-w-360 items-center gap-3 px-4 sm:px-6 lg:px-10">
         <Wordmark />
         <nav className="ms-10 hidden items-center gap-1 text-[0.9375rem] font-semibold md:flex">
-          <Link href="/search" className="rounded-full px-4 py-2.5 transition-colors hover:bg-surface-2">
-            {t("explore")}
-          </Link>
-          <Link href="/assistant" className="rounded-full px-4 py-2.5 transition-colors hover:bg-surface-2">
-            {t("assistant")}
-          </Link>
-          <Link href="/pricing" className="rounded-full px-4 py-2.5 transition-colors hover:bg-surface-2">
-            {t("pricing")}
-          </Link>
+          <NavLink href="/search">{t("explore")}</NavLink>
+          <NavLink href="/assistant">{t("assistant")}</NavLink>
+          <NavLink href="/pricing">{t("pricing")}</NavLink>
         </nav>
         <div className="ms-auto flex items-center gap-1">
-          <Link
-            href="/host"
-            className="hidden rounded-full px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-2 sm:block"
-          >
+          <NavLink href="/host" className="hidden text-sm font-semibold sm:block">
             {t("host")}
-          </Link>
+          </NavLink>
           <AppearanceMenu />
           {user ? (
             <Link
