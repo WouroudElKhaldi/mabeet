@@ -783,7 +783,7 @@ partners and sponsored listings") are the platform's only income. Code: `billing
 
 - **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members", tx)` inside the transaction that
   adds one: with `tx` it locks the business first, so two additions at the same moment cannot both take the last
-  place. Deleted
+  place. The whole-place unit is the place itself, so it never counts. Deleted
   rooms and experiences and removed members do not count. Inviting and joining a team call it (joining checks
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
@@ -866,6 +866,20 @@ handles it:
   stay has started (its money may already be paid out).
 - All three lock the room, check the status change, keep the occupancy's `active` flag correct (`changeStatus`),
   save who decided and when, log the action and tell the guest.
+
+The dashboard's routes, each a thin call to one of these services (`tenantRoute`, so a non-member gets 404):
+
+| Route                                                                             | Service                                             | Needs                                 |
+| --------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------- |
+| `GET /api/workspaces/{businessId}/bookings` (status, room, dates, `take`, `skip`) | `listBookings`                                      | `bookings.read`                       |
+| `GET .../bookings/{bookingId}`                                                    | `getBooking`                                        | `bookings.read`                       |
+| `POST .../bookings/{bookingId}/{confirm\|decline\|cancel}` (optional `reason`)    | `confirmBooking`, `declineBooking`, `cancelBooking` | `bookings.decide`                     |
+| `GET .../bookings/{bookingId}/payments`                                           | `listBookingPayments`                               | the owner (money is not a permission) |
+| `GET .../calendar` (`from`, `to`, `roomId`; six weeks from today by default)      | `getCalendar`                                       | `calendar.read`                       |
+| `POST .../blocks`, `DELETE .../blocks/{blockId}`                                  | `addBlock`, `removeBlock`                           | `blocks.manage`                       |
+
+A guest's phone and email come back masked to a member without `guests.contact`. Tests:
+`host-routes.integration.test.ts`.
 
 ### B. Bookings: the guest cancels
 
@@ -1071,6 +1085,13 @@ platform admins.
 Code: `src/modules/bookings/server/booking-payments.ts`. Route: `POST /api/public/bookings/{token}/checkout`
 (signed in, rate limited, `method` WHISH or CARD).
 
+The buttons: `PayOnline` (`src/modules/payments/components/pay-online.tsx`, from `@/modules/payments`). The guest's
+booking page renders `<PayOnline token={booking.publicToken} methods={onlinePaymentMethods(booking.currency)} />`
+only while the booking waits for its payment (`AWAITING_PAYMENT`), under "Pay {amount}" and the countdown. One button
+per open way to pay, Whish first; a press calls the route and goes to the payment page (`useRedirectAction`), with the
+pressed button spinning and both disabled, so a double tap never starts two payments. With no way open it says to
+message the host. Texts: `confirmation.pay`. Tests: `tests/unit/pay-online.test.tsx`.
+
 1. `startBookingCheckout` creates a pending payment and returns the Whish or Stripe payment page. If the provider
    refuses, the payment is marked failed and the booking keeps waiting. Whish takes USD and LBP; cards take USD and
    EUR (`onlinePaymentMethods(currency)` says which are open).
@@ -1168,8 +1189,16 @@ tens of thousands of them.
 - **On your computer and in tests (no R2 settings):** the bytes are kept in Postgres (`StoredImage.bytes`) and served
   from `/api/images/{id}`, cached forever.
 - Nothing is deleted: removing a photo marks it `isDeleted`; its file stays in R2.
+- **All or nothing with R2:** R2 is never called inside the transaction. The file goes up first, then its
+  `StoredImage` and `Photo` rows are saved in one transaction; if that fails, the file is removed from R2 again
+  (`deleteObject`), so nothing is left behind.
 
-Code: `photo-service.ts`, `photo-repository.ts`.
+The galleries are the place's own (no room) and each room's; both need `rooms.manage`, and a gallery holds 20 photos.
+Routes: `POST /api/workspaces/{businessId}/photos` (multipart through `parseUpload`: `file`, and optional `roomId`,
+`alt`, `area`; 60 uploads an hour per member), `PATCH .../photos/{photoId}` (`{ cover: true }` puts it first,
+`{ area, alt }` tags it for the photo tour), `DELETE .../photos/{photoId}`, and the public `GET /api/images/{id}`.
+Code: `photo-service.ts`, `photo-repository.ts` (in `rooms`), the R2 client and the resizing in `src/server/storage/`.
+Tests: `photos.integration.test.ts` (rooms), with R2 faked and a failed save that must take the upload back down.
 
 ### P. Places and rooms (public)
 
@@ -1178,6 +1207,18 @@ Code: `photo-service.ts`, `photo-repository.ts`.
 - `searchPlaces`: filters and dates. It uses two availability queries for all results together, never one per place.
 - `getPlace`, `checkAvailability`, `quoteRoom`, `getTakenNights`.
 
+Availability itself lives in `bookings` (it owns the night rows), behind `bookings/server.ts`
+(`availability-service.ts`), and the directory calls it:
+
+- `getTakenNights(businessId, roomId, range, now)`: the ISO nights in `range` (check-out night not included) that a
+  guest cannot book: confirmed stays, live holds, imported platform stays and closed dates. Holds whose time ran out
+  count as free already, as they do for `requestBooking`. At a place with a whole-place unit, a room's nights include
+  the whole place's, and the whole place's include every room's. Dates only, never who or why; no sign-in.
+- `findFreeRooms(roomIds, range, now)`: for search, the rooms free on every night of `range`, with the same rules, in
+  two queries however many rooms (the rooms' kinds through `rooms/server.ts`, then the taken nights). Unknown,
+  closed or deleted rooms are never free. Both refuse an empty or backwards range and more than 366 nights;
+  `findFreeRooms` takes 500 rooms at most. Tests: `availability.integration.test.ts`.
+
 The website search, the guest's AI and the guest MCP all use it, so they always agree.
 
 **What exists today:** `quoteRoom(slug, roomId, { range, guests }, now?)` in `src/modules/directory/server/directory-service.ts`,
@@ -1185,13 +1226,29 @@ behind `GET /api/public/places/{slug}/rooms/{roomId}/quote` (no sign-in, 120 a m
 night's price, the total (always the full amount), and `issue`: why the stay cannot be booked as asked, as a code the
 screen translates (`PAST`, `TOO_FAR`, `TOO_LONG`, `MIN_NIGHTS`, `CAPACITY`; the list is in
 `src/config/booking-limits.ts`). A stay with an issue still gets its price, except one longer than the longest stay,
-which is not priced. The rules are `stayIssue` in `quote-rules.ts`, pure and tested, and ask what the booking engine
-asks when a booking is made; the two limits (60 nights, 540 days ahead) are `MAX_STAY_NIGHTS` and `MAX_DAYS_AHEAD` in
-the same config file. A room the place does not book by (a room of a place that books whole) is "Room not found".
+which is not priced. The rule is the booking engine's own: `stayIssue` in `bookings/server/booking-policy.ts`
+(exported from `bookings/server.ts`), pure and tested in `stay-issue.test.ts`. The engine refuses a booking with the
+same function (`assertBookableStay`, which turns the code into the guest's sentence), so the quote and the booking can
+never disagree. The two limits (60 nights, 540 days ahead) are `MAX_STAY_NIGHTS` and `MAX_DAYS_AHEAD` in the same
+config file, and nothing else keeps a copy. A room the host switched off, or one the place does not book by (a room of a place that books whole), is "Room not found", as booking it would be.
 It reads the place, the room and the price through `workspaces`, `rooms` and their `server.ts` doors, so it needs no
-database code of its own. `getPlace`, `checkAvailability` and `getTakenNights` are still to come: they need a public
-place read from `workspaces`, a public rooms and photos read from `rooms`, and an availability read from `bookings`
-(whole-place units count their sibling rooms, so only `bookings` can answer).
+database code of its own. The availability reads exist in `bookings` (`getTakenNights`, `findFreeRooms`, above).
+
+The public page reads, for `getPlace` (all without sign-in, each through its module's `server.ts`):
+
+- `getPublicPlace(slug)` in `workspaces`: the place's public fields (name, description, area and region, address
+  and map pin, the business's own `phone` and `whatsapp`, currency, answer time, check-in and check-out times, house
+  rules, booking unit and mode, tags, accessibility, minimum guest age). Never its plan, Stripe ids, commission rate
+  or payment instructions (a guest sees those on their own booking). Null when the place is unknown, paused or
+  deleted. An unlisted place keeps its page, because its link is shared on Instagram; only search leaves it out.
+- `listPublicUnits(businessId, kind)` in `rooms`: the live, non-deleted units of one kind (pass
+  `BOOKABLE_ROOM_KIND[place.bookingUnit]`, so a unit that cannot be booked is never shown), with their non-deleted
+  photos in the host's order. Never the room's `exportToken`, its private calendar link.
+- `listPlacePhotos(businessId)` in `rooms`: the place's own photos (not a room's or an experience's), in order, for
+  the gallery and the photo tour.
+
+Tests: `public-place.integration.test.ts` (workspaces) and `public-units.integration.test.ts` (rooms).
+`getPlace` and `checkAvailability` themselves are the directory's, built on these.
 
 ### P. Pricing
 
@@ -1232,8 +1289,27 @@ schema with `.catch`).
 
 Business settings: contact, currency, hold hours, commission rate, the booking mode (automatic, online with
 approval, or offline; an online mode needs the owner to accept the payment policy first), and whether the place is
-listed. Needs `settings.manage`. Code: `settings-service.ts`,
-`settings-form.tsx`.
+listed. Needs `settings.manage`. Code: `settings-service.ts` (in `workspaces`), `settings-form.tsx`.
+
+`GET` and `PATCH /api/workspaces/{businessId}/settings` (`settingsInput`): only the fields sent change, and an emptied
+text box is saved as nothing. How money flows is the owner's alone, so changing `bookingMode`, or sending
+`acceptOnlineTerms`, also needs the owner. An online mode (`AUTOMATIC`, `ONLINE_APPROVAL`) is refused until the
+owner has accepted "online payments are always refunded in full" once (`acceptOnlineTerms: true` saves
+`onlineTermsAcceptedAt`); bookings already made keep their own mode. The region is the host's pick, or the one the
+town they typed is in (`regionOfArea`, `src/config/regions.ts`). Tags and accessibility come from
+`src/config/listing.ts`, currencies from `CURRENCIES` in `enums.ts`. `categories` are slugs of the admin's place
+categories (`listCategories("HOME")` from `admin/server`), checked first and saved as the place's exact set: the
+others are marked deleted and a category picked again is brought back, never added twice. Tests:
+`settings.integration.test.ts` (workspaces).
+
+Booking room by room or as a whole is its own route, `PUT /api/workspaces/{businessId}/booking-unit`
+(`chooseBookingUnit` in `rooms`, for the place screen), because it needs the whole-place unit, and settings calling
+`rooms` would close a circle between modules. It needs `settings.manage` and `rooms.manage`. In one transaction it
+saves the choice (`saveBookingUnit` from `workspaces`) and, for a whole place, makes sure the one whole-place unit
+exists: a new one starts from the live rooms added up (guests, bedrooms, beds, bathrooms, nightly prices) and is then
+adjusted like any room; one taken off or deleted is brought back, never doubled. The rooms stay, and are bookable
+again when the place goes back to rooms; bookings already made keep their own unit. The whole-place unit never uses
+up the plan's rooms. Tests: `booking-unit.integration.test.ts` (rooms).
 
 ### T. Team and roles
 

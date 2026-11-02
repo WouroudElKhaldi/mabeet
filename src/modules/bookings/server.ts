@@ -13,6 +13,7 @@ export {
   requestBooking,
 } from "./server/booking-service";
 export {
+  listBookingPayments,
   onlinePaymentMethods,
   reconcilePendingPayments,
   refreshGuestPayments,
@@ -20,4 +21,6 @@ export {
   settleOnlinePayment,
   startBookingCheckout,
 } from "./server/booking-payments";
+export { findFreeRooms, getTakenNights } from "./server/availability-service";
+export { stayIssue } from "./server/booking-policy";
 export { addBlock, getCalendar, removeBlock } from "./server/closed-dates-service";

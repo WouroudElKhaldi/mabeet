@@ -1,4 +1,4 @@
-import type { BookingMode, BookingStatus, FeedSource, PhotoArea } from "@prisma/client";
+import type { BookingMode, BookingStatus, BookingUnit, FeedSource, PhotoArea } from "@prisma/client";
 
 // Value lists shared by validation, the AI tools and the screens. `satisfies` checks them against the
 // database enums, so adding a status in the schema cannot silently miss a list here.
@@ -38,6 +38,9 @@ export const BOOKING_MODES = [
   "OFFLINE",
 ] as const satisfies readonly BookingMode[];
 
+/** How a place is booked: room by room, or the whole place as one unit. */
+export const BOOKING_UNITS = ["ROOMS", "WHOLE_PLACE"] as const satisfies readonly BookingUnit[];
+
 /** The modes where the guest pays the full amount online, so the owner must accept full refunds first. */
 export const ONLINE_BOOKING_MODES = [
   "AUTOMATIC",
@@ -46,6 +49,9 @@ export const ONLINE_BOOKING_MODES = [
 
 export const isOnlineMode = (mode: BookingMode): boolean =>
   (ONLINE_BOOKING_MODES as readonly BookingMode[]).includes(mode);
+
+/** The currencies a place can price in. Whish takes USD and LBP; cards take USD and EUR. */
+export const CURRENCIES = ["USD", "LBP", "EUR"] as const;
 
 /** How a guest pays online: with Whish, or by card (Stripe Checkout). */
 export const ONLINE_PAYMENT_METHODS = ["WHISH", "CARD"] as const;

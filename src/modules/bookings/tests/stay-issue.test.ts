@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MAX_DAYS_AHEAD, MAX_STAY_NIGHTS } from "@/config/booking-limits";
+import { MAX_DAYS_AHEAD, MAX_STAY_NIGHTS, STAY_ISSUES, type StayIssue } from "@/config/booking-limits";
 import { addDays, type DateRange, parseIsoDate, todayUtc } from "@/utils/dates";
-import { stayIssue } from "../server/quote-rules";
+import { assertBookableStay, stayIssue } from "../server/booking-policy";
 
-// A fixed "now", so no test depends on the day it runs.
+// The one rule for whether a stay can be booked as asked: the booking engine refuses with it, and the public quote
+// shows it. A fixed "now", so no test depends on the day it runs.
 const now = new Date("2026-11-14T10:00:00Z");
 const today = todayUtc(now);
 const room = { capacity: 4, minNights: 2 };
@@ -65,5 +66,45 @@ describe("stayIssue", () => {
   it("names the first problem when there are several", () => {
     expect(check(stayFrom(-3, 1), 9)).toBe("PAST");
     expect(check(stayFrom(5, 1), 9)).toBe("MIN_NIGHTS");
+  });
+
+  it("can give every issue in STAY_ISSUES, so the list the screen translates and the rules never drift apart", () => {
+    const stayFor: Record<StayIssue, () => StayIssue | null> = {
+      PAST: () => check(stayFrom(-1, 3)),
+      TOO_FAR: () => check(stayFrom(MAX_DAYS_AHEAD + 1, 2)),
+      TOO_LONG: () => check(stayFrom(5, MAX_STAY_NIGHTS + 1)),
+      MIN_NIGHTS: () => check(stayFrom(5, 1)),
+      CAPACITY: () => check(stayFrom(5, 3), 5),
+    };
+    expect(Object.keys(stayFor).sort()).toEqual([...STAY_ISSUES].sort());
+    for (const issue of STAY_ISSUES) expect(stayFor[issue]()).toBe(issue);
+  });
+
+  it("checks only the dates when the room is not known yet", () => {
+    expect(stayIssue({ range: stayFrom(5, 1), guests: 9 }, now)).toBeNull();
+    expect(stayIssue({ range: stayFrom(-1, 1), guests: null }, now)).toBe("PAST");
+  });
+});
+
+describe("assertBookableStay", () => {
+  it("refuses with a sentence the guest understands, naming the room's own limit", () => {
+    const refusal = (range: DateRange, guests: number | null = null) => {
+      try {
+        assertBookableStay({ range, guests, room }, now);
+        return null;
+      } catch (error) {
+        return error;
+      }
+    };
+    expect(refusal(stayFrom(10, 3), 2)).toBeNull();
+    expect(refusal(stayFrom(-1, 3))).toMatchObject({
+      code: "VALIDATION",
+      message: "Check-in cannot be in the past",
+    });
+    expect(refusal(stayFrom(5, MAX_STAY_NIGHTS + 1))).toMatchObject({
+      message: `Stays are limited to ${MAX_STAY_NIGHTS} nights`,
+    });
+    expect(refusal(stayFrom(5, 1))).toMatchObject({ message: "This room needs at least 2 nights" });
+    expect(refusal(stayFrom(5, 3), 5)).toMatchObject({ message: "This room sleeps up to 4" });
   });
 });

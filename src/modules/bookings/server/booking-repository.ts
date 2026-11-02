@@ -160,6 +160,48 @@ export function findSiblingOverlap(
   });
 }
 
+// ---------- Public availability ----------
+
+/** Night rows that take nights now: active, not deleted, and not a hold whose time already ran out. */
+const takingNights = (range: DateRange, now: Date) => ({
+  active: true,
+  isDeleted: false,
+  NOT: staleHold(now),
+  ...overlapsRange(range),
+});
+
+/**
+ * The stays that take a unit's nights in `range`: its own, and, at a place that also books whole (`acrossUnits`),
+ * the units it takes turns with (the whole-place unit for a room; every room for the whole-place unit).
+ */
+export function listTakenStays(
+  db: Db,
+  unit: { id: string; businessId: string; kind: "ROOM" | "WHOLE_PLACE" },
+  range: DateRange,
+  now: Date,
+  acrossUnits: boolean,
+) {
+  const siblings =
+    unit.kind === "ROOM" ? { room: { kind: "WHOLE_PLACE" as const } } : { roomId: { not: unit.id } };
+  return db.occupancy.findMany({
+    where: {
+      businessId: unit.businessId,
+      ...takingNights(range, now),
+      OR: acrossUnits ? [{ roomId: unit.id }, siblings] : [{ roomId: unit.id }],
+    },
+    select: { checkIn: true, checkOut: true },
+  });
+}
+
+/** For search: every unit with a taken night in `range` at these places, with its kind, in one query. */
+export function listTakenUnits(db: Db, businessIds: string[], range: DateRange, now: Date) {
+  return db.occupancy.findMany({
+    where: { businessId: { in: businessIds }, ...takingNights(range, now) },
+    select: { roomId: true, businessId: true, room: { select: { kind: true } } },
+    distinct: ["roomId"],
+  });
+}
+
 const staffFields = { room: { select: { id: true, name: true } } } as const;
 
 export function findBooking(db: Db, businessId: string, bookingId: string) {

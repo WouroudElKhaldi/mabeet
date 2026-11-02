@@ -76,6 +76,19 @@ describe("the price of a stay", () => {
     });
   });
 
+  it("does not price a room the host switched off, as booking it is refused too, until it is back on", async () => {
+    const place = await placeWithRoom();
+    const asked = { range: stay(10, 2), guests: null };
+    await prisma.room.update({ where: { id: place.room.id }, data: { active: false } });
+    await expect(quoteRoom(place.business.slug, place.room.id, asked)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await prisma.room.update({ where: { id: place.room.id }, data: { active: true } });
+    await expect(quoteRoom(place.business.slug, place.room.id, asked)).resolves.toMatchObject({
+      totalCents: 18_000,
+    });
+  });
+
   it("does not quote a place that is closed or deleted", async () => {
     const place = await placeWithRoom();
     await prisma.business.update({ where: { id: place.business.id }, data: { isDeleted: true } });
