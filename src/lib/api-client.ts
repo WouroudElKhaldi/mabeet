@@ -2,16 +2,34 @@
 // reaches the screen in one shape. The server answers a failure as { error: { code, message, details } } (see
 // `route` in src/server/http/route.ts).
 
-type Query = Record<string, string | number | boolean | null | undefined>;
+export type Query = Record<string, string | number | boolean | null | undefined>;
 
 // What the server may say about a failure that a guest or a host should not read as it is.
-const UNHELPFUL_CODES = ["INTERNAL", "NETWORK", "UNKNOWN"];
+const UNHELPFUL_CODES = ["INTERNAL", "NETWORK", "TIMEOUT", "ABORTED", "UNKNOWN"];
+
+// How long a call may take before we give up. Without a limit, a connection that goes quiet (a phone moving between
+// towers, a server that hangs) leaves a spinner turning for ever.
+const DEFAULT_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
+
+export interface RequestOptions {
+  /**
+   * Cancels the call when it is aborted: a search typed over, a page left. The call then fails with code `ABORTED`
+   * (see `isAborted`), which is not a problem to show to anyone.
+   */
+  signal?: AbortSignal;
+  /** How long to wait for the whole answer. 30 seconds, or 2 minutes for an upload. */
+  timeoutMs?: number;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** A call that failed: the server refused it, or it never got there (`status` 0, code `NETWORK`). */
+/**
+ * A call that failed. The server refused it, or it never got an answer, with `status` 0 and a code of ours:
+ * `NETWORK` (no connection), `TIMEOUT` (it took too long) or `ABORTED` (we cancelled it).
+ */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -58,6 +76,11 @@ export function formFailure(caught: unknown, fallback: string) {
   return { error: namesFields ? null : errorMessage(caught, fallback), fieldErrors };
 }
 
+/** True when we cancelled the call ourselves. Nothing went wrong, so nothing should be shown. */
+export function isAborted(caught: unknown): boolean {
+  return caught instanceof ApiError && caught.code === "ABORTED";
+}
+
 function readJson(text: string): unknown {
   if (!text) return undefined;
   try {
@@ -84,26 +107,53 @@ async function send<T>(
   url: string,
   body?: BodyInit,
   headers?: Record<string, string>,
+  options: RequestOptions = {},
 ): Promise<T> {
+  const { signal, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  // Cancelled before it started: there is nothing to send.
+  if (signal?.aborted) throw new ApiError(0, "ABORTED", "The request was cancelled");
+
+  // One controller carries both reasons to stop (the caller's signal and the time limit). `AbortSignal.any` would do
+  // it in one line, but iPhones older than iOS 17.4 do not have it.
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const stopWhenCancelled = () => controller.abort();
+  signal?.addEventListener("abort", stopWhenCancelled, { once: true });
+
   let response: Response;
   let text: string;
   try {
-    response = await fetch(url, { method, body, headers: { accept: "application/json", ...headers } });
+    response = await fetch(url, {
+      method,
+      body,
+      headers: { accept: "application/json", ...headers },
+      signal: controller.signal,
+    });
     text = await response.text();
   } catch {
+    if (signal?.aborted) throw new ApiError(0, "ABORTED", "The request was cancelled");
+    if (timedOut) throw new ApiError(0, "TIMEOUT", "The server took too long to answer");
     throw new ApiError(0, "NETWORK", "The server could not be reached");
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", stopWhenCancelled);
   }
   const data = readJson(text);
   if (!response.ok) throw failure(response, data);
   return data as T;
 }
 
-function sendJson<T>(method: string, url: string, body?: unknown): Promise<T> {
-  if (body === undefined) return send<T>(method, url);
-  return send<T>(method, url, JSON.stringify(body), { "content-type": "application/json" });
+function sendJson<T>(method: string, url: string, body?: unknown, options?: RequestOptions): Promise<T> {
+  if (body === undefined) return send<T>(method, url, undefined, undefined, options);
+  return send<T>(method, url, JSON.stringify(body), { "content-type": "application/json" }, options);
 }
 
-function withQuery(url: string, query?: Query): string {
+/** The address with its query: `queryUrl("/api/x", { page: 2, q: undefined })` is `/api/x?page=2`. */
+export function queryUrl(url: string, query?: Query): string {
   const params = new URLSearchParams();
   for (const [name, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null) params.set(name, String(value));
@@ -113,11 +163,14 @@ function withQuery(url: string, query?: Query): string {
 }
 
 export const api = {
-  get: <T>(url: string, query?: Query) => sendJson<T>("GET", withQuery(url, query)),
-  post: <T>(url: string, body?: unknown) => sendJson<T>("POST", url, body),
-  patch: <T>(url: string, body?: unknown) => sendJson<T>("PATCH", url, body),
-  put: <T>(url: string, body?: unknown) => sendJson<T>("PUT", url, body),
-  delete: <T = void>(url: string) => sendJson<T>("DELETE", url),
+  get: <T>(url: string, query?: Query, options?: RequestOptions) =>
+    sendJson<T>("GET", queryUrl(url, query), undefined, options),
+  post: <T>(url: string, body?: unknown, options?: RequestOptions) => sendJson<T>("POST", url, body, options),
+  patch: <T>(url: string, body?: unknown, options?: RequestOptions) =>
+    sendJson<T>("PATCH", url, body, options),
+  put: <T>(url: string, body?: unknown, options?: RequestOptions) => sendJson<T>("PUT", url, body, options),
+  delete: <T = void>(url: string, options?: RequestOptions) => sendJson<T>("DELETE", url, undefined, options),
   /** Photos and other files. The browser sets the content type itself, with the boundary the server needs. */
-  upload: <T>(url: string, form: FormData) => send<T>("POST", url, form),
+  upload: <T>(url: string, form: FormData, options?: RequestOptions) =>
+    send<T>("POST", url, form, undefined, { ...options, timeoutMs: options?.timeoutMs ?? UPLOAD_TIMEOUT_MS }),
 };

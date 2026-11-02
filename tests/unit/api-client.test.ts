@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, api, errorMessage, formFailure } from "@/lib/api-client";
+import { ApiError, api, errorMessage, formFailure, isAborted, queryUrl } from "@/lib/api-client";
 
 // `fetch` is replaced by a pretend server, so each answer the real routes can give (see `route` in
 // src/server/http/route.ts) is checked without a network.
@@ -183,5 +183,168 @@ describe("formFailure", () => {
       fieldErrors: {},
     });
     expect(formFailure(caught, fallback).error).toBe("Type your email exactly to confirm");
+  });
+});
+
+// ---- Cancelling and time limits -------------------------------------------------------------------------------
+
+// A server that never answers, but stops waiting when the browser cancels, as a real `fetch` does.
+function quietServer() {
+  const fetchMock = vi.fn(
+    (_url: string, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+function outcomeOf(call: Promise<unknown>) {
+  const outcome: { state: "pending" | "done" | "failed"; error?: unknown } = { state: "pending" };
+  call.then(
+    () => (outcome.state = "done"),
+    (error: unknown) => {
+      outcome.state = "failed";
+      outcome.error = error;
+    },
+  );
+  return outcome;
+}
+
+describe("cancelling a call", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("fails with ABORTED when the caller cancels, which is not a problem to show", async () => {
+    quietServer();
+    const controller = new AbortController();
+    const call = api.get("/api/x", undefined, { signal: controller.signal }).catch((error: unknown) => error);
+    controller.abort();
+    const caught = await call;
+    expect(caught).toMatchObject({ status: 0, code: "ABORTED" });
+    expect(isAborted(caught)).toBe(true);
+    expect(errorMessage(caught, "fallback")).toBe("fallback");
+  });
+
+  it("does not even send a call that was cancelled before it started", async () => {
+    const fetchMock = quietServer();
+    const controller = new AbortController();
+    controller.abort();
+    const caught = await api
+      .post("/api/x", { a: 1 }, { signal: controller.signal })
+      .catch((error: unknown) => error);
+    expect(isAborted(caught)).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("really stops the request in the browser, and it follows the caller's signal", async () => {
+    const fetchMock = quietServer();
+    const controller = new AbortController();
+    const call = api.get("/api/x", undefined, { signal: controller.signal }).catch(() => undefined);
+    const sent = fetchMock.mock.calls[0]?.[1]?.signal;
+    expect(sent?.aborted).toBe(false);
+    controller.abort();
+    await call;
+    expect(sent?.aborted).toBe(true);
+  });
+
+  it("does nothing when a call that already finished is cancelled afterwards", async () => {
+    serverAnswers(answer({ ok: true }));
+    const controller = new AbortController();
+    await expect(api.get("/api/x", undefined, { signal: controller.signal })).resolves.toEqual({ ok: true });
+    expect(() => controller.abort()).not.toThrow();
+  });
+
+  it("is told apart from a server failure and from a lost connection", async () => {
+    serverAnswers(answer({ error: { code: "CONFLICT", message: "Taken" } }, { status: 409 }));
+    expect(isAborted(await api.get("/api/x").catch((error: unknown) => error))).toBe(false);
+    serverAnswers(new TypeError("Failed to fetch"));
+    expect(isAborted(await api.get("/api/x").catch((error: unknown) => error))).toBe(false);
+    expect(isAborted(new Error("other"))).toBe(false);
+  });
+});
+
+describe("the time limit", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("gives up after 30 seconds, with TIMEOUT, so a spinner never turns for ever", async () => {
+    vi.useFakeTimers();
+    quietServer();
+    const outcome = outcomeOf(api.get("/api/x"));
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(outcome.state).toBe("pending");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(outcome.state).toBe("failed");
+    expect(outcome.error).toMatchObject({ status: 0, code: "TIMEOUT" });
+  });
+
+  it("shows the translated fallback for a timeout, not our English sentence", () => {
+    expect(errorMessage(new ApiError(0, "TIMEOUT", "The server took too long to answer"), "fallback")).toBe(
+      "fallback",
+    );
+    expect(formFailure(new ApiError(0, "TIMEOUT", "x"), "fallback")).toEqual({
+      error: "fallback",
+      fieldErrors: {},
+    });
+  });
+
+  it("takes the caller's limit instead", async () => {
+    vi.useFakeTimers();
+    quietServer();
+    const outcome = outcomeOf(api.get("/api/x", undefined, { timeoutMs: 1_000 }));
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(outcome.error).toMatchObject({ code: "TIMEOUT" });
+  });
+
+  it("lets an upload wait longer, 2 minutes", async () => {
+    vi.useFakeTimers();
+    quietServer();
+    const outcome = outcomeOf(api.upload("/api/photos", new FormData()));
+    await vi.advanceTimersByTimeAsync(119_999);
+    expect(outcome.state).toBe("pending");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(outcome.error).toMatchObject({ code: "TIMEOUT" });
+  });
+
+  it("calls a caller's cancel a cancel, even when the limit is also near", async () => {
+    vi.useFakeTimers();
+    quietServer();
+    const controller = new AbortController();
+    const outcome = outcomeOf(api.get("/api/x", undefined, { signal: controller.signal, timeoutMs: 1_000 }));
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(outcome.error).toMatchObject({ code: "ABORTED" });
+  });
+
+  it.each([
+    ["answers", () => serverAnswers(answer({ ok: true }))],
+    [
+      "refuses",
+      () => serverAnswers(answer({ error: { code: "CONFLICT", message: "Taken" } }, { status: 409 })),
+    ],
+    ["loses the connection", () => serverAnswers(new TypeError("Failed to fetch"))],
+  ])("leaves no timer running when the server %s", async (_name, setUp) => {
+    vi.useFakeTimers();
+    setUp();
+    await api.get("/api/x").catch(() => undefined);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("leaves no timer running when the call is cancelled", async () => {
+    vi.useFakeTimers();
+    quietServer();
+    const controller = new AbortController();
+    const call = api.get("/api/x", undefined, { signal: controller.signal }).catch(() => undefined);
+    controller.abort();
+    await call;
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("queryUrl", () => {
+  it("leaves out empty values and keeps a query the address already has", () => {
+    expect(queryUrl("/api/x", { a: 1, b: undefined, c: null, d: "ü b" })).toBe("/api/x?a=1&d=%C3%BC+b");
+    expect(queryUrl("/api/x?sort=price", { page: 2 })).toBe("/api/x?sort=price&page=2");
+    expect(queryUrl("/api/x")).toBe("/api/x");
   });
 });
