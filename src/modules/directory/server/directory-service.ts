@@ -56,6 +56,7 @@ export async function getPlace(slug: string): Promise<PublicPlace | null> {
     currency: place.currency,
     checkInTime: place.checkInTime,
     checkOutTime: place.checkOutTime,
+    holdHours: place.holdHours,
     houseRules: place.houseRules,
     bookingUnit: place.bookingUnit,
     bookingMode: place.bookingMode,

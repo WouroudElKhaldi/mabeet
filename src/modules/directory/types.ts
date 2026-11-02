@@ -55,6 +55,8 @@ export interface PublicPlace {
   currency: string;
   checkInTime: string;
   checkOutTime: string;
+  /** How many hours the host has to answer a request (the online-with-approval and offline modes). */
+  holdHours: number;
   houseRules: string | null;
   bookingUnit: BookingUnit;
   bookingMode: BookingMode;

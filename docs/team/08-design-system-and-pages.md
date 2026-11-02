@@ -528,6 +528,16 @@ End: a `BoardingPass` summary (place, room, dates, nights) with the `PriceBreakd
 **New:** the button is "Book and pay" (modes 1 and 2) or "Send request" (mode 3). There is no deposit line: the total
 is what is paid.
 
+**Built so far** (`src/app/(site)/p/[slug]/book/`): a signed-out guest is sent to sign in and comes straight back with the
+stay in the address (`?room=&checkIn=&checkOut=&guests=`, from the place page); a missing or unreadable stay sends the
+guest back to the place page to choose. A stay that cannot be booked (an issue code, or a taken night) shows why and a
+"Pick other dates" button instead of the form. `GuestDetailsForm` (name, mobile number, optional email, guests, a note)
+checks the fields before sending, in the guest's language, and tidies the number into the international form the booking
+needs (`normalizePhone`: "71 123 456" becomes +96171123456); the button spins and stays disabled until the page
+leaves, so a double tap never books twice. On success the guest goes to `/b/{token}`. `StaySummary` is the boarding
+pass with the stay and the total. The note under the form follows the mode: pay online at once (and, with approval, the
+host's answer time), or arrange payment with the host.
+
 #### `/p/[slug]/contact` Contact host (F2a)
 
 1. Title and the host's usual response time.
