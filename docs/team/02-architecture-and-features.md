@@ -1226,11 +1226,16 @@ can make or change an owner. Nobody can change their own access. Code: `team-ser
 - Use `api.get`, `api.post`, `api.patch`, `api.put`, `api.delete`, `api.upload` from `src/lib/api-client.ts`. `api.get`
   takes the query as a second argument (`api.get(url, { page: 2 })`; empty values are left out). Never call `fetch`
   directly.
-- If a call fails, it throws `ApiError` with `status`, `code`, `message`, `details`, and `retryAfterSeconds` on a 429. A
-  lost connection is an `ApiError` with status 0 and code `NETWORK`.
+- If a call fails, it throws `ApiError` with `status`, `code`, `message`, `details`, and `retryAfterSeconds` on a 429.
+  Three failures are ours, with status 0: `NETWORK` (no connection), `TIMEOUT` (no answer within the limit) and
+  `ABORTED` (we cancelled it: `isAborted(caught)`; nothing went wrong, so show nothing).
+- Every call has a time limit (30 seconds, 2 minutes for `api.upload`), so a connection that goes quiet ends in an error
+  and not a spinner for ever. Every method takes an optional last argument `{ signal, timeoutMs }`: pass an
+  `AbortSignal` to cancel a read that is no longer wanted. A call that times out may still have reached the server, so
+  a screen must not "retry" a payment or a booking on its own: the server decides what a repeated request does.
 - Show a failure with `errorMessage(caught, fallback)` and `FormError`. It returns the server's own sentence when a
   person can act on it ("Those dates were just taken"), and the translated `fallback` for a crash (`INTERNAL`), a lost
-  connection or an answer that is not ours. Until `localizeError` exists, a server sentence is in English.
+  connection, a timeout or an answer that is not ours. Until `localizeError` exists, a server sentence is in English.
 - For a form, `formFailure(caught, fallback)` also gives `fieldErrors`: the first problem of each wrong field, by field
   name. Show the text you want under each field, in the visitor's language.
 - `api.run` (slow AI answers) is built with the AI features.
@@ -1239,18 +1244,37 @@ can make or change an owner. Nobody can change their own access. Code: `team-ser
 
 - `useAction()` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } = useAction()`. `run(() =>
 api.post(...))` calls the API, then refreshes the page, and resolves to `true` when it worked. `pending` covers both
-  steps. After a failure, either `error` (for `FormError`) or `fieldErrors` is set, never both.
+  steps. After a failure, either `error` (for `FormError`) or `fieldErrors` is set, never both. A second `run` while
+  one is going is ignored (a double click can never save, book or pay twice) and resolves to `false`.
+- `useLiveQuery<T>(url, query, { delayMs, timeoutMs })` (`src/hooks/use-live-query.ts`): reads from the API and keeps
+  the answer in step with what the screen asks as the visitor changes it: the dates, the guests, a search text.
+  `const quote = useLiveQuery<Quote>(ready ? url : null, { checkIn, checkOut })` gives `{ data, error, loading,
+reload }`. Changes in quick succession give one call (300 ms by default); a call that is no longer wanted is
+  cancelled, and so is one that is still running when the page is left; `data` is `null` while the answer to the
+  current question is on its way, so it is never the answer to an older one (a price for other nights); a `url` of `null`
+  means "do not ask yet". Use it for every read that depends on what the visitor picks. For a read that does not
+  change, read on the server.
+- `useDebouncedValue(value, delayMs)`: a value that follows another only once it has stopped changing: show what is
+  typed, search with the debounced value.
 - `useRedirectAction()`: `const { run, pending, error } = useRedirectAction()`, for steps that end on another page
   (Stripe, Whish, an AI app's sign-in). `run(() => api.post(...))` expects `{ url }` and follows it only if it is a page
   of this site or an https address (`isSafeRedirect`).
 - `useStoredChoice(key, allowed, fallback)`: `const [view, setView] = useStoredChoice("calendar-view", ["month", "week"]
 as const, "month")`. Remembers a choice in this browser; a saved value that is no longer allowed is ignored.
-- `useConfirm()`: the "are you sure?" dialog, before anything that cannot be undone.
+- `useConfirm()` (`src/components/ui/confirm-dialog.tsx`): the "are you sure?" step before anything that cannot be
+  undone. `const { confirm, dialog } = useConfirm()`, render `{dialog}`, then `const answer = await confirm({ title,
+body, confirmLabel, tone, reason })`. `answer` is `null` when the person went back (Esc, the dark layer or "Go back"),
+  and `{ reason }` when they went ahead. The texts come from the `confirm` group: `confirm.<action>.title`, `.body`,
+  `.confirm`. `tone` is `danger` by default; the focus starts on "Go back".
 
 ### Loading, empty and error states
 
-- Every dashboard page has a `loading.tsx`, built from `components/shell/skeletons.tsx`, in the shape of the real
-  page.
+- Every dashboard page has a `loading.tsx`, built from `components/shell/skeletons.tsx` (`PageHeaderSkeleton`,
+  `PanelSkeleton`, `CardGridSkeleton`; add one there when a new kind of page part needs it) and `Skeleton`, in the shape
+  of the real page, with `<LoadingStatus />` for screen readers.
+- A dialog is `SheetDialog` (a full-screen sheet on phones, a centred box from 640 px; `compact` for a short question),
+  or `ShowAllDialog` for "Show all photos / reviews / amenities". Put `data-autofocus` on the element that should
+  have the focus first.
 - Every list has an empty state with one clear next step.
 - Every action shows errors with `FormError`.
 
