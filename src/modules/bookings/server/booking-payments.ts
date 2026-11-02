@@ -12,6 +12,7 @@ import {
   supportsWhish,
   whishEnabled,
 } from "@/modules/payments/server";
+import { requireOwner, type TenantContext } from "@/server/auth/tenant-context";
 import { prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { appUrl } from "@/server/email/notices";
 import { conflict, invalid, notFound, unavailable } from "@/server/errors";
@@ -35,6 +36,16 @@ const STALE_PAYMENT_AGE_MS = 2 * 60_000;
 /** Past a day, a pending payment or an unsent refund is left to the admin's money page. */
 const RETRY_WINDOW_MS = 24 * 60 * 60_000;
 const BATCH_SIZE = 25;
+
+/**
+ * A booking's payments, for the owner: money is not a permission, so only an owner sees it (like plans and payouts).
+ * Another place's booking is "not found".
+ */
+export async function listBookingPayments(ctx: TenantContext, bookingId: string) {
+  requireOwner(ctx, "Only an owner can see a booking's payments");
+  if (!(await bookings.findBooking(prisma, ctx.businessId, bookingId))) throw notFound("Booking");
+  return payments.listPaymentsForBooking(prisma, ctx.businessId, bookingId);
+}
 
 /** Which ways this booking's guest can pay online, for their booking page. */
 export function onlinePaymentMethods(currency: string): OnlinePaymentMethod[] {

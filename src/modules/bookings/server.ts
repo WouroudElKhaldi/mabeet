@@ -13,6 +13,7 @@ export {
   requestBooking,
 } from "./server/booking-service";
 export {
+  listBookingPayments,
   onlinePaymentMethods,
   reconcilePendingPayments,
   refreshGuestPayments,
