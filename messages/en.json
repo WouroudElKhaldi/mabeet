@@ -17,7 +17,9 @@
     "dashboard": "Host dashboard",
     "privacy": "Privacy",
     "madeIn": "Made in Beirut",
-    "pricing": "Plans and pricing"
+    "pricing": "Plans and pricing",
+    "aboutUs": "About us",
+    "contact": "Contact us"
   },
   "appearance": {
     "language": "Language",
@@ -2145,5 +2147,147 @@
     },
     "cannotLabel": "It can't:",
     "browse": "Browse places on Mabeet"
+  },
+  "about": {
+    "title": "About Mabeet",
+    "eyebrow": "Made in Beirut",
+    "headline": "Lebanon's guesthouses, <em>booked direct.</em>",
+    "intro": "Mabeet is where you book a guesthouse, B&B or mountain cabin straight from the people who run it. No platform in the middle taking a cut, and never two guests on one night.",
+    "explore": "Explore stays",
+    "host": "Become a host",
+    "glance": {
+      "title": "Our promises",
+      "commission": "No commission on any booking",
+      "refunds": "Online bookings refunded in full",
+      "double": "Never two guests on one night",
+      "direct": "Booked straight from the host",
+      "footer": "Made in Beirut"
+    },
+    "problem": {
+      "title": "What a platform takes from a host",
+      "intro": "Most Lebanese guesthouses also sell on Airbnb or Booking.com, and every night sold there costs the host a cut.",
+      "commission": "of every platform booking can go to commission",
+      "night": "a night can go to commission, on a room at $80",
+      "month": "a month, for 20 nights sold through a platform",
+      "note": "Estimates from public prices, at the top of the usual 15 to 18% commission."
+    },
+    "how": {
+      "title": "How booking direct works",
+      "intro": "From the host's dashboard to a confirmed night, in four steps.",
+      "add": {
+        "title": "The host adds their place",
+        "body": "Rooms, prices per night and photos. The place gets its own booking link for Instagram and WhatsApp."
+      },
+      "pick": {
+        "title": "The guest picks dates",
+        "body": "Nights already booked on Airbnb or Booking.com show as taken, because the calendars stay in sync."
+      },
+      "pay": {
+        "title": "Booked and paid in full",
+        "body": "The guest pays online with Whish or a card, or arranges payment with the host, as the place chooses."
+      },
+      "confirm": {
+        "title": "Confirmed everywhere",
+        "body": "The host confirms from their phone, and the night closes on Airbnb and Booking.com too."
+      }
+    },
+    "modes": {
+      "title": "Three ways to take bookings",
+      "intro": "Each place chooses how it works with its guests.",
+      "automatic": {
+        "title": "Automatic",
+        "body": "The guest pays online in full, and the booking is confirmed the moment the payment is."
+      },
+      "approval": {
+        "title": "Online, with approval",
+        "body": "The guest pays online in full and the host confirms or declines. No answer in time means a full refund."
+      },
+      "offline": {
+        "title": "Arranged with the host",
+        "body": "No payment through Mabeet: the guest and the host arrange it, and the host confirms by hand."
+      }
+    },
+    "promises": {
+      "title": "What we stand by",
+      "double": {
+        "title": "Never double-booked",
+        "body": "The database itself refuses two stays on one room night. Not a promise: a rule."
+      },
+      "refunds": {
+        "title": "Refunds in full",
+        "body": "A booking paid online is refunded in full if it is cancelled, declined or not answered in time."
+      },
+      "commission": {
+        "title": "No commission",
+        "body": "Hosts pay a monthly plan, starting free. The money from every booking is theirs."
+      },
+      "data": {
+        "title": "Your details stay yours",
+        "body": "We keep only what a booking needs, and you can download or delete it any time."
+      },
+      "seePlans": "See the plans",
+      "readPrivacy": "Read our privacy page"
+    },
+    "band": {
+      "title": "Lebanon is better <em>booked direct.</em>",
+      "intro": "Find your next stay, or bring your place to Mabeet."
+    },
+    "chapters": {
+      "problem": "The problem",
+      "how": "How it works",
+      "modes": "Your way",
+      "promises": "Our promises",
+      "arrive": "Your turn"
+    }
+  },
+  "contact": {
+    "title": "Contact us",
+    "eyebrow": "Talk to us",
+    "headline": "Questions? <em>We're here.</em>",
+    "intro": "Planning a stay or listing your place, the Mabeet team is happy to help.",
+    "cardTitle": "Reach the Mabeet team",
+    "cardIntro": "Send us a message and we'll answer by email.",
+    "whatsapp": "Chat on WhatsApp",
+    "unavailable": "Our team inbox is not open yet. For a booking, write to the host from your booking page.",
+    "topics": {
+      "booking": {
+        "title": "About a booking?",
+        "body": "The host knows your stay best. Write to them from your booking page, on WhatsApp or by phone."
+      },
+      "hosting": {
+        "title": "Want to list your place?",
+        "body": "Create your workspace in a few minutes and start on the free plan.",
+        "link": "Become a host"
+      },
+      "privacy": {
+        "title": "About your data?",
+        "body": "See what we keep, who sees it, and how to download or delete it.",
+        "link": "Read our privacy page"
+      }
+    },
+    "orWhatsapp": "Prefer WhatsApp?",
+    "form": {
+      "name": "Your name",
+      "email": "Your email",
+      "topic": "What is it about?",
+      "topics": {
+        "booking": "A booking",
+        "hosting": "Listing a place",
+        "privacy": "Privacy",
+        "other": "Something else"
+      },
+      "message": "Your message",
+      "messageHint": "Up to 2,000 characters.",
+      "send": "Send message",
+      "sending": "Sending…",
+      "sentTitle": "Message sent",
+      "sentBody": "Thank you, {name}. We'll reply to {email}.",
+      "another": "Write another message",
+      "errors": {
+        "name": "Please enter your name.",
+        "email": "Please enter a valid email address.",
+        "message": "Please write at least a few words."
+      }
+    }
   }
 }

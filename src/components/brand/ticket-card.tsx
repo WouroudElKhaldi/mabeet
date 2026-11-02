@@ -22,7 +22,8 @@ export function TicketCard({
   header?: ReactNode;
   stub?: ReactNode;
   sticky?: boolean;
-  children: ReactNode;
+  /** Under the tear line: the form or the actions. Without it, the ticket ends after the stub. */
+  children?: ReactNode;
 }) {
   const titleId = useId();
   return (
@@ -44,7 +45,9 @@ export function TicketCard({
         {header ? <div className="mt-4">{header}</div> : null}
         {stub ? <div className="mt-5">{stub}</div> : null}
       </div>
-      <div className="ticket-tear px-6 pt-6 pb-7 [--ticket-bite:var(--paper)] sm:px-8">{children}</div>
+      {children ? (
+        <div className="ticket-tear px-6 pt-6 pb-7 [--ticket-bite:var(--paper)] sm:px-8">{children}</div>
+      ) : null}
     </section>
   );
 }

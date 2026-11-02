@@ -72,9 +72,9 @@ export default async function UseWithAiPage() {
         </TicketCard>
       </div>
       <Section title={t("limitsTitle")} intro={t("limitsIntro")} className="mt-16 border-t border-line pt-12">
-        <div className="flex flex-wrap items-end justify-between gap-8">
-          <div className="flex items-start gap-4">
-            <ShieldCheck className="mt-0.5 size-6 shrink-0 text-accent" aria-hidden strokeWidth={1.6} />
+        <div className="flex items-start gap-4">
+          <ShieldCheck className="mt-0.5 size-6 shrink-0 text-accent" aria-hidden strokeWidth={1.6} />
+          <div className="min-w-0">
             <CheckList
               missingLabel={t("cannotLabel")}
               items={[
@@ -85,10 +85,10 @@ export default async function UseWithAiPage() {
                 { text: t("cannot.account"), included: false },
               ]}
             />
+            <ButtonLink href="/search" className={`mt-8 ${slideParent}`}>
+              <SlideLabel icon={Search}>{t("browse")}</SlideLabel>
+            </ButtonLink>
           </div>
-          <ButtonLink href="/search" className={slideParent}>
-            <SlideLabel icon={Search}>{t("browse")}</SlideLabel>
-          </ButtonLink>
         </div>
       </Section>
     </div>
