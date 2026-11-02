@@ -12,7 +12,8 @@ interface ButtonStyle {
 
 const base =
   "inline-flex items-center justify-center font-semibold transition duration-150 ease-(--ease-out) " +
-  "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40";
+  "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 " +
+  "aria-disabled:pointer-events-none aria-disabled:opacity-40";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: "bg-accent text-accent-ink hover:bg-accent-strong",
