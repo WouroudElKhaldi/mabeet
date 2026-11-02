@@ -6053,3 +6053,76 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
+  /api/public/contact:
+    post:
+      tags:
+        - Guests
+      summary: "Send a message to the Mabeet team from the Contact page (rate limited: 5 an hour per address)"
+      description: No sign-in. The message is emailed to the team inbox (CONTACT_EMAIL) with the sender as the reply address; nothing is stored. 503 while no team inbox is set.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $schema: https://json-schema.org/draft/2020-12/schema
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 80
+                email:
+                  type: string
+                  format: email
+                  maxLength: 254
+                topic:
+                  type: string
+                  enum:
+                    - booking
+                    - hosting
+                    - privacy
+                    - other
+                message:
+                  type: string
+                  minLength: 10
+                  maxLength: 2000
+              required:
+                - name
+                - email
+                - topic
+                - message
+      responses:
+        "202":
+          description: "Accepted: the email is on its way"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent:
+                    type: boolean
+                required:
+                  - sent
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "429":
+          description: Rate limited
+        "503":
+          description: No team inbox is set
