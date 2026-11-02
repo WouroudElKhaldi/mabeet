@@ -1071,6 +1071,13 @@ platform admins.
 Code: `src/modules/bookings/server/booking-payments.ts`. Route: `POST /api/public/bookings/{token}/checkout`
 (signed in, rate limited, `method` WHISH or CARD).
 
+The buttons: `PayOnline` (`src/modules/payments/components/pay-online.tsx`, from `@/modules/payments`). The guest's
+booking page renders `<PayOnline token={booking.publicToken} methods={onlinePaymentMethods(booking.currency)} />`
+only while the booking waits for its payment (`AWAITING_PAYMENT`), under "Pay {amount}" and the countdown. One button
+per open way to pay, Whish first; a press calls the route and goes to the payment page (`useRedirectAction`), with the
+pressed button spinning and both disabled, so a double tap never starts two payments. With no way open it says to
+message the host. Texts: `confirmation.pay`. Tests: `tests/unit/pay-online.test.tsx`.
+
 1. `startBookingCheckout` creates a pending payment and returns the Whish or Stripe payment page. If the provider
    refuses, the payment is marked failed and the booking keeps waiting. Whish takes USD and LBP; cards take USD and
    EUR (`onlinePaymentMethods(currency)` says which are open).
