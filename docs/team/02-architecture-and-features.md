@@ -1204,8 +1204,22 @@ never disagree. The two limits (60 nights, 540 days ahead) are `MAX_STAY_NIGHTS`
 config file, and nothing else keeps a copy. A room the place does not book by (a room of a place that books whole) is "Room not found".
 It reads the place, the room and the price through `workspaces`, `rooms` and their `server.ts` doors, so it needs no
 database code of its own. The availability reads exist in `bookings` (`getTakenNights`, `findFreeRooms`, above).
-`getPlace` and `checkAvailability` are still to come: they need a public place read from `workspaces` and a public
-rooms and photos read from `rooms`.
+
+The public page reads, for `getPlace` (all without sign-in, each through its module's `server.ts`):
+
+- `getPublicPlace(slug)` in `workspaces`: the place's public fields (name, description, area and region, address
+  and map pin, the business's own `phone` and `whatsapp`, currency, answer time, check-in and check-out times, house
+  rules, booking unit and mode, tags, accessibility, minimum guest age). Never its plan, Stripe ids, commission rate
+  or payment instructions (a guest sees those on their own booking). Null when the place is unknown, paused or
+  deleted. An unlisted place keeps its page, because its link is shared on Instagram; only search leaves it out.
+- `listPublicUnits(businessId, kind)` in `rooms`: the live, non-deleted units of one kind (pass
+  `BOOKABLE_ROOM_KIND[place.bookingUnit]`, so a unit that cannot be booked is never shown), with their non-deleted
+  photos in the host's order. Never the room's `exportToken`, its private calendar link.
+- `listPlacePhotos(businessId)` in `rooms`: the place's own photos (not a room's or an experience's), in order, for
+  the gallery and the photo tour.
+
+Tests: `public-place.integration.test.ts` (workspaces) and `public-units.integration.test.ts` (rooms).
+`getPlace` and `checkAvailability` themselves are the directory's, built on these.
 
 ### P. Pricing
 

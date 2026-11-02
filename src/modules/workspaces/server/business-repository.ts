@@ -31,6 +31,41 @@ export async function createBusinessWithOwner(tx: Tx, input: NewBusinessWithOwne
   return business;
 }
 
+/**
+ * A live place's public page, by its link. Only what any visitor may see: never its plan, payment accounts,
+ * commission rate or payment instructions (those go to a guest on their own booking). The phone and WhatsApp are
+ * the business's own, the only numbers guests are given.
+ */
+export function findPublicBusinessBySlug(db: Db, slug: string) {
+  return db.business.findFirst({
+    where: { slug, status: "ACTIVE", isDeleted: false },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      area: true,
+      region: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      phone: true,
+      whatsapp: true,
+      timezone: true,
+      currency: true,
+      holdHours: true,
+      checkInTime: true,
+      checkOutTime: true,
+      houseRules: true,
+      bookingUnit: true,
+      bookingMode: true,
+      tags: true,
+      accessibility: true,
+      minGuestAge: true,
+    },
+  });
+}
+
 /** A place guests can book: live, not deleted, found by its public link. */
 export function findBookableBusinessBySlug(db: Db, slug: string) {
   return db.business.findFirst({
