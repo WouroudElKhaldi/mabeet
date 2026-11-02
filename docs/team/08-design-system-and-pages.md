@@ -335,7 +335,13 @@ All buttons: `font-semibold`, shrink a little when pressed (`active:scale-[0.98]
 | `choiceChipClass`      | A pill around a hidden checkbox or radio; it fills with `accent-soft` when checked.                                                                             |
 
 Other controls in `src/components/ui/`: `DateRangePicker`, `GuestCounter`, `CopyField` (a value with a copy
-button), `Rating` (stars).
+button), `Rating` (stars), `ChoiceChips` (one choice among a few, as `choiceChipClass` radios with a legend),
+`ChoiceLinks` (the same chips, but each choice is its own address, such as `?plan=PRO`), `StepTrail` (the numbered
+steps of a short process, the current one filled), `CheckList` (what is included, ticked, and what is not, dimmed),
+`Pill` (a small label beside a title: `accent` or `quiet`), `ArrowLink` (an underlined link with an arrow that
+follows the reading way) and `StepList` (how to do something, as numbered steps under a small title). In
+`src/components/brand/`: `TicketCard` (a public page's one form dressed as a ticket,
+like `BoardingPass`: the title in the accent band with `LogoMark`, a stub, the tear line, then the form).
 
 ### 6.3 Messages and states
 
@@ -350,17 +356,24 @@ button), `Rating` (stars).
 
 ### 6.4 Page structure
 
-| Component                               | File                      | Use                                                                                                                              |
-| --------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `AppShell`                              | `shell/app-shell.tsx`     | The dashboard and admin frame (Part 4.3)                                                                                         |
-| `PageHeader`                            | `shell/page-header.tsx`   | The title block of every dashboard and admin page: a small `glow` bar, the title, an intro, and actions on the end side. `mb-8`. |
-| `Panel`                                 | `shell/page-header.tsx`   | A titled card on a dashboard page (`panelClass` + `text-xl` title + optional intro and action)                                   |
-| `BackLink`                              | `shell/back-link.tsx`     | The Back button                                                                                                                  |
-| `Pagination`                            | `shell/pagination.tsx`    | Page numbers for long lists                                                                                                      |
-| `NotificationBell`, `NotificationList`  | `shell/`                  | The bell (latest 5) and the full list                                                                                            |
-| `StatTile`                              | `dashboard/stat-tile.tsx` | One number with its label (percent, count or money)                                                                              |
-| `BarChart`, analytics charts            | `dashboard/`              | Charts, coloured with tokens and `channel-colors.ts`                                                                             |
-| `SiteHeader`, `SiteFooter`, `SearchBar` | `site/`                   | The public site's header, footer and search                                                                                      |
+| Component                               | File                      | Use                                                                                                                                |
+| --------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `AppShell`                              | `shell/app-shell.tsx`     | The dashboard and admin frame (Part 4.3)                                                                                           |
+| `PageHeader`                            | `shell/page-header.tsx`   | The title block of every dashboard and admin page: a small `glow` bar, the title, an intro, and actions on the end side. `mb-8`.   |
+| `Panel`                                 | `shell/page-header.tsx`   | A titled card on a dashboard page (`panelClass` + `text-xl` title + optional intro and action)                                     |
+| `BackLink`                              | `shell/back-link.tsx`     | The Back button                                                                                                                    |
+| `Pagination`                            | `shell/pagination.tsx`    | Page numbers for long lists                                                                                                        |
+| `NotificationBell`, `NotificationList`  | `shell/`                  | The bell (latest 5) and the full list                                                                                              |
+| `StatTile`                              | `dashboard/stat-tile.tsx` | One number with its label (percent, count or money)                                                                                |
+| `BarChart`, analytics charts            | `dashboard/`              | Charts, coloured with tokens and `channel-colors.ts`                                                                               |
+| `SiteHeader`, `SiteFooter`, `SearchBar` | `site/`                   | The public site's header, footer and search                                                                                        |
+| `NavLink`, `LogoMark`                   | `site/`                   | A header link with the glow bar on hover and on the current page; the logo's arch alone, in the text colour                        |
+| `Section`, `ExamplePrompt`              | `site/`                   | A titled part of a public page; something to try typing into an AI app, shown as a chat message                                    |
+| `TopicCard`, `OnThisPage`               | `site/`                   | A numbered topic card that leans in 3D (glow bar, filled tile on hover); links to a long page's sections                           |
+| `TiltCard`, `ReceiptCard`               | `brand/`                  | Any card leaning toward the mouse in 3D (`--px`/`--py` for `Sheen`); promises on a till receipt in a `BrandScene`, with a postmark |
+| `PageIntro`, `PageNote`                 | `site/page-intro.tsx`     | A public page's centred poster title and line; the small print at its end                                                          |
+| `HeroHeading`, `IconPoints`             | `site/`                   | The big title and intro of a page that sells something; reasons with an accent icon, two to a row                                  |
+| `PlanCards`, `PlanPicker`               | `billing/`                | The three plans side by side; the plan to start on, picked in place as `ChoiceLinks`, with its price and limits                    |
 
 ### 6.5 AI components: `src/components/assistant/`
 
@@ -399,7 +412,7 @@ Changes for the new project (from `06-functional-requirements.md`) are marked **
    experiences and services (`ListingTabs`), and the results grid (`ResultsGrid` of `PlaceCard`s).
 3. **Direct receipts** (`DirectReceipts`): what a guest pays on Airbnb or Booking.com compared with booking direct.
 4. **Use it from your AI app** band (F6): one line on asking Claude or ChatGPT for free places, and a `ButtonLink`
-   to `/use-with-ai`. When the travel assistant is built (F6, last bonus), this band invites to it as well (`ConciergeBand`).
+   to `/assistant` (the MCP page; there is no chat on the website).
 
 #### `/search` Search (F1)
 
@@ -478,38 +491,54 @@ Like the place page: title row, gallery, summary, what is included, `ThingsToKno
 "Cancellation" is the same refund rule as the place page (an experience has no "cancel up to N hours" setting).
 The card shows the total, which is what is paid: no deposit line.
 
-#### `/use-with-ai` Use Mabeet from your AI app (F6)
+#### `/assistant` Use Mabeet from your AI app (F6)
 
-A reading page like `/privacy` (`mx-auto max-w-5xl px-4 pt-6 sm:px-6`), linked from `SiteFooter` and the home page band:
+**New (decided 2026-11-02):** "Trip Assistant" in the header opens this page. There is no chat on the website: the
+assistant is the guest's own AI app, connected through the guest MCP. Texts in the `useWithAi` group. Two columns
+from `lg`, like `/host`:
 
-1. **Title** (`font-poster`) and one line: "Ask Claude, ChatGPT or any AI app for a place that is free on your
-   dates."
-2. **What MCP is:** a short paragraph. MCP is a standard way for an AI app to use another service's tools; ours lets
-   your AI app search Mabeet's places, check dates and prices.
-3. **Why use it:** three short points: plan the trip in the app you already talk to; real availability and prices,
-   not guesses; the answer links straight to the place's booking page.
-4. **The address:** the guest MCP address (`/api/mcp/guest` on our domain) in a `CopyField`.
-5. **How to connect:** numbered steps for Claude and for ChatGPT (add a custom connector, paste the address), then an
-   example question to try.
-6. **What it can and cannot do:** it only reads public places, dates and prices. It never books and never sees your
-   account: you book and pay on Mabeet. A `ButtonLink` to `/search`.
+1. **Start side:** `HeroHeading` ("Ask your AI app. Get places that are really free." and one line), then a
+   `Section` "What is MCP?" (MCP is a standard way for an AI app to use another service's tools; ours lets your AI
+   app search Mabeet's places, check dates and prices), then `IconPoints`: plan the trip in the app you already
+   use; real dates and prices, not guesses; the answer links straight to the place's booking page.
+2. **End side:** a sticky `TicketCard` "Connect in a minute": no sign-in and no key; as the stub, the guest MCP
+   address (`/api/mcp/guest` on our domain, from `BETTER_AUTH_URL`) in a `CopyField`; under the tear line a
+   `StepList` for Claude and one for ChatGPT (add a custom connector, paste the address), then an `ExamplePrompt`.
+3. **Full width:** a `Section` "What it can and cannot do": a `CheckList` (it searches places, checks dates and
+   prices, links to the booking page; it never books or pays, and never sees your account) and a `ButtonLink` to
+   `/search`.
 
-No sign-in, no chat on this page. Every text in the three message files.
-
-#### `/assistant` Travel assistant (F6, last bonus)
-
-The `Concierge` chat with idea tickets to start, place cards under answers, and a link to `/use-with-ai`.
+No sign-in on this page. Every text in the three message files.
 
 #### `/pricing` Plans (F15, bonus)
 
-`PlanCards`: Free, Pro, Business with their limits and the button for each.
+1. `PageIntro`: the title and one line.
+2. `PlanCards`: Free, Pro, Business with their limits (`CheckList`), the price, a `Pill` on Pro ("Most popular",
+   or "Your plan" where `current` is passed) and the button for each. Free goes to `/host`; Pro and Business go to
+   `/host?plan=PRO` or `?plan=BUSINESS`.
+3. `PageNote`: no commission on any plan.
 
 #### `/privacy`, `/offline`, not found and error pages (the privacy page: F17)
 
-Plain reading pages. The privacy page also holds the payment policy (online refunds are always full; offline
-payments are between the host and the guest). `/offline` shows `HeroLandscape` and "You're offline". Not found
-(`src/app/not-found.tsx`) is the reference's: `HeroLandscape` filling the screen, a big "404" in the accent, the
-title, one line and "Back home", with the wordmark in the corner. The error page (`error.tsx`) uses `MessagePage`.
+`/privacy` "Privacy and payments": two columns from `lg` for the opening, `HeroHeading` ("Your details stay yours.")
+and a `ReceiptCard` "At a glance" (four promises on a till receipt in a `BrandScene`, with a postmark). Under it,
+`OnThisPage` (sticky from `lg`, chips on phones) beside two `Section`s of numbered `TopicCard`s; the refunds card is
+highlighted. "Your information": what we keep, who sees it (contact details masked for staff without
+`guests.contact`), the calendar links to Airbnb and Booking.com, AI apps, the browser (two cookies: session and
+language; no tracking) and downloading or deleting your data. "Paying and refunds" is the payment policy: paying
+online through Whish or Stripe, online refunds always full (none once the stay has started), and offline payments
+being between the host and the guest.
+
+Not found, the error page and `/offline` are one design, `MessagePage` (`shell/message-page.tsx`): `HeroLandscape`
+filling the screen, the wordmark in the corner, a big mark in the accent, the title, one line and the actions.
+
+- Not found (`src/app/not-found.tsx`): the mark is "404"; "Back home".
+- Error (`error.tsx`): a floating storm cloud; "Try again" and "Back home"; under them the error's reference (its
+  digest), to quote when writing to us.
+- `/offline`: a floating Wi-Fi-off icon; "Try again" is a plain link that reloads the address. The service worker
+  (`public/sw.js`, registered by `ServiceWorker` in the root layout, also in development) saves this page with its
+  stylesheets, fonts and logo shapes, so it looks the same with no connection. It answers only when the network
+  fails; pages are never cached.
 
 ### 8.2 Sign in and accounts (F17)
 
@@ -527,7 +556,13 @@ All use `AuthPage` (a narrow centred card, `max-w-md`) with `AuthForm`:
   expired or was used comes back with `?error=` and goes on to `/sign-in`, which says so (`auth.linkExpired`).
 - When Better Auth's rate limit answers (a few tries a minute from one address), every sign-in form says to wait
   (`auth.tooManyAttempts`), never "wrong password", and the forgot-password form does not claim a link was sent.
-- `/host`: "Create your workspace" (`CreateWorkspaceForm`: the place's name and area).
+- `/host` Become a host (inside the site frame, not `AuthPage`): two columns from `lg`. Start side: `HeroHeading`
+  (title and intro) and `IconPoints` (four reasons). End side: a sticky `TicketCard` "Create your workspace": the
+  intro, a `StepTrail` (Your place, Pay, Add rooms; no Pay on Free), and as the stub a `PlanPicker` (Free, Pro,
+  Business as chips; the plan from `/pricing` is chosen, and changing it stays on this page as `?plan=`). Under the
+  tear line, `CreateWorkspaceForm` (the place's name and area; with a paid plan, `ChoiceChips` for card or Whish
+  when both are on, and "Create and pay"). Signed out, it shows "Create an account to start" and "I already have an
+  account", which carry the plan back here.
 - `/oauth/consent` and `/oauth/workspace` (F14): "Allow {app} to connect?" and "Which workspace?" when Claude or
   ChatGPT connects.
 

@@ -657,7 +657,7 @@ an AI is cut.
 The place cards under a reply are built from the tool results, not from the model's words. So the model cannot
 invent a place.
 
-The page `/use-with-ai` (built with the guest MCP) tells guests what MCP is, why and how to connect Claude or ChatGPT, and shows the guest
+The page `/assistant` (built with the guest MCP; there is no chat on the website) tells guests what MCP is, why and how to connect Claude or ChatGPT, and shows the guest
 MCP address in a `CopyField`. It has no chat. `SiteFooter` and the home page link to it.
 
 ### A. AI: the format of every answer
@@ -788,6 +788,13 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
 - **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
+- **Choosing a plan before there is a business:** `/pricing` sends a paid plan to `/host?plan=PRO` (checked with
+  `paidPlan`), where it can be changed in place (each plan is its own address). A signed-out visitor keeps it
+  through sign-up or sign-in (`?next=`). `CreateWorkspaceForm` creates
+  the workspace (`POST /api/workspaces`, always on Free), then calls the same checkout route by card or Whish for
+  the new business, offering only the ways `planPaymentMethods()` says are on. The plan starts when the payment is
+  confirmed, as above. If paying fails, trying again only pays (the workspace is not created twice), and "Start on
+  Free for now" goes to the dashboard. With no way to pay switched on, the workspace simply starts on Free.
 - **Card (Stripe):** `POST .../billing/checkout` returns Stripe Checkout; the plan only changes when the signed
   webhook (`POST /api/webhooks/stripe`) says so. Each event is recorded in `WebhookEvent` in the same transaction
   that applies it, so a replay changes nothing and a failure leaves nothing (Stripe retries). Paid invoices are
