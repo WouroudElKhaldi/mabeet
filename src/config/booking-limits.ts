@@ -10,7 +10,7 @@ export const MAX_STAY_NIGHTS = 60;
 export const MAX_DAYS_AHEAD = 540;
 
 /** Why a stay cannot be booked as asked. The screen turns each into a sentence in the guest's language. */
-const STAY_ISSUES = ["PAST", "TOO_FAR", "TOO_LONG", "MIN_NIGHTS", "CAPACITY"] as const;
+export const STAY_ISSUES = ["PAST", "TOO_FAR", "TOO_LONG", "MIN_NIGHTS", "CAPACITY"] as const;
 export type StayIssue = (typeof STAY_ISSUES)[number];
 
 /** The kind of room a place books by: its rooms one by one, or the whole place as one unit. */

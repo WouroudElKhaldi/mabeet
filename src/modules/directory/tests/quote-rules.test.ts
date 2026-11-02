@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_DAYS_AHEAD, MAX_STAY_NIGHTS } from "@/config/booking-limits";
+import { MAX_DAYS_AHEAD, MAX_STAY_NIGHTS, STAY_ISSUES, type StayIssue } from "@/config/booking-limits";
 import { addDays, type DateRange, parseIsoDate, todayUtc } from "@/utils/dates";
 import { stayIssue } from "../server/quote-rules";
 
@@ -65,5 +65,17 @@ describe("stayIssue", () => {
   it("names the first problem when there are several", () => {
     expect(check(stayFrom(-3, 1), 9)).toBe("PAST");
     expect(check(stayFrom(5, 1), 9)).toBe("MIN_NIGHTS");
+  });
+
+  it("can give every issue in STAY_ISSUES, so the list the screen translates and the rules never drift apart", () => {
+    const stayFor: Record<StayIssue, () => StayIssue | null> = {
+      PAST: () => check(stayFrom(-1, 3)),
+      TOO_FAR: () => check(stayFrom(MAX_DAYS_AHEAD + 1, 2)),
+      TOO_LONG: () => check(stayFrom(5, MAX_STAY_NIGHTS + 1)),
+      MIN_NIGHTS: () => check(stayFrom(5, 1)),
+      CAPACITY: () => check(stayFrom(5, 3), 5),
+    };
+    expect(Object.keys(stayFor).sort()).toEqual([...STAY_ISSUES].sort());
+    for (const issue of STAY_ISSUES) expect(stayFor[issue]()).toBe(issue);
   });
 });
