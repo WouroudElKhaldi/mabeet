@@ -86,6 +86,14 @@ export function findRoomForBooking(db: Db, businessId: string, roomId: string) {
   });
 }
 
+/** For search: the place and kind of each live room in `roomIds`, in one query. Unknown or closed rooms are left out. */
+export function findRoomUnits(db: Db, roomIds: string[]) {
+  return db.room.findMany({
+    where: { id: { in: roomIds }, active: true, isDeleted: false },
+    select: { id: true, businessId: true, kind: true },
+  });
+}
+
 /** Whether the place can also be booked whole, so its bookings must be checked across all its units. */
 export async function hasWholePlaceUnit(db: Db, businessId: string): Promise<boolean> {
   return (await db.room.count({ where: { businessId, kind: "WHOLE_PLACE", isDeleted: false } })) > 0;

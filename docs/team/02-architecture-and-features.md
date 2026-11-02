@@ -1178,6 +1178,18 @@ Code: `photo-service.ts`, `photo-repository.ts`.
 - `searchPlaces`: filters and dates. It uses two availability queries for all results together, never one per place.
 - `getPlace`, `checkAvailability`, `quoteRoom`, `getTakenNights`.
 
+Availability itself lives in `bookings` (it owns the night rows), behind `bookings/server.ts`
+(`availability-service.ts`), and the directory calls it:
+
+- `getTakenNights(businessId, roomId, range, now)`: the ISO nights in `range` (check-out night not included) that a
+  guest cannot book: confirmed stays, live holds, imported platform stays and closed dates. Holds whose time ran out
+  count as free already, as they do for `requestBooking`. At a place with a whole-place unit, a room's nights include
+  the whole place's, and the whole place's include every room's. Dates only, never who or why; no sign-in.
+- `findFreeRooms(roomIds, range, now)`: for search, the rooms free on every night of `range`, with the same rules, in
+  two queries however many rooms (the rooms' kinds through `rooms/server.ts`, then the taken nights). Unknown,
+  closed or deleted rooms are never free. Both refuse an empty or backwards range and more than 366 nights;
+  `findFreeRooms` takes 500 rooms at most. Tests: `availability.integration.test.ts`.
+
 The website search, the guest's AI and the guest MCP all use it, so they always agree.
 
 ### P. Pricing

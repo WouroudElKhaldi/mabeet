@@ -10,6 +10,10 @@ export function findRoomForBooking(businessId: string, roomId: string, db: Db = 
   return rooms.findRoomForBooking(db, businessId, roomId);
 }
 
+export function findRoomUnits(roomIds: string[], db: Db = prisma) {
+  return rooms.findRoomUnits(db, roomIds);
+}
+
 export function hasWholePlaceUnit(businessId: string, db: Db = prisma) {
   return rooms.hasWholePlaceUnit(db, businessId);
 }
