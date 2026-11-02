@@ -416,14 +416,29 @@
       }
     },
     "formTitle": "Create your workspace",
-    "formSubtitle": "Free during the pilot. You can add rooms right after.",
+    "formSubtitle": "Pick a plan, name your place, and you can add rooms right after.",
     "placeName": "Name of your place",
     "area": "Town or area",
     "create": "Create workspace",
     "error": "We could not create your workspace. Please try again.",
     "signUpFirst": "Create an account to start",
     "haveAccount": "I already have an account",
-    "seePlans": "See plans and prices"
+    "paidSubtitle": "Pick a plan, name your place, then pay the first month. Your plan starts as soon as the payment is confirmed.",
+    "payingOff": "Paying online isn't switched on yet, so your workspace starts on Free. You can change plan later.",
+    "payWith": "Pay with",
+    "payMethods": {
+      "card": "Card",
+      "whish": "Whish"
+    },
+    "createAndPay": "Create and pay",
+    "retryPay": "Try paying again",
+    "startFreeInstead": "Start on Free for now",
+    "steps": {
+      "label": "Steps",
+      "place": "Your place",
+      "pay": "Pay",
+      "rooms": "Add rooms"
+    }
   },
   "permissions": {
     "rooms": {
@@ -1308,11 +1323,66 @@
     "home": "Back home",
     "errorTitle": "Something went wrong on our side",
     "errorBody": "Please try again. If it keeps happening, tell the host or write to us.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "reference": "Reference: {digest}"
   },
   "privacy": {
-    "title": "Privacy",
-    "body": "We collect only what a booking needs: your name, phone and, if you give it, your email. Hosts see your contact details only if their role allows it. Calendar feeds we share with Airbnb and Booking.com say only that dates are taken. The Trip Assistant sends your message and public listing data to our AI provider (DeepSeek), never your phone, email or bookings. Owners' AI keys see only what that owner's role permits, and every access is logged. Ask us to delete your account at any time."
+    "title": "Privacy and payments",
+    "intro": "What we keep about you, who sees it, and how paying and refunds work on Mabeet.",
+    "keep": {
+      "title": "What we keep",
+      "body": "For your account: your name, your email and your password, stored protected. For a booking: the name and phone number you give the host, and your email if you add it. We ask for nothing else."
+    },
+    "see": {
+      "title": "Who sees it",
+      "body": "The place you book sees your contact details, so the host can reach you. Their team members see them only if their role allows it; otherwise your phone and email are partly hidden. Other guests never see them."
+    },
+    "calendars": {
+      "title": "Airbnb and Booking.com",
+      "body": "The calendar links we share with Airbnb and Booking.com say only which dates are taken, never who booked them or anything about you."
+    },
+    "ai": {
+      "title": "AI apps",
+      "body": "An AI app connected to Mabeet as a guest reads only public places, dates and prices. A host's AI app sees only what that person's role allows, and every use is recorded."
+    },
+    "paying": {
+      "title": "Paying online",
+      "body": "Online payments go through Whish or Stripe. You enter your card or Whish details on their pages: Mabeet never sees or stores them."
+    },
+    "refunds": {
+      "title": "Refunds",
+      "body": "A booking paid online on Mabeet is always refunded in full when it is cancelled, whoever cancels, or when the host declines it or does not answer in time. Once the stay has started it can no longer be cancelled, and nights already stayed are not refunded."
+    },
+    "direct": {
+      "title": "Paying the host directly",
+      "body": "Some places ask you to arrange payment with the host. That payment happens outside Mabeet, so it is between you and the host: Mabeet does not record it or refund it."
+    },
+    "browser": {
+      "title": "Your browser",
+      "body": "One cookie keeps you signed in and another remembers your language. Light or dark mode is saved only in your browser. There are no advertising or tracking cookies."
+    },
+    "rights": {
+      "title": "Your data, your choice",
+      "body": "From your account you can download everything we hold about you, or delete your account by typing your email. You are signed out everywhere and your email is freed. Your bookings and reviews stay with the host, the reviews without your name."
+    },
+    "groups": {
+      "data": "Your information",
+      "money": "Paying and refunds"
+    },
+    "headline": "Your details stay <em>yours.</em>",
+    "onThisPage": "On this page",
+    "glance": {
+      "title": "At a glance",
+      "card": "We never see your card details",
+      "refunds": "Online bookings are refunded in full",
+      "tracking": "No advertising or tracking cookies",
+      "delete": "Download or delete your data any time",
+      "footer": "Thank you for booking direct"
+    },
+    "intros": {
+      "data": "What we keep, who sees it, and where it goes.",
+      "money": "How paying online, refunds and paying the host directly work."
+    }
   },
   "listing": {
     "tabs": {
@@ -2020,5 +2090,60 @@
       "bekaa": "Bekaa",
       "south": "South Lebanon"
     }
+  },
+  "useWithAi": {
+    "title": "Use Mabeet from your AI app",
+    "headline": "Ask your AI app. <em>Get places that are really free.</em>",
+    "intro": "Ask Claude, ChatGPT or any AI app for a place that is free on your dates. It searches Mabeet for you and links straight to the booking page.",
+    "whatTitle": "What is MCP?",
+    "whatBody": "MCP (Model Context Protocol) is a standard way for an AI app to use another service's tools. Ours lets your AI app search Mabeet's places and check their dates and prices, live.",
+    "why": {
+      "app": {
+        "title": "Plan in the app you already use",
+        "body": "Describe the trip the way you would to a friend: who's coming, where, and what you need."
+      },
+      "live": {
+        "title": "Real dates and prices",
+        "body": "Every answer comes from Mabeet's calendars at that moment, never from a guess."
+      },
+      "book": {
+        "title": "One tap to book",
+        "body": "Each place in the answer links to its booking page on Mabeet."
+      }
+    },
+    "connectTitle": "Connect in a minute",
+    "connectIntro": "No sign-in and no key. Copy the address, add it to your AI app, then ask.",
+    "address": "Guest MCP address",
+    "claude": {
+      "title": "In Claude",
+      "steps": {
+        "open": "Open Settings, then Connectors.",
+        "add": "Choose Add custom connector.",
+        "paste": "Name it Mabeet, paste the address and save."
+      }
+    },
+    "chatgpt": {
+      "title": "In ChatGPT",
+      "steps": {
+        "open": "Open Settings, then Connectors.",
+        "add": "Create a new connector (some plans ask you to turn on developer mode first).",
+        "paste": "Name it Mabeet, paste the address and save."
+      }
+    },
+    "tryLabel": "Then try asking",
+    "example": "Find us a place in Batroun for 4 people from 14 to 16 August, with a sea view and parking.",
+    "limitsTitle": "What it can and cannot do",
+    "limitsIntro": "It only reads what anyone can see on Mabeet. Booking and paying always happen here.",
+    "can": {
+      "search": "Search places by town, region, rooms, beds and amenities",
+      "dates": "Check which dates are free and what they cost",
+      "link": "Link to each place's booking page"
+    },
+    "cannot": {
+      "book": "Book or pay for you",
+      "account": "See your account, your trips or anything private"
+    },
+    "cannotLabel": "It can't:",
+    "browse": "Browse places on Mabeet"
   }
 }
