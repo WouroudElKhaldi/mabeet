@@ -6,6 +6,7 @@ export {
   hasWholePlaceUnit,
   listPlacePhotos,
   listPublicUnits,
+  listRoomNames,
   priceStay,
 } from "./server/room-lookup";
 export {

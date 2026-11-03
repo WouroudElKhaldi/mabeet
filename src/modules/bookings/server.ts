@@ -23,4 +23,4 @@ export {
 } from "./server/booking-payments";
 export { findFreeRooms, getTakenNights } from "./server/availability-service";
 export { stayIssue } from "./server/booking-policy";
-export { addBlock, getCalendar, removeBlock } from "./server/closed-dates-service";
+export { addBlock, getCalendar, getCalendarBoard, removeBlock } from "./server/closed-dates-service";

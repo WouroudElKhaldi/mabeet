@@ -15,3 +15,5 @@ export {
   placeParams,
 } from "./schemas";
 export { BookingRow } from "./components/booking-row";
+export { CalendarBoard } from "./components/calendar-board";
+export type { CalendarEntry } from "./calendar-model";
