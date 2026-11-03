@@ -4,6 +4,7 @@ import { cache } from "react";
 import { getPlace } from "./server/directory-service";
 
 export {
+  checkPlaceAvailability,
   getPlace,
   getRoomAvailability,
   listMyTrips,

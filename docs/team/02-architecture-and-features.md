@@ -657,6 +657,18 @@ Both use the read-only `GUEST_TOOLS`: search places, check availability, get a p
 experience. They only see public data. They give a link to the booking page. They never book: booking through
 an AI is cut.
 
+**What exists today** (`src/modules/assistant/server/`): `tool.ts`, `run-tool.ts` and `mcp-server.ts` as above, and
+`guest-tools.ts` with `search_places` (`searchPlaces`: every part of the wish as a filter, the matching rooms with
+their layout, and a booking link with the stay already picked), `check_availability`
+(`checkPlaceAvailability(slug, { range, guests })` in `directory`: each unit the place is booked by, free or not, the
+stay's price, and the `stayIssue` code when the stay does not fit it) and `get_place` (`getPlace`: public fields,
+the units, how booking and paying work in the place's mode, and the full refund rule). The experience tools come with
+experiences (F8). `answerGuestMcp(request)` (`guest-mcp.ts`, the module's `server.ts`) serves them at
+`POST /api/mcp/guest`: no sign-in, 30 calls a minute from one address, `GET` and `DELETE` answer 405 (stateless).
+Links are absolute (`BETTER_AUTH_URL`), so the guest's AI app can show them. Tests: `mcp-server.test.ts` (marks,
+context, safe errors, money formatted) and `guest-mcp.integration.test.ts` (search, dates, a place, nothing private,
+the rate limit).
+
 The place cards under a reply are built from the tool results, not from the model's words. So the model cannot
 invent a place.
 

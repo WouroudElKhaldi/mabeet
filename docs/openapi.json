@@ -6410,6 +6410,30 @@
             "description": "Rate limited"
           }
         }
+      },
+      "get": {
+        "tags": ["AI"],
+        "summary": "Not used: the guest MCP is stateless (405)",
+        "description": "No sign-in. The MCP endpoint keeps no session, so only POST is answered.",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "405": {
+            "description": "Use POST"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["AI"],
+        "summary": "Not used: the guest MCP is stateless (405)",
+        "description": "No sign-in. The MCP endpoint keeps no session, so only POST is answered.",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "405": {
+            "description": "Use POST"
+          }
+        }
       }
     },
     "/api/admin/businesses/{businessId}": {
