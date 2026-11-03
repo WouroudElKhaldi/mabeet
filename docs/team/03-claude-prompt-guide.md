@@ -150,7 +150,8 @@ The app is a modular monolith: one Next.js app, one database, split into feature
   screen calls `api.run`. Never await slow work on the request path.
 - Functions that depend on the time take `now = new Date()` as the last argument, so tests can set the time.
 - Settings come from `env` (`src/server/env.ts`), never `process.env`. A new setting is declared there, explained in
-  `.env.example`, and added to `docker-compose.prod.yml` if production needs it.
+  `.env.example`, and, if the live site needs it, added to the deploy job in `.github/workflows/ci.yml` and to
+  GitHub (`docs/deployment.md`).
 - A new bell entry needs four things: the log call, the action in `notification-feed-service.ts`, an icon (and link)
   in `notification-list.tsx`, and its text in the three message files. A new email or push is a `notify` job in the
   module that owns the event (`<module>-notifications.ts`), built like `notifyInvitation` in
@@ -365,7 +366,7 @@ and set a special price per night for some dates.
    createRoom(db, data), updateRoom(db, businessId, roomId, data) returning true or false, setRateOverrides(tx, ...)
 2. Service: src/modules/rooms/server/room-service.ts — listRooms(ctx) and getRoom(ctx, id) need rooms.read;
    createRoom, updateRoom and setSpecialPrice need rooms.manage; createRoom calls
-   assertPlanAllowsAnother(ctx.businessId, "rooms"); every change calls recordAction
+   assertPlanAllowsAnother(ctx.businessId, "rooms", tx) inside its transaction; every change calls recordAction
 3. Schemas: roomInput, roomUpdate (roomInput.partial()), specialPriceInput (at most 366 nights) in schemas.ts
 4. Routes: GET/POST /api/workspaces/[businessId]/rooms, GET/PATCH .../rooms/[roomId], GET/PUT .../rooms/[roomId]/prices
 5. Screen: src/app/dashboard/[businessId]/rooms/page.tsx (list), loading.tsx, room-editor.tsx, special-prices.tsx

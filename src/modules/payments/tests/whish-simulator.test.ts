@@ -3,10 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/server/env", () => ({
   env: { WHISH_MODE: "simulator", BETTER_AUTH_URL: "https://mabeet.example" },
 }));
-const saved = vi.hoisted(() => vi.fn());
-vi.mock("../server/whish-simulator-repository", () => ({ upsertSimulatedPayment: saved }));
+const { saved, findByCode } = vi.hoisted(() => ({ saved: vi.fn(), findByCode: vi.fn() }));
+vi.mock("../server/whish-simulator-repository", () => ({
+  upsertSimulatedPayment: saved,
+  findSimulatedPaymentByCode: findByCode,
+}));
 
-const { createSimulatedPayment } = await import("../server/whish-simulator-service");
+const { createSimulatedPayment, getPayPage } = await import("../server/whish-simulator-service");
 
 const body = {
   amount: "10.00",
@@ -25,5 +28,26 @@ describe("the Whish simulator", () => {
       expect(answer).toMatchObject({ status: false, code: "url.not_allowed" });
     }
     expect(saved).not.toHaveBeenCalled();
+  });
+
+  it("shows the payer the amount, what it is for, and the way back", async () => {
+    findByCode.mockResolvedValueOnce({
+      ...body,
+      code: "c1",
+      invoice: "Beit Tannour, 2 nights",
+      status: "pending",
+    });
+    await expect(getPayPage("c1")).resolves.toEqual({
+      amount: "10.00",
+      currency: "USD",
+      invoice: "Beit Tannour, 2 nights",
+      status: "pending",
+      cancelUrl: body.failureRedirectUrl,
+    });
+  });
+
+  it("answers not found for a code it never made", async () => {
+    findByCode.mockResolvedValueOnce(null);
+    await expect(getPayPage("nope")).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

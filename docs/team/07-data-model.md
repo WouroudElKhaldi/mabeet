@@ -197,7 +197,7 @@ read by `GET /api/jobs/{jobId}`, deleted when the job ends.
 | Webhooks applied only once              | `WebhookEvent` (unique on `provider, eventId`)                        |
 | Platform clashes shown, never cancelled | `Occupancy.conflict`, the bell, and an email and push to the hosts    |
 | Rate limits across servers              | Redis (`REDIS_URL`), not a table                                      |
-| A failed automatic refund sent by hand  | `Refund.automatic` and `RefundStatus` (`PENDING` → `DONE`)            |
+| A failed automatic refund sent by hand  | `RefundStatus`: `PENDING` until Whish or Stripe confirms, then `DONE` |
 | Payouts to owners                       | `Payout` (`REQUESTED` → `PAID` or `REJECTED`)                         |
 | Commission saved                        | `Business.commissionRateBps` and the confirmed bookings' `totalCents` |
 | Email verification                      | `Verification` (Better Auth)                                          |

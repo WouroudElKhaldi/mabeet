@@ -1,6 +1,7 @@
 import type { Plan } from "@prisma/client";
-import { type PaidPlan, PLAN_LIMITS } from "@/config/plans";
+import { type PaidPlan, PLAN_LIMITS, type PlanPaymentMethod } from "@/config/plans";
 import { findAccountEmail } from "@/modules/accounts/server";
+import { settleOnlinePayment } from "@/modules/bookings/server";
 import { recordAction } from "@/modules/audit/server";
 import {
   createBillingPortalSession,
@@ -15,7 +16,7 @@ import {
   whishEnabled,
 } from "@/modules/payments/server";
 import { requireOwner, requirePermission, type TenantContext } from "@/server/auth/tenant-context";
-import { prisma, runInTransaction, type Tx } from "@/server/db/client";
+import { type Db, prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { env } from "@/server/env";
 import { conflict, invalid, notFound, unavailable } from "@/server/errors";
 import { secureToken } from "@/utils/tokens";
@@ -41,32 +42,48 @@ const LIMIT_MESSAGES: Record<Counted, (max: number) => string> = {
   members: (max) => `Your plan allows up to ${max} team members, you included. Upgrade to add more.`,
 };
 
-async function loadBilling(businessId: string) {
-  const row = await billing.findBilling(prisma, businessId);
+async function loadBilling(businessId: string, db: Db = prisma) {
+  const row = await billing.findBilling(db, businessId);
   if (!row) throw notFound("Business");
   return row;
 }
 
-/** Refuses adding one more room, experience or team member past the plan's limit. */
-export async function assertPlanAllowsAnother(businessId: string, what: Counted): Promise<void> {
-  const row = await loadBilling(businessId);
+/**
+ * Refuses adding one more room, experience or team member past the plan's limit. Pass the transaction that adds it:
+ * the business is then locked until it commits, so two additions at the same moment cannot both pass the check.
+ */
+export async function assertPlanAllowsAnother(businessId: string, what: Counted, tx?: Tx): Promise<void> {
+  if (tx) await billing.lockBusinessForPlan(tx, businessId);
+  const row = await loadBilling(businessId, tx);
   const max = PLAN_LIMITS[row.plan][what];
   const used = what === "members" ? row._count.memberships : row._count[what];
   if (max !== null && used >= max) throw conflict(LIMIT_MESSAGES[what](max));
+}
+
+/**
+ * Which ways to pay for a plan are on. Public: a future host sees them before their business exists, so the
+ * sign-up page offers only what works.
+ */
+export function planPaymentMethods(): Record<PlanPaymentMethod, boolean> {
+  return {
+    card: stripeEnabled() && Boolean(env.STRIPE_PRICE_PRO && env.STRIPE_PRICE_BUSINESS),
+    whish: whishEnabled(),
+  };
 }
 
 /** For the billing page: the plan, what is used against it, and which ways to pay are on. */
 export async function getBilling(ctx: TenantContext) {
   requirePermission(ctx, "settings.manage");
   const row = await loadBilling(ctx.businessId);
+  const methods = planPaymentMethods();
   return {
     plan: row.plan,
     limits: PLAN_LIMITS[row.plan],
     usage: { rooms: row._count.rooms, offerings: row._count.offerings, members: row._count.memberships },
     renewsAt: row.planRenewsAt,
     paysByCard: Boolean(row.stripeSubscriptionId),
-    cardEnabled: stripeEnabled() && Boolean(env.STRIPE_PRICE_PRO && env.STRIPE_PRICE_BUSINESS),
-    whishEnabled: whishEnabled(),
+    cardEnabled: methods.card,
+    whishEnabled: methods.whish,
     canManage: ctx.isOwner,
   };
 }
@@ -179,10 +196,11 @@ async function addPlanMonths(tx: Tx, businessId: string, plan: Plan, months: num
 }
 
 /**
- * A Whish callback. The call itself proves nothing (it is unauthenticated), so it only makes Mabeet ask Whish for
+ * A Whish callback, for a guest's booking payment or a host's plan payment. The call itself proves nothing (it is unauthenticated), so it only makes Mabeet ask Whish for
  * the payment's real status.
  */
-export async function handleWhishCallback(query: { plan?: string }) {
+export async function handleWhishCallback(query: { payment?: string; plan?: string }) {
+  if (query.payment) return settleOnlinePayment(query.payment);
   if (query.plan) return settlePlanPayment(query.plan);
   throw invalid("Missing payment reference");
 }
@@ -312,7 +330,7 @@ export async function handleStripeWebhook(
   const parsed = stripeEvent.safeParse(parseJson(rawBody));
   if (!parsed.success) return "rejected";
   const event = parsed.data;
-  return runInTransaction(async (tx) => {
+  const result = await runInTransaction(async (tx): Promise<WebhookResult> => {
     const first = await billing.recordWebhookEvent(tx, {
       provider: "stripe",
       eventId: event.id,
@@ -322,4 +340,20 @@ export async function handleStripeWebhook(
     await applyEvent(tx, event, now);
     return "applied";
   });
+  // A guest's card payment: settled after the commit, because settling asks Stripe and may refund. If Stripe can't
+  // be reached now, housekeeping checks the payment again within minutes.
+  const paymentId = bookingPaymentOf(event);
+  if (result === "applied" && paymentId) {
+    await settleOnlinePayment(paymentId, now).catch((error: unknown) =>
+      console.error("[payments] card payment not settled yet", error),
+    );
+  }
+  return result;
+}
+
+/** The booking payment behind a finished Stripe Checkout for a booking, or null for any other event. */
+function bookingPaymentOf(event: StripeEvent): string | null {
+  const object = event.data.object;
+  if (event.type !== "checkout.session.completed" || object.mode !== "payment") return null;
+  return object.metadata?.paymentId ?? null;
 }

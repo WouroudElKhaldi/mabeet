@@ -74,6 +74,26 @@ export async function parseBody<T extends z.ZodType>(request: Request, schema: T
   return schema.parse(body);
 }
 
+/**
+ * A multipart upload: the file under `file` (its bytes), and the other form fields checked by `schema`. An empty
+ * form field counts as not sent (null), as a browser sends every field of a form.
+ */
+export async function parseUpload<T extends z.ZodType>(
+  request: Request,
+  schema: T,
+): Promise<{ bytes: Uint8Array<ArrayBuffer>; fields: z.infer<T> }> {
+  const form = await request.formData().catch(() => {
+    throw invalid("Send the file as multipart form data");
+  });
+  const file = form.get("file");
+  if (!(file instanceof File)) throw invalid("Choose a file to upload");
+  const fields: Record<string, string | null> = {};
+  for (const [name, value] of form) {
+    if (name !== "file") fields[name] = typeof value === "string" && value !== "" ? value : null;
+  }
+  return { bytes: new Uint8Array(await file.arrayBuffer()), fields: schema.parse(fields) };
+}
+
 export function parseQuery<T extends z.ZodType>(request: Request, schema: T): z.infer<T> {
   return schema.parse(Object.fromEntries(new URL(request.url).searchParams));
 }
@@ -88,6 +108,13 @@ export async function parseParams<T extends z.ZodType>(
 export async function optionalUser(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
   return session?.user ?? null;
+}
+
+/** The caller's sign-in session itself, for a step that keeps something on it (connecting an AI app). */
+export async function requireSession(request: Request) {
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session) throw unauthenticated();
+  return session;
 }
 
 export async function requireUser(request: Request) {

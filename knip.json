@@ -2,25 +2,23 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/app/**/{page,layout,route}.{ts,tsx}",
-    "tests/**/*.test.ts",
-    "src/modules/*/tests/**/*.test.ts",
-    "scripts/*.ts"
+    "src/components/{ui,shell,theme}/**/*.{ts,tsx}",
+    "tests/**/*.test.{ts,tsx}",
+    "src/modules/*/tests/**/*.test.{ts,tsx}",
+    "src/lib/api-client.ts",
+    "src/hooks/*.ts",
+    "scripts/*.ts",
+    "prisma/seed.ts"
   ],
   "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "scripts/**/*.ts", "prisma/**/*.ts"],
   "ignoreDependencies": [
     "eslint-config-next",
     "eslint-config-prettier",
     "tailwindcss",
-    "@better-auth/oauth-provider",
     "@modelcontextprotocol/sdk",
     "aws4fetch",
-    "clsx",
     "ical-generator",
-    "lucide-react",
-    "motion",
-    "next-intl",
     "node-ical",
-    "sharp",
     "web-push",
     "@types/web-push"
   ]

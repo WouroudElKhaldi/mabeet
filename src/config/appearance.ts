@@ -1,5 +1,5 @@
 /** English, Modern Standard Arabic, and Lebanese Arabic ("ar-LB", the way people actually talk in Lebanon). */
-const LOCALES = ["en", "ar", "ar-LB"] as const;
+export const LOCALES = ["en", "ar", "ar-LB"] as const;
 export type Locale = (typeof LOCALES)[number];
 const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_COOKIE = "locale";
@@ -17,4 +17,23 @@ export function pickLocale(saved: string | undefined, acceptLanguage: string | n
   const accepted = (acceptLanguage ?? "").toLowerCase();
   if (accepted.startsWith("ar-lb")) return "ar-LB";
   return accepted.startsWith("ar") ? "ar" : DEFAULT_LOCALE;
+}
+
+/** The five colour palettes (docs/team/08, Part 2). The platform admin picks one for the whole site. */
+export const PALETTES = ["cedar", "byblos", "batroun", "baalbek", "jounieh"] as const;
+export type Palette = (typeof PALETTES)[number];
+export const DEFAULT_PALETTE: Palette = "cedar";
+
+/** The saved site setting is plain text in the database; anything that is not a palette falls back to the default. */
+export function isPalette(value: string): value is Palette {
+  return (PALETTES as readonly string[]).includes(value);
+}
+
+/** Each visitor chooses light or dark; the choice is kept in this browser. */
+export type Mode = "light" | "dark";
+export const MODE_STORAGE_KEY = "mabeet-mode";
+
+/** A category's name in the reader's language: both Arabic variants read the Arabic name. */
+export function categoryName(category: { nameEn: string; nameAr: string }, locale: string): string {
+  return isArabic(locale) ? category.nameAr : category.nameEn;
 }

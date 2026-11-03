@@ -25,8 +25,8 @@ paths:
     get:
       tags:
         - Guests
-      summary: Price and availability for a stay
-      description: No sign-in.
+      summary: Price of a stay in a room, and whether it can be booked as asked
+      description: No sign-in. A stay that cannot be booked still gets its price, with the reason in `issue`; one longer than the longest stay is not priced.
       security: []
       parameters:
         - name: slug
@@ -45,15 +45,68 @@ paths:
             type: string
             format: date
             pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          required: true
         - name: checkOut
           in: query
           schema:
             type: string
             format: date
             pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          required: true
+        - name: guests
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 30
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roomId:
+                    type: string
+                  currency:
+                    type: string
+                  nights:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        rateCents:
+                          type: integer
+                      required:
+                        - date
+                        - rateCents
+                  nightCount:
+                    type: integer
+                  totalCents:
+                    type: integer
+                    description: What the guest pays, in full. Whole minor units.
+                  issue:
+                    type:
+                      - string
+                      - "null"
+                    enum:
+                      - PAST
+                      - TOO_FAR
+                      - TOO_LONG
+                      - MIN_NIGHTS
+                      - CAPACITY
+                      - null
+                required:
+                  - roomId
+                  - currency
+                  - nights
+                  - nightCount
+                  - totalCents
+                  - issue
         "400":
           description: Invalid input
           content:
@@ -86,8 +139,8 @@ paths:
     get:
       tags:
         - Guests
-      summary: Taken nights of a room (no guest details)
-      description: No sign-in.
+      summary: Taken nights of a room (dates only, no guest details)
+      description: No sign-in. Confirmed stays, held rooms, platform stays and closed dates, as ISO dates; the check-out night of a stay is free. By default from today for a year (`to` is a check-out day, at most 366 nights after `from`). Not found for a room the place does not book by or one the host switched off.
       security: []
       parameters:
         - name: slug
@@ -106,15 +159,32 @@ paths:
             type: string
             format: date
             pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          description: First night asked about. Today by default.
         - name: to
           in: query
           schema:
             type: string
             format: date
             pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          description: Check-out day of the window. A year after `from` by default.
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roomId:
+                    type: string
+                  takenNights:
+                    type: array
+                    items:
+                      type: string
+                      format: date
+                required:
+                  - roomId
+                  - takenNights
         "400":
           description: Invalid input
           content:
@@ -148,7 +218,7 @@ paths:
       tags:
         - Guests
       summary: "Request a stay: holds the room at once (rate limited)"
-      description: Signed-in user.
+      description: Signed-in user. Who the guest is comes from the session, never the body. The room is held at once; what happens next depends on the place's mode. Only the link to the booking and where it stands are returned.
       security:
         - session: []
       parameters:
@@ -209,7 +279,23 @@ paths:
                 - checkOut
       responses:
         "201":
-          description: Success
+          description: The room is held
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  publicToken:
+                    type: string
+                    description: The secret in the booking's private link, /b/{publicToken}.
+                  reference:
+                    type: string
+                  status:
+                    type: string
+                required:
+                  - publicToken
+                  - reference
+                  - status
         "400":
           description: Invalid input
           content:
@@ -454,7 +540,7 @@ paths:
       tags:
         - Guests
       summary: The signed-in guest cancels their own booking before check-in or the session (rate limited)
-      description: Signed-in user.
+      description: Signed-in user, and only their own booking (someone else's is 404). Allowed while the booking waits for payment or for the host, or once confirmed, and before the check-in day (409 after). Anything paid online is refunded in full. A reason is optional.
       security:
         - session: []
       parameters:
@@ -476,7 +562,18 @@ paths:
                   maxLength: 300
       responses:
         "200":
-          description: Success
+          description: The booking is cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - CANCELLED
+                required:
+                  - status
         "400":
           description: Invalid input
           content:
@@ -510,13 +607,76 @@ paths:
       tags:
         - Guests
       summary: The signed-in guest's stays
-      description: Signed-in user.
+      description: Signed-in user. Only their own stays, newest first. Nothing about payments or contact details; each stay carries the secret of its booking link (`publicToken`, /b/{publicToken}).
       security:
         - session: []
       parameters: []
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    publicToken:
+                      type: string
+                    reference:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                        - HELD
+                        - AWAITING_PAYMENT
+                        - CONFIRMED
+                        - DECLINED
+                        - EXPIRED
+                        - CANCELLED
+                    bookingMode:
+                      type: string
+                      enum:
+                        - AUTOMATIC
+                        - ONLINE_APPROVAL
+                        - OFFLINE
+                    checkIn:
+                      type: string
+                      format: date
+                    checkOut:
+                      type: string
+                      format: date
+                    guestCount:
+                      type: integer
+                    totalCents:
+                      type: integer
+                      description: The full price, in whole minor units.
+                    currency:
+                      type: string
+                    place:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                      required:
+                        - name
+                        - slug
+                    roomName:
+                      type: string
+                  required:
+                    - publicToken
+                    - reference
+                    - status
+                    - bookingMode
+                    - checkIn
+                    - checkOut
+                    - guestCount
+                    - totalCents
+                    - currency
+                    - place
+                    - roomName
         "400":
           description: Invalid input
           content:
@@ -1017,7 +1177,7 @@ paths:
       tags:
         - Workspaces
       summary: Update business settings
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      description: Signed-in member with settings.manage; choosing the booking mode or accepting the payment policy needs an owner. Only the fields sent change. An online mode needs acceptOnlineTerms once. Booking room by room or as a whole is PUT .../booking-unit. Non-members get 404.
       security:
         - session: []
       parameters:
@@ -1120,18 +1280,6 @@ paths:
                   description: "Required (true) to switch to AUTOMATIC or ONLINE_APPROVAL: the owner accepts that online payments are always refunded in full."
                 listedPublicly:
                   type: boolean
-                bookingUnit:
-                  type: string
-                  enum:
-                    - ROOMS
-                    - WHOLE_PLACE
-                categories:
-                  maxItems: 6
-                  type: array
-                  items:
-                    type: string
-                    minLength: 1
-                    maxLength: 40
                 tags:
                   maxItems: 12
                   type: array
@@ -1180,6 +1328,14 @@ paths:
                       minimum: -180
                       maximum: 180
                     - type: "null"
+                categories:
+                  maxItems: 6
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 40
+                  description: Slugs of the admin's place categories; replaces the place's current ones.
       responses:
         "200":
           description: Success
@@ -1365,7 +1521,7 @@ paths:
                 baseRateCents:
                   type: integer
                   minimum: 0
-                  maximum: 10000000
+                  maximum: 9007199254740991
                 minNights:
                   default: 1
                   type: integer
@@ -1374,6 +1530,7 @@ paths:
                 amenities:
                   default: []
                   maxItems: 13
+                  uniqueItems: true
                   type: array
                   items:
                     type: string
@@ -1519,32 +1676,28 @@ paths:
                   minimum: 1
                   maximum: 30
                 bedrooms:
-                  default: 1
                   type: integer
                   minimum: 0
                   maximum: 30
                 beds:
-                  default: 1
                   type: integer
                   minimum: 0
                   maximum: 60
                 bathrooms:
-                  default: 1
                   type: integer
                   minimum: 0
                   maximum: 30
                 baseRateCents:
                   type: integer
                   minimum: 0
-                  maximum: 10000000
+                  maximum: 9007199254740991
                 minNights:
-                  default: 1
                   type: integer
                   minimum: 1
                   maximum: 60
                 amenities:
-                  default: []
                   maxItems: 13
+                  uniqueItems: true
                   type: array
                   items:
                     type: string
@@ -1563,7 +1716,6 @@ paths:
                       - pets
                       - generator
                 active:
-                  default: true
                   type: boolean
       responses:
         "200":
@@ -1684,7 +1836,7 @@ paths:
                   anyOf:
                     - type: integer
                       minimum: 0
-                      maximum: 10000000
+                      maximum: 9007199254740991
                     - type: "null"
               required:
                 - checkIn
@@ -1788,7 +1940,7 @@ paths:
     post:
       tags:
         - Calendar
-      summary: Close dates (maintenance, phone or Kazderni bookings)
+      summary: Close dates (maintenance, or a booking taken by phone)
       description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
       security:
         - session: []
@@ -1810,14 +1962,6 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 64
-                source:
-                  anyOf:
-                    - type: string
-                      enum:
-                        - AIRBNB
-                        - BOOKING
-                        - OTHER
-                    - type: "null"
                 note:
                   anyOf:
                     - type: string
@@ -1964,7 +2108,7 @@ paths:
     post:
       tags:
         - Calendar
-      summary: Connect an Airbnb, Booking.com or Kazderni calendar
+      summary: Connect an Airbnb, Booking.com or other platform calendar
       description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
       security:
         - session: []
@@ -2385,83 +2529,6 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
-    post:
-      tags:
-        - Bookings
-      summary: Record a payment
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
-      security:
-        - session: []
-      parameters:
-        - name: businessId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $schema: https://json-schema.org/draft/2020-12/schema
-              type: object
-              properties:
-                amountCents:
-                  type: integer
-                  minimum: 1
-                  maximum: 100000000
-                method:
-                  type: string
-                  enum:
-                    - WHISH
-                    - OMT
-                    - CASH
-                    - BANK_TRANSFER
-                    - OTHER
-                note:
-                  anyOf:
-                    - type: string
-                      maxLength: 300
-                    - type: "null"
-              required:
-                - amountCents
-                - method
-      responses:
-        "201":
-          description: Success
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: object
-                    properties:
-                      code:
-                        type: string
-                      message:
-                        type: string
-                      details: {}
-                    required:
-                      - code
-                      - message
-        "401":
-          description: Sign-in or key required
-        "403":
-          description: Missing permission
-        "404":
-          description: Not found, or not yours
-        "409":
-          description: Conflict, e.g. dates or seats just taken
-        "429":
-          description: Rate limited
   /api/workspaces/{businessId}/session-bookings/{bookingId}/{action}:
     post:
       tags:
@@ -2499,84 +2566,6 @@ paths:
                   maxLength: 500
       responses:
         "200":
-          description: Success
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: object
-                    properties:
-                      code:
-                        type: string
-                      message:
-                        type: string
-                      details: {}
-                    required:
-                      - code
-                      - message
-        "401":
-          description: Sign-in or key required
-        "403":
-          description: Missing permission
-        "404":
-          description: Not found, or not yours
-        "409":
-          description: Conflict, e.g. dates or seats just taken
-        "429":
-          description: Rate limited
-  /api/workspaces/{businessId}/session-bookings/{bookingId}/payments:
-    post:
-      tags:
-        - Bookings
-      summary: Record a payment on a session booking
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
-      security:
-        - session: []
-      parameters:
-        - name: businessId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $schema: https://json-schema.org/draft/2020-12/schema
-              type: object
-              properties:
-                amountCents:
-                  type: integer
-                  minimum: 1
-                  maximum: 100000000
-                method:
-                  type: string
-                  enum:
-                    - WHISH
-                    - OMT
-                    - CASH
-                    - BANK_TRANSFER
-                    - OTHER
-                note:
-                  anyOf:
-                    - type: string
-                      maxLength: 300
-                    - type: "null"
-              required:
-                - amountCents
-                - method
-      responses:
-        "201":
           description: Success
         "400":
           description: Invalid input
@@ -3197,8 +3186,8 @@ paths:
     post:
       tags:
         - Photos
-      summary: "Upload a photo (multipart: file, optional offeringId); JPEG, PNG or WebP up to 2.5 MB"
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      summary: "Upload a photo (multipart: file, optional roomId, alt, area); JPEG, PNG or WebP up to 2.5 MB"
+      description: "Needs rooms.manage. The file is checked by its bytes and stored as WebP, at most 1600 px. No roomId: the place's own gallery. A gallery holds 20 photos. 60 uploads an hour per member. Non-members get 404."
       security:
         - session: []
       parameters:
@@ -3238,12 +3227,43 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                roomId:
+                  type: string
+                alt:
+                  type: string
+                  maxLength: 160
+                area:
+                  type: string
+                  enum:
+                    - LIVING_ROOM
+                    - KITCHEN
+                    - DINING
+                    - BEDROOM
+                    - BATHROOM
+                    - EXTERIOR
+                    - TERRACE
+                    - GARDEN
+                    - POOL
+                    - VIEW
+                    - OTHER
+              required:
+                - file
   /api/workspaces/{businessId}/photos/{photoId}:
     patch:
       tags:
         - Photos
-      summary: Make a photo the cover
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      summary: Make a photo the cover, or tag its area and caption
+      description: 'Needs rooms.manage. Body: {"cover": true}, or {"area", "alt"}. Non-members get 404.'
       security:
         - session: []
       parameters:
@@ -3288,10 +3308,45 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              anyOf:
+                - type: object
+                  properties:
+                    cover:
+                      const: true
+                  required:
+                    - cover
+                - type: object
+                  properties:
+                    area:
+                      anyOf:
+                        - type: string
+                          enum:
+                            - LIVING_ROOM
+                            - KITCHEN
+                            - DINING
+                            - BEDROOM
+                            - BATHROOM
+                            - EXTERIOR
+                            - TERRACE
+                            - GARDEN
+                            - POOL
+                            - VIEW
+                            - OTHER
+                        - type: "null"
+                    alt:
+                      anyOf:
+                        - type: string
+                          maxLength: 160
+                        - type: "null"
     delete:
       tags:
         - Photos
-      summary: Delete a photo and its stored bytes
+      summary: Delete a photo (its file is kept but no longer served)
       description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
       security:
         - session: []
@@ -4363,6 +4418,26 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
+    get:
+      tags:
+        - AI
+      summary: "Not used: the host MCP is stateless (405)"
+      description: The MCP endpoint keeps no session, so only POST is answered.
+      security: []
+      parameters: []
+      responses:
+        "405":
+          description: Use POST
+    delete:
+      tags:
+        - AI
+      summary: "Not used: the host MCP is stateless (405)"
+      description: The MCP endpoint keeps no session, so only POST is answered.
+      security: []
+      parameters: []
+      responses:
+        "405":
+          description: Use POST
   /api/mcp/guest:
     post:
       tags:
@@ -4402,6 +4477,26 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
+    get:
+      tags:
+        - AI
+      summary: "Not used: the guest MCP is stateless (405)"
+      description: No sign-in. The MCP endpoint keeps no session, so only POST is answered.
+      security: []
+      parameters: []
+      responses:
+        "405":
+          description: Use POST
+    delete:
+      tags:
+        - AI
+      summary: "Not used: the guest MCP is stateless (405)"
+      description: No sign-in. The MCP endpoint keeps no session, so only POST is answered.
+      security: []
+      parameters: []
+      responses:
+        "405":
+          description: Use POST
   /api/admin/businesses/{businessId}:
     patch:
       tags:
@@ -4980,7 +5075,7 @@ paths:
       tags:
         - Platform
       summary: Pick the workspace an AI app will act in, during OAuth
-      description: Signed-in user.
+      description: Signed-in user, who may use AI apps in that place; otherwise 403.
       security:
         - session: []
       parameters: []
@@ -4994,6 +5089,8 @@ paths:
               properties:
                 businessId:
                   type: string
+                  minLength: 1
+                  maxLength: 64
               required:
                 - businessId
       responses:
@@ -6189,6 +6286,205 @@ paths:
               required:
                 - phone
                 - otp
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+  /api/public/contact:
+    post:
+      tags:
+        - Guests
+      summary: "Send a message to the Mabeet team from the Contact page (rate limited: 5 an hour per address)"
+      description: No sign-in. The message is emailed to the team inbox (CONTACT_EMAIL) with the sender as the reply address; nothing is stored. 503 while no team inbox is set.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $schema: https://json-schema.org/draft/2020-12/schema
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 80
+                email:
+                  type: string
+                  format: email
+                  maxLength: 254
+                topic:
+                  type: string
+                  enum:
+                    - booking
+                    - hosting
+                    - privacy
+                    - other
+                message:
+                  type: string
+                  minLength: 10
+                  maxLength: 2000
+              required:
+                - name
+                - email
+                - topic
+                - message
+      responses:
+        "202":
+          description: "Accepted: the email is on its way"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent:
+                    type: boolean
+                required:
+                  - sent
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "429":
+          description: Rate limited
+        "503":
+          description: No team inbox is set
+  /api/workspaces/{businessId}/booking-unit:
+    put:
+      tags:
+        - Workspaces
+      summary: Book the place room by room, or as a whole
+      description: Needs settings.manage and rooms.manage. WHOLE_PLACE gives the place its one whole-place unit (started from its rooms added up, never doubled, not counted against the plan), which takes turns with the rooms. Non-members get 404.
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingUnit:
+                  type: string
+                  enum:
+                    - ROOMS
+                    - WHOLE_PLACE
+              required:
+                - bookingUnit
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookingUnit:
+                    type: string
+                    enum:
+                      - ROOMS
+                      - WHOLE_PLACE
+                  wholePlaceUnitId:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                required:
+                  - bookingUnit
+                  - wholePlaceUnitId
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+      security:
+        - session: []
+  /api/workspaces/{businessId}/connected-apps/{connectionId}:
+    delete:
+      tags:
+        - AI
+      summary: Disconnect an AI app the member connected to this place by signing in (OAuth); its next call is refused
+      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      security:
+        - session: []
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Success

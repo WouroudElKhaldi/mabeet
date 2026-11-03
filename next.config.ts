@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -32,7 +33,6 @@ const securityHeaders = [
 // config is fixed at build time, so the Docker build receives R2_PUBLIC_URL as a build argument.
 const photoHost = process.env.R2_PUBLIC_URL ? new URL(process.env.R2_PUBLIC_URL).hostname : null;
 
-// The languages task wraps this with next-intl's plugin (createNextIntlPlugin("./src/i18n/request.ts")).
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Loaded from node_modules, not bundled: its driver (pg) sits inside pnpm's nested folder, where only pg-boss
@@ -50,4 +50,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// next-intl finds the visitor's language and messages in src/i18n/request.ts.
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+export default withNextIntl(nextConfig);

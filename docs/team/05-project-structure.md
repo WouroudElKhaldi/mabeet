@@ -32,8 +32,8 @@ A module creates only the folders it needs. Its rules:
 1. **Two doors.** Outside code imports `@/modules/<name>` or `@/modules/<name>/server`, nothing else. Repositories
    and every other inner file are private. Inside the module, files import each other by relative path.
 2. **No circles.** If `bookings` calls `payments`, `payments` never calls `bookings` back; one side becomes a job or
-   is called by a third module. The order today: `team` calls `accounts`, `audit` and `billing`; `billing` calls
-   `accounts`, `payments` and `audit`; `housekeeping` calls `billing`. Decided for what comes next: `bookings` calls
+   is called by a third module. The order today: `bookings` calls `rooms`, `workspaces`, `team` and `audit`; `directory` calls `bookings`, `rooms` and `workspaces`; `rooms` calls `billing`, `workspaces` and `audit`; `workspaces` calls `admin` and `audit`; `team` calls `accounts`, `audit` and `billing`; `billing` calls
+   `accounts`, `payments`, `bookings` (a guest's payment arriving by Stripe's webhook or Whish's callback) and `audit`; `housekeeping` calls `billing` and `bookings`; `analytics` calls `bookings`, `rooms`, `workspaces`, `team` and `billing`. Decided for what comes next: `bookings` calls
    `payments` and `calendar-sync`, and neither of them ever calls `bookings` (rule 4 says how).
 3. **One transaction across modules passes `tx`.** A public function that writes takes an optional `tx`, so a caller
    in another module can commit both changes together.
@@ -79,8 +79,9 @@ climbing into another module, or the kernel importing a module fails `pnpm lint`
 | `housekeeping`  | The scheduled tidy-up: expiring holds and plan months                                                                                                                   |
 | `admin`         | The platform admin area                                                                                                                                                 |
 | `partners`      | Partner businesses                                                                                                                                                      |
+| `contact`       | Messages to the Mabeet team from the Contact page: the input check, the email job and the form                                                                          |
 
-`accounts`, `workspaces`, `team`, `billing`, `payments`, `audit` and `housekeeping` exist today. The others are
+`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping` and `contact` exist today, and `rooms` has begun (the reads a booking needs). The others are
 created by the first feature that needs them, in this shape.
 
 ## Where each kind of file goes
@@ -118,7 +119,8 @@ Names:
 | Folder                            | What goes there                                                                                                                     |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `.github/workflows/`              | The checks that run on every pull request, the deploy, and the scheduled jobs (until the worker runs them)                          |
-| `docs/`                           | Documents for reviewers: architecture, requirements, data model, database diagram, API contract                                     |
+| `deploy/`                         | What the live server needs besides the image: the deploy script (it also gets the certificate), nginx's files                       |
+| `docs/`                           | Documents for reviewers: architecture, requirements, data model, database diagram, API contract, deployment                         |
 | `messages/`                       | All text on screen, in English, Arabic and Lebanese Arabic. Every key must be in all three (a test checks)                          |
 | `prisma/`                         | The database tables, the migrations (including hand-written database rules), and the demo data                                      |
 | `prisma/migrations/`              | Never edit a migration after it is merged. Add a new one                                                                            |
@@ -301,6 +303,8 @@ src/
       sign-up/
         page.tsx
     (site)/
+      about/                      # F24: why booking direct, on one journey line (StoryRail)
+        page.tsx
       account/
         activity/
           page.tsx
@@ -313,12 +317,14 @@ src/
         page.tsx
         privacy/
           page.tsx
-      assistant/
+      assistant/                  # F6: use Mabeet from your AI app (the guest MCP); no chat on the website
         page.tsx
       b/
         [token]/
           loading.tsx
           page.tsx
+      contact/                    # F24: a message form to the Mabeet team, and WhatsApp
+        page.tsx
       host/
         page.tsx
       layout.tsx
@@ -349,10 +355,10 @@ src/
         page.tsx
       use-with-ai/
         page.tsx
-      whish-simulator/
-        pay/
-          [code]/
-            page.tsx
+    whish-simulator/              # its own page, outside the site frame: Whish's page in the simulator
+      pay/
+        [code]/
+          page.tsx
     .well-known/
       oauth-authorization-server/
         api/
@@ -472,6 +478,8 @@ src/
           callback/
             route.ts
       public/
+        contact/                  # F24: a message to the Mabeet team, emailed to CONTACT_EMAIL
+          route.ts
         bookings/
           [token]/
             cancel/
@@ -710,7 +718,6 @@ src/
       guest-cancel-button.tsx
       guest-details-form.tsx
       hold-countdown.tsx
-      pay-online.tsx
       price-breakdown.tsx
       use-room-calendar.ts
     brand/
@@ -769,7 +776,8 @@ src/
       duration.tsx
       offering-card.tsx
       session-booking-card.tsx
-    payments/
+    payments/                     # now src/modules/payments/components/
+      pay-online.tsx              # PayOnline: the guest's Whish and card buttons on the booking page
       whish-simulator-form.tsx
     place/
       amenity.tsx

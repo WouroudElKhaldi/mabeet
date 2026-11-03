@@ -3,6 +3,14 @@ import type { Db, Tx } from "@/server/db/client";
 
 // A business's plan, its Stripe ids, what it uses against the plan's limits, and processed webhooks.
 
+/**
+ * Holds the business's row until the transaction ends, so two additions at the same moment are counted one after
+ * the other and cannot both slip under the plan's limit.
+ */
+export async function lockBusinessForPlan(tx: Tx, businessId: string): Promise<void> {
+  await tx.$queryRaw`SELECT id FROM "Business" WHERE id = ${businessId} FOR UPDATE`;
+}
+
 export function findBilling(db: Db, businessId: string) {
   return db.business.findFirst({
     where: { id: businessId, isDeleted: false },
@@ -13,7 +21,8 @@ export function findBilling(db: Db, businessId: string) {
       planRenewsAt: true,
       _count: {
         select: {
-          rooms: { where: { isDeleted: false } },
+          // The whole-place unit is the place itself, not one more room: it never uses up the plan.
+          rooms: { where: { isDeleted: false, kind: "ROOM" } },
           offerings: { where: { isDeleted: false } },
           memberships: { where: { status: "ACTIVE", isDeleted: false } },
         },

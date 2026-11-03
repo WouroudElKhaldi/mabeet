@@ -13,11 +13,12 @@ import {
   getBilling,
   handleStripeWebhook,
   openBillingPortal,
+  planPaymentMethods,
   settlePlanPayment,
   startCheckout,
   startWhishPlanCheckout,
 } from "../server/billing-service";
-import { sendWhishToTheApp } from "./whish-in-process";
+import { sendPaymentsToTheApp } from "@tests/integration/payments-in-process";
 
 // Host plans: the limits each plan sets, paying by card (Stripe's webhooks are signed and applied once) and by
 // Whish (the simulator, end to end), and the housekeeping that ends a Whish month that ran out.
@@ -181,6 +182,7 @@ describe("paying by card (Stripe)", () => {
     try {
       await expect(startCheckout(place.ctx, "PRO")).rejects.toMatchObject({ code: "UNAVAILABLE" });
       expect(await getBilling(place.ctx)).toMatchObject({ cardEnabled: false });
+      expect(planPaymentMethods()).toEqual({ card: false, whish: true });
     } finally {
       env.STRIPE_SECRET_KEY = stripeSettings.STRIPE_SECRET_KEY;
     }
@@ -319,7 +321,7 @@ describe("paying by Whish (the simulator, end to end)", () => {
   it("buys a month of Pro: a wrong code changes nothing, the right one starts the plan, a second month follows on", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const place = await createPlace();
-    sendWhishToTheApp();
+    sendPaymentsToTheApp();
 
     const url = await startWhishPlanCheckout(place.ctx, "PRO");
     expect(url).toMatch(/\/whish-simulator\/pay\/[\w-]+$/);
@@ -365,7 +367,7 @@ describe("paying by Whish (the simulator, end to end)", () => {
 
   it("lets only an owner pay, and sends a card subscriber to the billing portal", async () => {
     const place = await createPlace();
-    sendWhishToTheApp();
+    sendPaymentsToTheApp();
     const manager = await memberWith(place.business.id, [...ALL_PERMISSIONS]);
     await expect(startWhishPlanCheckout(manager, "PRO")).rejects.toMatchObject({ code: "FORBIDDEN" });
     await prisma.business.update({
@@ -398,7 +400,7 @@ describe("paying by Whish (the simulator, end to end)", () => {
 describe("housekeeping", () => {
   it("ends a Whish month that ran out, leaves card plans to Stripe, and checks a payment whose callback was lost", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    sendWhishToTheApp();
+    sendPaymentsToTheApp();
     const now = new Date();
 
     const lapsed = await createPlace();
@@ -441,7 +443,7 @@ describe("housekeeping", () => {
     const refused = await call(cron.POST, { method: "POST" });
     expect(refused.status).toBe(401);
 
-    sendWhishToTheApp();
+    sendPaymentsToTheApp();
     const request = new Request("http://localhost/api/cron/expire-holds", {
       method: "POST",
       headers: { authorization: `Bearer ${env.CRON_SECRET}` },

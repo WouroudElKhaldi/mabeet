@@ -1,5 +1,5 @@
 import type { Plan } from "@prisma/client";
-import type { Db, Tx } from "@/server/db/client";
+import { type Db, moneyNumber, type Tx } from "@/server/db/client";
 
 // Plan payments: a host paying for a plan, by card (a Stripe invoice) or by Whish (a month at a time).
 
@@ -77,4 +77,14 @@ export function extendPlan(tx: Tx, businessId: string, plan: Plan, renewsAt: Dat
     data: { plan, planRenewsAt: renewsAt },
     select: { id: true },
   });
+}
+
+/** What a place paid Mabeet for plans, by currency: paid payments only, a refunded one no longer counts. */
+export async function sumPaidPlans(db: Db, businessId: string) {
+  const rows = await db.planPayment.groupBy({
+    by: ["currency"],
+    where: { businessId, status: "PAID", isDeleted: false },
+    _sum: { amountCents: true },
+  });
+  return rows.map((row) => ({ currency: row.currency, cents: moneyNumber(row._sum.amountCents ?? 0) }));
 }

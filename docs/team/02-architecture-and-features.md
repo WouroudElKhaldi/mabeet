@@ -78,8 +78,9 @@ Our product gives the host one booking page, one calendar, and a database that r
 - **DeepSeek:** our own AI model, for the last bonuses only (the dashboard assistant, the website travel
   assistant, the AI report). Changing to another AI provider means changing one file.
 - **Vitest:** unit tests (no database) and integration tests (real database).
-- **DigitalOcean with Docker:** hosting for the website and the PostgreSQL database. One Docker image runs twice: as
-  the website (`pnpm start`) and as the job worker (`pnpm worker`). Real emails are sent with Resend from our own
+- **DigitalOcean with Docker:** hosting for the website and the PostgreSQL database, on one server (a droplet)
+  behind nginx (`docs/deployment.md`). One Docker image runs twice: as the website (`pnpm start`) and as the job
+  worker (`pnpm worker`). Real emails are sent with Resend from our own
   domain.
 - **pg-boss:** job queues kept in our own PostgreSQL (in a `pgboss` schema), so slow AI work, emails and scheduled
   jobs run in the worker, not in the web request. The queues need no Redis.
@@ -93,8 +94,10 @@ Our product gives the host one booking page, one calendar, and a database that r
 - An optional setting uses the `optional(...)` helper, so an empty value in a copied `.env.example` counts as unset.
   Give it a sensible default or a clear fallback (Redis: count in memory; Resend: print emails to the log).
 - Add it to `.env.example` with a comment saying what it is for and what happens without it.
-- If production needs it, add it to `docker-compose.prod.yml` (a service address such as `REDIS_URL` points at the
-  service by name). Only a setting the build itself checks needs a placeholder in the `Dockerfile` build step.
+- If the live site needs it, add its name to the deploy job's list in `.github/workflows/ci.yml` and its value to
+  GitHub's `production` environment (`docs/deployment.md`). A service address such as `REDIS_URL` goes in
+  `docker-compose.prod.yml` instead, pointing at the service by name. Only a setting the build itself checks needs a
+  placeholder in the `Dockerfile` build step.
 - Tests set their own values in `tests/integration/setup-env.ts` (their own database, no real email, jobs inline).
 
 ### The checks CI runs
@@ -448,7 +451,7 @@ Its one `Occupancy` row takes the nights.
 
 ### Money tables: `Payment`, `Refund`, `Payout`, `PlanPayment`
 
-- A payment belongs to a booking. It has an amount, currency, method, status, an `online` flag, and two provider
+- A payment belongs to a booking. It is always online (Whish or Stripe). It has an amount, currency, method, status, and two provider
   references that mean different things: `providerRef` is the checkout (a Stripe Checkout session id, or
   `whish:<payment id>`), used to look it up and settle it, and unique so it is never settled twice;
   `providerPaymentId` is the charge it produced (Stripe's payment intent), only needed to refund a card payment.
@@ -645,6 +648,39 @@ Route: `POST /api/mcp`.
   only allows places the person belongs to. If a name fits several places, it refuses.
 - Every call is logged in `McpAuditLog`. The key's "last used" time is updated after the answer (`touchKey`).
 
+**What exists today** (`src/modules/assistant/server/`): personal keys (`api-key-service.ts`: `createKey`, `listKeys`,
+`revokeKey`, all under `ai.use`; routes `GET`/`POST /api/workspaces/{id}/keys` and `DELETE .../keys/{keyId}`). A key
+is `mbt_` and 32 random bytes; only its SHA-256 hash is stored, and the secret is shown once, when it is made. It is
+the member's own (nobody else lists or revokes it), read only, 90 days unless chosen (or never), and a platform admin
+visiting a business cannot make one. `authenticateKey` turns a key into the member's context (`channel: "mcp"`,
+`readOnly`) only while the same membership is active, so a removed member's keys stop at once, and revoked or expired
+ones too. `POST /api/mcp` (`answerHostMcp`, `host-mcp.ts`): 401 without a working key, 60 calls a minute per key,
+the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_rooms`, `check_availability`
+(`findFreeRooms`), `get_calendar` and `list_bookings`, each with the optional `place` (`resolvePlaceContext`: by
+id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
+come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. `get_report`
+(`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give
+the same numbers as the analytics page. Not yet: the actions. Tests: `mcp-isolation.integration.test.ts` and
+`mcp-oauth.integration.test.ts` (assistant).
+
+**OAuth sign-in** (for ChatGPT, Claude.ai and any app that connects without a key). Better Auth's `jwt` and
+`oauthProvider` plugins (`src/server/auth/better-auth.ts`) make Mabeet the app's sign-in server. The app finds it
+from the 401 of `POST /api/mcp` (`WWW-Authenticate: Bearer resource_metadata=…`), then
+`/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`, registers itself (with PKCE)
+and sends the person to sign in. After signing in, `/oauth/workspace` asks which place (only places where they hold
+`ai.use`, `listConnectableWorkspaces`); `POST /api/oauth/workspace` keeps it on the sign-in session
+(`Session.mcpBusinessId`), and `/oauth/consent` shows what the app asks for. The consent is saved for that place
+(`OauthConsent.referenceId` is the business id) and the access token carries it as `business_id`. Only one access
+scope exists, `mcp:read`: tokens are read only, like keys. `MCP_RESOURCE`, `MCP_READ_SCOPE` and `mayConnectAi`
+live in the shared kernel (`src/server/auth/mcp-oauth.ts`) because Better Auth's setup needs them; the rest is in
+the assistant module. `authenticateMcpCaller` (`mcp-token.ts`) takes a key (`mbt_…`) or verifies the token
+(signature, issuer, audience `/api/mcp`, scope), and `contextForToken` (`mcp-oauth-service.ts`) then checks on
+every call that the member is still on the team with `ai.use` and that the consent still exists: tokens are signed,
+not stored, so this is what makes leaving or disconnecting work at once. The Connect AI page lists the member's
+connected apps (`listConnectedApps`) and disconnects one (`DELETE /api/workspaces/{id}/connected-apps/{connectionId}`,
+`disconnectApp`: its consent and tokens are deleted, and the action is logged). The access is not tied to a plan,
+like keys: the person's own AI app brings the model.
+
 ### A. AI: the guest's assistant and guest MCP
 
 - For AI apps: `POST /api/mcp/guest` (public), built first.
@@ -654,10 +690,22 @@ Both use the read-only `GUEST_TOOLS`: search places, check availability, get a p
 experience. They only see public data. They give a link to the booking page. They never book: booking through
 an AI is cut.
 
+**What exists today** (`src/modules/assistant/server/`): `tool.ts`, `run-tool.ts` and `mcp-server.ts` as above, and
+`guest-tools.ts` with `search_places` (`searchPlaces`: every part of the wish as a filter, the matching rooms with
+their layout, and a booking link with the stay already picked), `check_availability`
+(`checkPlaceAvailability(slug, { range, guests })` in `directory`: each unit the place is booked by, free or not, the
+stay's price, and the `stayIssue` code when the stay does not fit it) and `get_place` (`getPlace`: public fields,
+the units, how booking and paying work in the place's mode, and the full refund rule). The experience tools come with
+experiences (F8). `answerGuestMcp(request)` (`guest-mcp.ts`, the module's `server.ts`) serves them at
+`POST /api/mcp/guest`: no sign-in, 30 calls a minute from one address, `GET` and `DELETE` answer 405 (stateless).
+Links are absolute (`BETTER_AUTH_URL`), so the guest's AI app can show them. Tests: `mcp-server.test.ts` (marks,
+context, safe errors, money formatted) and `guest-mcp.integration.test.ts` (search, dates, a place, nothing private,
+the rate limit).
+
 The place cards under a reply are built from the tool results, not from the model's words. So the model cannot
 invent a place.
 
-The page `/use-with-ai` (built with the guest MCP) tells guests what MCP is, why and how to connect Claude or ChatGPT, and shows the guest
+The page `/assistant` (built with the guest MCP; there is no chat on the website) tells guests what MCP is, why and how to connect Claude or ChatGPT, and shows the guest
 MCP address in a `CopyField`. It has no chat. `SiteFooter` and the home page link to it.
 
 ### A. AI: the format of every answer
@@ -721,6 +769,21 @@ Revenue is added up per currency, never mixed. All numbers come from the databas
 in `analytics-repository.ts`. Code: `analytics-service.ts`, `dashboard/[businessId]/analytics/page.tsx`,
 `analytics-charts.tsx`.
 
+**What exists today** (`src/modules/analytics/server/analytics-service.ts`). The night and booking sums live in
+`bookings`, which owns those tables (`booking-stats-repository.ts`, raw SQL by business; `getStayNumbers`,
+`getLifetimeDirectRevenue`, `getPlaceSnapshots` in its `server.ts`), so the `analytics` module has no database
+code of its own: it reads them, the units (`countActiveUnits`, rooms), the places (`findPlacesForReports`,
+workspaces) and the plan fees (`getPlanFeesPaid`, billing). A night counts as sold when it is a confirmed direct
+stay, closed by the host or imported, on a unit of the kind the place is booked by, out of the live units of that kind
+times the nights of the period. `getBusinessReport(ctx, range)` (`analytics.read`): occupancy, nights sold,
+direct revenue (confirmed stays, for their nights inside the period), average price per direct night, commission
+saved (revenue × the place's rate), channels, nights by month, requests by outcome, typical answer time.
+`getSavings(ctx)`: since the place joined, per currency, and the plan fees paid. `getAnalytics(ctx, scope, range)`:
+one place or every place the member may read, with totals (money per currency). `getPlacesOverview(userId)`: each of
+the person's places with today's numbers where they may read bookings. Route: `GET /api/workspaces/{id}/analytics`
+(`from`, `to`; the last 30 days by default, two years at most). Reviews are not built, so there is no rating yet.
+Tests: `analytics.integration.test.ts` (analytics).
+
 ### B. Background work
 
 Two kinds, by how much they matter:
@@ -781,11 +844,20 @@ partners and sponsored listings") are the platform's only income. Code: `billing
 | Pro      | $10       | 15        | unlimited                | 10                    | yes |
 | Business | $20       | unlimited | unlimited                | unlimited             | yes |
 
-- **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members")` before adding one. Deleted
+- **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members", tx)` inside the transaction that
+  adds one: with `tx` it locks the business first, so two additions at the same moment cannot both take the last
+  place. The whole-place unit is the place itself, so it never counts. Deleted
   rooms and experiences and removed members do not count. Inviting and joining a team call it (joining checks
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
 - **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
+- **Choosing a plan before there is a business:** `/pricing` sends a paid plan to `/host?plan=PRO` (checked with
+  `paidPlan`), where it can be changed in place (each plan is its own address). A signed-out visitor keeps it
+  through sign-up or sign-in (`?next=`). `CreateWorkspaceForm` creates
+  the workspace (`POST /api/workspaces`, always on Free), then calls the same checkout route by card or Whish for
+  the new business, offering only the ways `planPaymentMethods()` says are on. The plan starts when the payment is
+  confirmed, as above. If paying fails, trying again only pays (the workspace is not created twice), and "Start on
+  Free for now" goes to the dashboard. With no way to pay switched on, the workspace simply starts on Free.
 - **Card (Stripe):** `POST .../billing/checkout` returns Stripe Checkout; the plan only changes when the signed
   webhook (`POST /api/webhooks/stripe`) says so. Each event is recorded in `WebhookEvent` in the same transaction
   that applies it, so a replay changes nothing and a failure leaves nothing (Stripe retries). Paid invoices are
@@ -800,18 +872,22 @@ partners and sponsored listings") are the platform's only income. Code: `billing
 
 ### B. Bookings: the statuses
 
-| Status             | Meaning                                  |
-| ------------------ | ---------------------------------------- |
-| `HELD`             | A request waiting for the host           |
-| `AWAITING_PAYMENT` | Accepted, waiting for the online payment |
-| `CONFIRMED`        | Confirmed                                |
-| `DECLINED`         | The host said no                         |
-| `EXPIRED`          | Nobody answered or nobody paid in time   |
-| `CANCELLED`        | Cancelled by the guest or the host       |
+| Status             | Meaning                                                            |
+| ------------------ | ------------------------------------------------------------------ |
+| `HELD`             | Waiting for the owner's answer (mode 3, or mode 2 once paid)       |
+| `AWAITING_PAYMENT` | Waiting for the guest's online payment (10 minutes, modes 1 and 2) |
+| `CONFIRMED`        | Confirmed                                                          |
+| `DECLINED`         | The host said no                                                   |
+| `EXPIRED`          | Nobody answered or nobody paid in time                             |
+| `CANCELLED`        | Cancelled by the guest or the host                                 |
 
 - The first three hold the nights (`ACTIVE_BOOKING_STATUSES`).
 - The first two end when their time runs out (`EXPIRING_BOOKING_STATUSES`).
 - Allowed changes are in `booking-status.ts` (`assertTransition`). Any other change gives a 409 error.
+- The owner confirms or declines only a `HELD` booking (`assertOwnerCanAnswer`): one still waiting for its
+  payment is the payment's to decide.
+- A status change applies only if the booking is still in the status it was read in, so the clock expiring a hold
+  and the owner answering it at the same moment never overwrite each other ("This booking just changed").
 
 ### B. Bookings: where a new booking starts
 
@@ -847,10 +923,26 @@ handles it:
 ### B. Bookings: the host decides
 
 - `confirmBooking` (modes 2 and 3) first reads the room's Airbnb and Booking.com calendars again
-  (`refreshRoomFeeds`). Then it confirms.
-- `declineBooking` and `cancelBooking` refund everything the guest paid online.
+  (`refreshRoomFeeds`, in `calendar-sync`, once calendar sync is built). Then it confirms, unless a platform stay now
+  covers those nights or the answer time ran out.
+- `declineBooking` and `cancelBooking` refund everything the guest paid online. `cancelBooking` is refused once the
+  stay has started (its money may already be paid out).
 - All three lock the room, check the status change, keep the occupancy's `active` flag correct (`changeStatus`),
   save who decided and when, log the action and tell the guest.
+
+The dashboard's routes, each a thin call to one of these services (`tenantRoute`, so a non-member gets 404):
+
+| Route                                                                             | Service                                             | Needs                                 |
+| --------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------- |
+| `GET /api/workspaces/{businessId}/bookings` (status, room, dates, `take`, `skip`) | `listBookings`                                      | `bookings.read`                       |
+| `GET .../bookings/{bookingId}`                                                    | `getBooking`                                        | `bookings.read`                       |
+| `POST .../bookings/{bookingId}/{confirm\|decline\|cancel}` (optional `reason`)    | `confirmBooking`, `declineBooking`, `cancelBooking` | `bookings.decide`                     |
+| `GET .../bookings/{bookingId}/payments`                                           | `listBookingPayments`                               | the owner (money is not a permission) |
+| `GET .../calendar` (`from`, `to`, `roomId`; six weeks from today by default)      | `getCalendar`                                       | `calendar.read`                       |
+| `POST .../blocks`, `DELETE .../blocks/{blockId}`                                  | `addBlock`, `removeBlock`                           | `blocks.manage`                       |
+
+A guest's phone and email come back masked to a member without `guests.contact`. Tests:
+`host-routes.integration.test.ts`.
 
 ### B. Bookings: the guest cancels
 
@@ -875,12 +967,16 @@ Page: `/dashboard/{id}/calendar`. Views: month, week and rooms.
 - Click a stay to see its details.
 - Double-click a day (or press "Close dates") to close nights.
 
-Code: `calendar-board.tsx` (views, selecting), `calendar-side-panel.tsx`, `close-dates-form.tsx`,
-`calendar-model.ts` (types and date helpers).
+Code (in `src/modules/bookings/`): `components/calendar-board.tsx` (views, selecting), `calendar-side-panel.tsx`,
+`close-dates-form.tsx`, and `calendar-model.ts` (types and date helpers). The page reads `getCalendarBoard(ctx, query)`:
+the place's rooms by name (`listRoomNames` from `rooms/server`: switched-off rooms kept, their nights stay) with the
+same nights as `getCalendar`, under `calendar.read` alone, so a member who may see the calendar sees the rooms on it.
+`?month=2026-11` picks the month; the view chosen is kept in this browser.
 
 ### C. Closed dates (blocks)
 
-`addBlock` and `removeBlock` in `calendar-service.ts` (no moving by drag and drop). A block is a `MANUAL` occupancy, so the database
+`addBlock` and `removeBlock` in `src/modules/bookings/server/closed-dates-service.ts` (no moving by drag and drop),
+under the same room lock as bookings. A block is a `MANUAL` occupancy, so the database
 refuses it on taken nights (409 "Those nights are already booked or blocked"). Hosts also use blocks for bookings
 taken by phone.
 
@@ -938,6 +1034,16 @@ slug and kind never change, because links use them.
 
 A guest can email a host from the place page (`POST /api/public/places/{slug}/messages`). It is rate limited. The
 guest's email is the reply address. A host can turn it off and offer WhatsApp only.
+
+### C. Contact the Mabeet team (F24)
+
+The Contact page's form posts to `POST /api/public/contact` (no sign-in; `contactMessage` in
+`src/modules/contact/schemas.ts`: name, email, a topic from `src/config/contact.ts`, the message). The route allows
+five messages an hour per address (`enforceRateLimit`). `sendContactMessage` refuses with 503 while `CONTACT_EMAIL`
+is unset, so a message is never accepted and then lost; otherwise it queues `notify.contact-message`, which emails
+the team's inbox with the sender as Reply-To, the topic and the sender's language in the details, and a per-message
+idempotency key. Nothing is stored. `CONTACT_WHATSAPP` (digits with the country code) adds a WhatsApp button
+(`whatsappLink` in `src/utils/whatsapp.ts`). Tests: `src/modules/contact/tests/contact.integration.test.ts`.
 
 ### D. Dashboard overview
 
@@ -1018,16 +1124,46 @@ platform admins.
 
 ### L. Languages
 
-- `messages/en.json`, `ar.json` and `ar-LB.json` hold every text on screen.
-- A unit test fails if a key is missing or empty in any file.
-- Arabic pages are right-to-left.
-- Server error messages are translated by `localizeError`.
+- `messages/en.json`, `ar.json` and `ar-LB.json` hold every text on screen, in the same top-level groups as the
+  reference project (`nav`, `footer`, `home`, `placePage`, `dashboard`, `serverErrors`...). Each group has one owner
+  (`01-work-split.md`, "Who owns each group of the message files"): add texts only under your own groups. A new group
+  goes in that table in the same pull request that adds it.
+- English is the model. Its keys type `t("...")` (`src/global.d.ts`), so a wrong key fails the type check. A unit test
+  (`tests/unit/messages.test.ts`) fails if a key is missing, extra or empty in any file, if a text is not valid for
+  next-intl (a missing brace, an unclosed tag), if a key name has a dot, or if a translation needs other `{names}` or
+  `<tags>` than the English text (plural and select forms are read properly).
+- A text may hold `{name}`, plural forms and tags such as `<em>`. Read tags with `t.rich("key", { em: ... })`.
+- The language is not in the address. The `locale` cookie decides, then the browser's `Accept-Language` (`pickLocale`
+  in `src/config/appearance.ts`, the same rule the API and the emails use). `src/i18n/request.ts` loads the messages and
+  `src/app/layout.tsx` sets `lang` and `dir` on `<html>`. Arabic pages are right-to-left.
+- The visitor changes language with `AppearanceMenu`, which calls the `setLocale` server action
+  (`src/app/actions/locale.ts`): it checks the value against `LOCALES`, saves the `locale` cookie for a year, saves it
+  on a signed-in person's account (`setMyLocale`, so their emails follow it) and builds the pages again. The language names (`appearance.languageNames`) are each written in their own language.
+- Numbers use the digits 0 to 9 and dates the Gregorian calendar in all three languages. Both Arabic languages write
+  prices with a decimal point (`ar-LB`'s own format has a decimal comma, which reads as thousands next to dollar prices).
+  Use `formatMoney` and `formatDate` from `src/utils/format.ts`, never `toLocaleString` by hand.
+- Server error messages are translated by `localizeError`, using `serverErrors` (`messages`, `entities`, `statuses`).
+  Every new message thrown with `conflict(...)`, `invalid(...)` and the like needs its text there, in all three files.
 - In components use `useTranslations("namespace")`. On the server use `getTranslations`.
 
 ### M. Money: guests paying online
 
-1. `startBookingCheckout` creates a pending payment and returns the Whish or Stripe payment page.
-2. When Whish calls us back, or the guest comes back, we only run `settleOnlinePayment`.
+Code: `src/modules/bookings/server/booking-payments.ts`. Route: `POST /api/public/bookings/{token}/checkout`
+(signed in, rate limited, `method` WHISH or CARD).
+
+The buttons: `PayOnline` (`src/modules/payments/components/pay-online.tsx`, from `@/modules/payments`). The guest's
+booking page renders `<PayOnline token={booking.publicToken} methods={onlinePaymentMethods(booking.currency)} />`
+only while the booking waits for its payment (`AWAITING_PAYMENT`), under "Pay {amount}" and the countdown. One button
+per open way to pay, Whish first; a press calls the route and goes to the payment page (`useRedirectAction`), with the
+pressed button spinning and both disabled, so a double tap never starts two payments. With no way open it says to
+message the host. Texts: `confirmation.pay`. Tests: `tests/unit/pay-online.test.tsx`.
+
+1. `startBookingCheckout` creates a pending payment and returns the Whish or Stripe payment page. If the provider
+   refuses, the payment is marked failed and the booking keeps waiting. Whish takes USD and LBP; cards take USD and
+   EUR (`onlinePaymentMethods(currency)` says which are open).
+2. When Whish calls us back, Stripe's webhook arrives, or the guest comes back (`refreshGuestPayments`, for the
+   booking page), we only run `settleOnlinePayment`. Once paid, the booking moves on by its mode: `CONFIRMED` in
+   mode 1 (the hosts are told), `HELD` in mode 2 with the owner's answer time (the owner gets the request).
 3. `settleOnlinePayment` asks Whish or Stripe what really happened. Their answer decides. So a fake callback cannot
    confirm a booking.
 4. Marking a payment as paid happens only once, in a transaction. Calling it many times changes nothing.
@@ -1036,11 +1172,19 @@ platform admins.
 
 ### M. Money: refunds
 
-`refundForEndedBooking(endedBooking, by, now)`:
+Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `sendRefunds`, `retryPendingRefunds`).
 
-- Whoever ends the booking (guest, owner, platform, or the clock): full refund, automatically.
-- Card refunds go through Stripe. Whish refunds go through Whish.
-- If an automatic refund fails, it shows on the admin page to send by hand (`Refund.automatic`, `PENDING`).
+- Whoever ends a paid booking (guest, owner, or the clock), and a payment that lands after the booking ended or on
+  one already paid: full refund, automatically.
+- **A stay that has started can no longer be cancelled, by the owner or the guest.** Payouts only release money
+  for confirmed stays that have started, so a refund can never give back money already paid out to the owner. The
+  payout service must keep to this: available money is confirmed, started, unrefunded stays only.
+- The refund row is written in the same transaction that ends the booking (`PENDING`, the payment marked
+  `REFUNDED`); Whish or Stripe is called after the commit, and the row becomes `DONE` when they confirm it.
+- Card refunds go through Stripe, with the refund's id as Stripe's idempotency key; Whish refunds go through Whish,
+  which refunds a payment once. So sending again never pays twice.
+- A refund the provider refuses stays `PENDING`: housekeeping sends it again for a day, then it waits on the admin
+  page to send by hand.
 
 ### M. Money: payouts to hosts
 
@@ -1111,17 +1255,93 @@ tens of thousands of them.
 - **On your computer and in tests (no R2 settings):** the bytes are kept in Postgres (`StoredImage.bytes`) and served
   from `/api/images/{id}`, cached forever.
 - Nothing is deleted: removing a photo marks it `isDeleted`; its file stays in R2.
+- **All or nothing with R2:** R2 is never called inside the transaction. The file goes up first, then its
+  `StoredImage` and `Photo` rows are saved in one transaction; if that fails, the file is removed from R2 again
+  (`deleteObject`), so nothing is left behind.
 
-Code: `photo-service.ts`, `photo-repository.ts`.
+The galleries are the place's own (no room) and each room's; both need `rooms.manage`, and a gallery holds 20 photos.
+Routes: `POST /api/workspaces/{businessId}/photos` (multipart through `parseUpload`: `file`, and optional `roomId`,
+`alt`, `area`; 60 uploads an hour per member), `PATCH .../photos/{photoId}` (`{ cover: true }` puts it first,
+`{ area, alt }` tags it for the photo tour), `DELETE .../photos/{photoId}`, and the public `GET /api/images/{id}`.
+Code: `photo-service.ts`, `photo-repository.ts` (in `rooms`), the R2 client and the resizing in `src/server/storage/`.
+Tests: `photos.integration.test.ts` (rooms), with R2 faked and a failed save that must take the upload back down.
 
 ### P. Places and rooms (public)
 
 `directory-service.ts` is the public side:
 
-- `searchPlaces`: filters and dates. It uses two availability queries for all results together, never one per place.
+- `searchPlaces(search, now)`: filters and dates (see "Search" below).
 - `getPlace`, `checkAvailability`, `quoteRoom`, `getTakenNights`.
 
+Availability itself lives in `bookings` (it owns the night rows), behind `bookings/server.ts`
+(`availability-service.ts`), and the directory calls it:
+
+- `getTakenNights(businessId, roomId, range, now)`: the ISO nights in `range` (check-out night not included) that a
+  guest cannot book: confirmed stays, live holds, imported platform stays and closed dates. Holds whose time ran out
+  count as free already, as they do for `requestBooking`. At a place with a whole-place unit, a room's nights include
+  the whole place's, and the whole place's include every room's. Dates only, never who or why; no sign-in.
+- `findFreeRooms(roomIds, range, now)`: for search, the rooms free on every night of `range`, with the same rules, in
+  two queries however many rooms (the rooms' kinds through `rooms/server.ts`, then the taken nights). Unknown,
+  closed or deleted rooms are never free. Both refuse an empty or backwards range and more than 366 nights;
+  `findFreeRooms` takes 500 rooms at most. Tests: `availability.integration.test.ts`.
+
 The website search, the guest's AI and the guest MCP all use it, so they always agree.
+
+**Search.** `searchPlaces(search, now)` in `directory-service.ts` gives a `PlaceCard` per listed place that has a unit
+fitting the search, in at most a few queries however many places: `listListedPlaces` (workspaces: listed, live,
+not deleted, by town or region, words, categories, tags and accessibility), then `findSearchUnits` and
+`findPlaceCovers` (rooms: each place's units of the kind it books by, by guests, base price, amenities, bedrooms,
+bathrooms and beds), then, with dates, `findFreeRooms` (bookings) and `priceStays` (rooms, one query for every
+room's special prices). With dates a unit counts only when `stayIssue` has nothing against the stay and it is free
+on every night, so search never shows what booking would refuse. A region ("North Lebanon", "الشمال") matches the
+region a place stores or any of its towns (`areasMatching` in `src/config/regions.ts`). Nothing is returned rather
+than a near miss. The address holds the search (`searchParams` in `directory/schemas.ts`: wrong values are dropped,
+dates are kept only as a stay a guest could book) and `toPlaceSearch` turns it into the service's input, prices into
+minor units. Tests: `place-search.integration.test.ts` and `schemas.test.ts` (directory).
+
+**What exists today:** `quoteRoom(slug, roomId, { range, guests }, now?)` in `src/modules/directory/server/directory-service.ts`,
+behind `GET /api/public/places/{slug}/rooms/{roomId}/quote` (no sign-in, 120 a minute from one address). It gives each
+night's price, the total (always the full amount), and `issue`: why the stay cannot be booked as asked, as a code the
+screen translates (`PAST`, `TOO_FAR`, `TOO_LONG`, `MIN_NIGHTS`, `CAPACITY`; the list is in
+`src/config/booking-limits.ts`). A stay with an issue still gets its price, except one longer than the longest stay,
+which is not priced. The rule is the booking engine's own: `stayIssue` in `bookings/server/booking-policy.ts`
+(exported from `bookings/server.ts`), pure and tested in `stay-issue.test.ts`. The engine refuses a booking with the
+same function (`assertBookableStay`, which turns the code into the guest's sentence), so the quote and the booking can
+never disagree. The two limits (60 nights, 540 days ahead) are `MAX_STAY_NIGHTS` and `MAX_DAYS_AHEAD` in the same
+config file, and nothing else keeps a copy. A room the host switched off, or one the place does not book by (a room of a place that books whole), is "Room not found", as booking it would be.
+It reads the place, the room and the price through `workspaces`, `rooms` and their `server.ts` doors, so it needs no
+database code of its own. The availability reads exist in `bookings` (`getTakenNights`, `findFreeRooms`, above).
+
+The public page reads, for `getPlace` (all without sign-in, each through its module's `server.ts`):
+
+- `getPublicPlace(slug)` in `workspaces`: the place's public fields (name, description, area and region, address
+  and map pin, the business's own `phone` and `whatsapp`, currency, answer time, check-in and check-out times, house
+  rules, booking unit and mode, tags, accessibility, minimum guest age). Never its plan, Stripe ids, commission rate
+  or payment instructions (a guest sees those on their own booking). Null when the place is unknown, paused or
+  deleted. An unlisted place keeps its page, because its link is shared on Instagram; only search leaves it out.
+- `listPublicUnits(businessId, kind)` in `rooms`: the live, non-deleted units of one kind (pass
+  `BOOKABLE_ROOM_KIND[place.bookingUnit]`, so a unit that cannot be booked is never shown), with their non-deleted
+  photos in the host's order. Never the room's `exportToken`, its private calendar link.
+- `listPlacePhotos(businessId)` in `rooms`: the place's own photos (not a room's or an experience's), in order, for
+  the gallery and the photo tour.
+
+Tests: `public-place.integration.test.ts` (workspaces) and `public-units.integration.test.ts` (rooms).
+`getPlace(slug)` (directory) puts them together as a `PublicPlace`: the place's public fields, its bookable `units` (the
+rooms, or the one whole-place unit) with their photos, its `rooms` to show (at a place booked whole, the rooms inside it),
+and its photos (the rooms' photos when it has none of its own). `getRoomAvailability(slug, roomId, range)` is the calendar's
+read, behind `GET /api/public/places/{slug}/rooms/{roomId}/availability` (no sign-in, 120 a minute from one address): the
+taken nights as dates, for the year ahead by default (`AVAILABILITY_DAYS`), for the same rooms a quote accepts.
+The guest's booking route is `POST /api/public/places/{slug}/bookings` (`requireUser`, 10 requests per 10 minutes per guest): it
+calls `requestBooking` with the guest taken from the session, and answers `{ publicToken, reference, status }` only. The
+book page (`/p/{slug}/book`) is its screen.
+The guest's own booking page is `/b/{token}`: `getBookingForGuest` (someone else's link is "not found"), then
+`refreshGuestPayments` first when the booking waits for its payment, so a guest back from the payment page sees it at
+once. `POST /api/public/bookings/{token}/cancel` (`requireUser`, 10 requests per 10 minutes) calls `cancelStayAsGuest`
+with a reason that is optional; the engine refuses once the stay has started (409) and refunds online payments in full.
+The guest's trips are `listMyTrips(guestUserId)` (directory, over `listMyBookings`): a `GuestTrip` per stay with only what the
+list needs (no payments, no guest contact, no hold time). The page `/account` and `GET /api/me/bookings` both read it;
+`splitTrips` divides it into upcoming and past. The place page's parts and the
+booking box are built too (see `08`, "Built so far").
 
 ### P. Pricing
 
@@ -1134,11 +1354,25 @@ Money is always whole cents, stored as `BigInt` and handled as a number (see "Ru
 
 ### P. Push notifications and installing the app
 
-The site can be installed on a phone. It has a manifest, icons and a service worker (`public/sw.js`) that shows
+The site can be installed on a phone. It has a manifest (`src/app/manifest.ts`: full screen from `/`, the icons of
+the site's palette from `public/brand/icons/{palette}/`), icons and a service worker (`public/sw.js`) that shows
 notifications. We only accept push subscriptions from real browser push services. A device always belongs to a
 signed-in person (booking needs an account), and one browser endpoint is one row (`endpoint` is unique): subscribing
 again replaces its keys, and someone else subscribing on the same browser takes it over. Pages are never served from the
 cache, because availability must always be live.
+
+**What exists today:** `src/server/push/` sends (`sendPush`, signed with `VAPID_*`; without both keys push is off) and
+checks addresses (`isPushServiceUrl`: only Google, Mozilla, Apple and Windows push services, over https). The
+`notifications` module keeps the devices: `POST /api/me/push` (the browser's `PushSubscription.toJSON()`, signed in,
+20 changes an hour) and `DELETE /api/me/push` (`{ endpoint }`, only the person's own device). `pushToPeople(userIds,
+messageFor)` reaches every device of those people whose account is open, each in its owner's words; a device its
+push service calls gone (404, 410) is deleted; it never throws. The notify jobs push after their email has gone
+(`tellHosts` and `tellGuest` in `booking-notifications.ts`, and "they joined your team" in
+`team-notifications.ts`), using `noticeAsPush(message)`: the email's title, first line and button link. So a retried
+email never pushes twice, and a push failure never sends an email again. A guest with no email address still gets the
+push. `public/sw.js` shows the notification and opens its page (only pages of this site). The switch on screen
+(`PhoneAlerts`) comes with the account's notifications tab. Tests: `push.test.ts` and
+`push-devices.integration.test.ts` (notifications).
 
 ### R. Reviews
 
@@ -1162,8 +1396,27 @@ schema with `.catch`).
 
 Business settings: contact, currency, hold hours, commission rate, the booking mode (automatic, online with
 approval, or offline; an online mode needs the owner to accept the payment policy first), and whether the place is
-listed. Needs `settings.manage`. Code: `settings-service.ts`,
-`settings-form.tsx`.
+listed. Needs `settings.manage`. Code: `settings-service.ts` (in `workspaces`), `settings-form.tsx`.
+
+`GET` and `PATCH /api/workspaces/{businessId}/settings` (`settingsInput`): only the fields sent change, and an emptied
+text box is saved as nothing. How money flows is the owner's alone, so changing `bookingMode`, or sending
+`acceptOnlineTerms`, also needs the owner. An online mode (`AUTOMATIC`, `ONLINE_APPROVAL`) is refused until the
+owner has accepted "online payments are always refunded in full" once (`acceptOnlineTerms: true` saves
+`onlineTermsAcceptedAt`); bookings already made keep their own mode. The region is the host's pick, or the one the
+town they typed is in (`regionOfArea`, `src/config/regions.ts`); a new place gets it from its town when it is created (`createWorkspace`). Tags and accessibility come from
+`src/config/listing.ts`, currencies from `CURRENCIES` in `enums.ts`. `categories` are slugs of the admin's place
+categories (`listCategories("HOME")` from `admin/server`), checked first and saved as the place's exact set: the
+others are marked deleted and a category picked again is brought back, never added twice. Tests:
+`settings.integration.test.ts` (workspaces).
+
+Booking room by room or as a whole is its own route, `PUT /api/workspaces/{businessId}/booking-unit`
+(`chooseBookingUnit` in `rooms`, for the place screen), because it needs the whole-place unit, and settings calling
+`rooms` would close a circle between modules. It needs `settings.manage` and `rooms.manage`. In one transaction it
+saves the choice (`saveBookingUnit` from `workspaces`) and, for a whole place, makes sure the one whole-place unit
+exists: a new one starts from the live rooms added up (guests, bedrooms, beds, bathrooms, nightly prices) and is then
+adjusted like any room; one taken off or deleted is brought back, never doubled. The rooms stay, and are bookable
+again when the place goes back to rooms; bookings already made keep their own unit. The whole-place unit never uses
+up the plan's rooms. Tests: `booking-unit.integration.test.ts` (rooms).
 
 ### T. Team and roles
 
@@ -1183,22 +1436,58 @@ can make or change an owner. Nobody can change their own access. Code: `team-ser
 
 ### Calling the API from the browser
 
-- Use `api.get`, `api.post`, `api.patch`, `api.put`, `api.delete`, `api.upload` from `src/lib/api-client.ts`.
-- If a call fails, it throws `ApiError` with the server's message.
-- Show it with `errorMessage(caught, fallback)` and `FormError`.
-- Never call `fetch` directly.
+- Use `api.get`, `api.post`, `api.patch`, `api.put`, `api.delete`, `api.upload` from `src/lib/api-client.ts`. `api.get`
+  takes the query as a second argument (`api.get(url, { page: 2 })`; empty values are left out). Never call `fetch`
+  directly.
+- If a call fails, it throws `ApiError` with `status`, `code`, `message`, `details`, and `retryAfterSeconds` on a 429.
+  Three failures are ours, with status 0: `NETWORK` (no connection), `TIMEOUT` (no answer within the limit) and
+  `ABORTED` (we cancelled it: `isAborted(caught)`; nothing went wrong, so show nothing).
+- Every call has a time limit (30 seconds, 2 minutes for `api.upload`), so a connection that goes quiet ends in an error
+  and not a spinner for ever. Every method takes an optional last argument `{ signal, timeoutMs }`: pass an
+  `AbortSignal` to cancel a read that is no longer wanted. A call that times out may still have reached the server, so
+  a screen must not "retry" a payment or a booking on its own: the server decides what a repeated request does.
+- Show a failure with `errorMessage(caught, fallback)` and `FormError`. It returns the server's own sentence when a
+  person can act on it ("Those dates were just taken"), and the translated `fallback` for a crash (`INTERNAL`), a lost
+  connection, a timeout or an answer that is not ours. Until `localizeError` exists, a server sentence is in English.
+- For a form, `formFailure(caught, fallback)` also gives `fieldErrors`: the first problem of each wrong field, by field
+  name. Show the text you want under each field, in the visitor's language.
+- `api.run` (slow AI answers) is built with the AI features.
 
 ### Shared hooks
 
-- `useAction()`: calls the API, then refreshes the page. Gives `pending` and `error`.
-- `useRedirectAction(fallback)`: for steps that end on another page (Stripe, Whish, an AI app's sign-in).
-- `useStoredChoice(key, allowed, fallback)`: remembers a choice in this browser, such as the calendar view.
-- `useConfirm()`: the "are you sure?" dialog, before anything that cannot be undone.
+- `useAction()` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } = useAction()`. `run(() =>
+api.post(...))` calls the API, then refreshes the page, and resolves to `true` when it worked. `pending` covers both
+  steps. After a failure, either `error` (for `FormError`) or `fieldErrors` is set, never both. A second `run` while
+  one is going is ignored (a double click can never save, book or pay twice) and resolves to `false`.
+- `useLiveQuery<T>(url, query, { delayMs, timeoutMs })` (`src/hooks/use-live-query.ts`): reads from the API and keeps
+  the answer in step with what the screen asks as the visitor changes it: the dates, the guests, a search text.
+  `const quote = useLiveQuery<Quote>(ready ? url : null, { checkIn, checkOut })` gives `{ data, error, loading,
+reload }`. Changes in quick succession give one call (300 ms by default); a call that is no longer wanted is
+  cancelled, and so is one that is still running when the page is left; `data` is `null` while the answer to the
+  current question is on its way, so it is never the answer to an older one (a price for other nights); a `url` of `null`
+  means "do not ask yet". Use it for every read that depends on what the visitor picks. For a read that does not
+  change, read on the server.
+- `useDebouncedValue(value, delayMs)`: a value that follows another only once it has stopped changing: show what is
+  typed, search with the debounced value.
+- `useRedirectAction()`: `const { run, pending, error } = useRedirectAction()`, for steps that end on another page
+  (Stripe, Whish, an AI app's sign-in). `run(() => api.post(...))` expects `{ url }` and follows it only if it is a page
+  of this site or an https address (`isSafeRedirect`).
+- `useStoredChoice(key, allowed, fallback)`: `const [view, setView] = useStoredChoice("calendar-view", ["month", "week"]
+as const, "month")`. Remembers a choice in this browser; a saved value that is no longer allowed is ignored.
+- `useConfirm()` (`src/components/ui/confirm-dialog.tsx`): the "are you sure?" step before anything that cannot be
+  undone. `const { confirm, dialog } = useConfirm()`, render `{dialog}`, then `const answer = await confirm({ title,
+body, confirmLabel, tone, reason })`. `answer` is `null` when the person went back (Esc, the dark layer or "Go back"),
+  and `{ reason }` when they went ahead. The texts come from the `confirm` group: `confirm.<action>.title`, `.body`,
+  `.confirm`. `tone` is `danger` by default; the focus starts on "Go back".
 
 ### Loading, empty and error states
 
-- Every dashboard page has a `loading.tsx`, built from `components/shell/skeletons.tsx`, in the shape of the real
-  page.
+- Every dashboard page has a `loading.tsx`, built from `components/shell/skeletons.tsx` (`PageHeaderSkeleton`,
+  `PanelSkeleton`, `CardGridSkeleton`; add one there when a new kind of page part needs it) and `Skeleton`, in the shape
+  of the real page, with `<LoadingStatus />` for screen readers.
+- A dialog is `SheetDialog` (a full-screen sheet on phones, a centred box from 640 px; `compact` for a short question),
+  or `ShowAllDialog` for "Show all photos / reviews / amenities". Put `data-autofocus` on the element that should
+  have the focus first.
 - Every list has an empty state with one clear next step.
 - Every action shows errors with `FormError`.
 
@@ -1239,7 +1528,8 @@ They are only for a manual or outside run: on DigitalOcean the worker runs every
 - API keys are stored as hashes and shown only once. Read-only keys lose every write permission.
 - Raw SQL only with safe `$queryRaw` templates (values are never pasted into the SQL text).
 - Webhooks (calls from Stripe) are checked by signature and applied only once.
-- No secrets in the repository. Live secrets are in the DigitalOcean server's settings and in GitHub secrets.
+- No secrets in the repository. Live secrets are in GitHub's `production` environment; each deploy writes them to
+  the server's `.env` (`docs/deployment.md`).
 
 ---
 
@@ -1340,6 +1630,22 @@ cancelStayAsGuest(publicToken: string, guestUserId: string, reason: string | nul
 // (409) once the stay has started.
 
 getBookingForGuest(publicToken: string, guestUserId: string): Promise<(Booking & { room; business; payments }) | null>
+// business holds only what a guest may see (name, address, contact numbers, times, house rules, how to pay).
+
+getBooking(ctx: TenantContext, bookingId: string): Promise<Booking & { room }>   // bookings.read
+listBookings(ctx: TenantContext, filters: { status?, roomId?, from?: Date, to?: Date, take, skip }): Promise<Booking[]>
+// Staff without guests.contact see the guest's phone and email masked.
+listMyBookings(guestUserId: string): Promise<Booking[]>   // the guest's trips, newest first
+
+getCalendar(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read
+getCalendarBoard(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read: { rooms, occupancy }
+addBlock(ctx: TenantContext, input: { roomId: string; range: DateRange; note: string | null }, now?: Date)   // blocks.manage
+removeBlock(ctx: TenantContext, blockId: string, now?: Date)   // blocks.manage
+// Closing taken nights gives 409 "Those nights are already booked or closed."
+
+// The input checks for these routes are in `@/modules/bookings` (bookingRequestInput, decisionInput,
+// bookingActionParams, bookingFilters, guestCancelInput, bookingTokenParams, blockInput, blockParams, calendarQuery,
+// placeParams). Each hands the service its own shape (a DateRange, Dates, null for missing text).
 
 // Every function that frees or takes our own nights (decide, guest cancel, hold expiry, closed dates) calls
 // recheckImportClashes(businessId, roomId) after it commits, so platform clash flags are right at once.

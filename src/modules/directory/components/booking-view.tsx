@@ -1,0 +1,182 @@
+import type { BookingMode, BookingStatus } from "@prisma/client";
+import { getLocale, getTranslations } from "next-intl/server";
+import { BoardingPass } from "@/components/brand/boarding-pass";
+import { Postmark } from "@/components/brand/postmark";
+import { WhatsAppLink } from "@/components/site/whatsapp-link";
+import { ButtonLink } from "@/components/ui/button";
+import { panelClass } from "@/components/ui/field";
+import { StepTrail } from "@/components/ui/step-trail";
+import type { Locale } from "@/config/appearance";
+import type { OnlinePaymentMethod } from "@/config/enums";
+import { isOnlineMode } from "@/config/enums";
+import { PayOnline } from "@/modules/payments";
+import { toIsoDate, todayUtc } from "@/utils/dates";
+import { formatMoney, formatStayDates } from "@/utils/format";
+import { bookingProgress, canGuestCancel, watchEverySeconds } from "../booking-progress";
+import { BookingWatcher } from "./booking-watcher";
+import { GuestCancelButton } from "./guest-cancel-button";
+import { HoldCountdown } from "./hold-countdown";
+
+/** A booking as its guest's page shows it: what the guest may see of it, its place and its payments. */
+export interface GuestBooking {
+  status: BookingStatus;
+  bookingMode: BookingMode;
+  currency: string;
+  totalCents: number;
+  checkIn: Date;
+  checkOut: Date;
+  guestCount: number;
+  guestName: string;
+  reference: string;
+  holdExpiresAt: Date | null;
+  room: { name: string };
+  business: {
+    name: string;
+    slug: string;
+    area: string | null;
+    whatsapp: string | null;
+    phone: string | null;
+    checkInTime: string;
+    paymentInstructions: string | null;
+  };
+  payments: { status: "PENDING" | "PAID" | "REFUNDED" | "FAILED"; amountCents: number }[];
+}
+
+/**
+ * The guest's own booking: where it stands, what to do next (pay, wait for the host), how to reach the host, and how
+ * to cancel. `now` is the moment the page is drawn, so the countdown starts from the server's clock.
+ */
+export async function BookingView({
+  token,
+  booking,
+  methods,
+  now = new Date(),
+}: {
+  token: string;
+  booking: GuestBooking;
+  /** The ways this booking's currency can be paid online, for the pay buttons. */
+  methods: OnlinePaymentMethod[];
+  now?: Date;
+}) {
+  const [t, locale] = await Promise.all([getTranslations("confirmation"), getLocale()]);
+  const place = booking.business.name;
+  const money = (cents: number) => formatMoney(cents, booking.currency, locale as Locale);
+  const online = isOnlineMode(booking.bookingMode);
+  const progress = bookingProgress(booking.bookingMode, booking.status);
+  const remainingSeconds = booking.holdExpiresAt
+    ? Math.max(0, Math.floor((booking.holdExpiresAt.getTime() - now.getTime()) / 1000))
+    : null;
+  const paid = booking.payments.filter((payment) => payment.status === "PAID");
+  const refunded = booking.payments.filter((payment) => payment.status === "REFUNDED");
+  const refundedCents = refunded.reduce((sum, payment) => sum + payment.amountCents, 0);
+  const ended =
+    booking.status === "DECLINED" || booking.status === "EXPIRED" || booking.status === "CANCELLED";
+  const contact = booking.business.whatsapp || booking.business.phone;
+
+  return (
+    <div className="mx-auto grid max-w-280 gap-12 px-4 pt-10 pb-16 sm:px-6 lg:grid-cols-[1fr_400px] lg:px-10">
+      <BookingWatcher everySeconds={watchEverySeconds(booking.bookingMode, booking.status)} />
+      <div className="flex min-w-0 flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <h1 className="font-poster text-[clamp(1.75rem,3.2vw,2.25rem)]">
+            {t(`heading.${booking.status}`, { place })}
+          </h1>
+          {progress ? (
+            <StepTrail
+              label={t("title")}
+              steps={progress.steps.map((step) => t(`steps.${step}`))}
+              current={progress.current}
+            />
+          ) : null}
+        </div>
+
+        {booking.status === "AWAITING_PAYMENT" ? (
+          <section className={`${panelClass} flex flex-col gap-4`}>
+            <h2 className="text-xl font-semibold">{t("pay.title", { amount: money(booking.totalCents) })}</h2>
+            <p className="text-muted">
+              {t("pay.intro")}{" "}
+              {remainingSeconds !== null ? <HoldCountdown remainingSeconds={remainingSeconds} /> : null}
+            </p>
+            <PayOnline token={token} methods={methods} />
+          </section>
+        ) : null}
+
+        {booking.status === "HELD" ? (
+          <section className={`${panelClass} flex flex-col gap-3`}>
+            {paid.length > 0 ? (
+              <p className="font-semibold">{t("pay.paid", { amount: money(booking.totalCents) })}</p>
+            ) : null}
+            <p className="text-muted">
+              {t("holdIntro")}{" "}
+              {remainingSeconds !== null ? <HoldCountdown remainingSeconds={remainingSeconds} /> : null}
+            </p>
+          </section>
+        ) : null}
+
+        {!online && (booking.status === "HELD" || booking.status === "CONFIRMED") ? (
+          <section className={`${panelClass} flex flex-col gap-2`}>
+            <h2 className="text-xl font-semibold">{t("payTitle", { amount: money(booking.totalCents) })}</h2>
+            <p className="whitespace-pre-line text-muted">
+              {booking.business.paymentInstructions || t("payFallback")}
+            </p>
+          </section>
+        ) : null}
+
+        {online && booking.status === "CONFIRMED" ? (
+          <p className="font-semibold">{t("pay.paid", { amount: money(booking.totalCents) })}</p>
+        ) : null}
+
+        {ended ? (
+          <section className="flex flex-col items-start gap-3">
+            {refundedCents > 0 ? (
+              <p className="font-semibold">{t("pay.refunded", { amount: money(refundedCents) })}</p>
+            ) : online && paid.length > 0 ? (
+              <p className="font-semibold">{t("refundNote")}</p>
+            ) : null}
+            <ButtonLink href={`/p/${encodeURIComponent(booking.business.slug)}`}>{t("bookAgain")}</ButtonLink>
+          </section>
+        ) : null}
+
+        {contact ? <WhatsAppLink phone={contact} label={t("whatsapp")} /> : null}
+
+        {canGuestCancel(booking.status, toIsoDate(booking.checkIn), toIsoDate(todayUtc(now))) ? (
+          <GuestCancelButton token={token} online={online} />
+        ) : null}
+
+        <p className="text-sm text-muted">{t("keepLink")}</p>
+      </div>
+
+      <aside className="relative lg:sticky lg:top-28 lg:self-start">
+        <BoardingPass
+          kicker={t(`status.${booking.status}`)}
+          title={place}
+          subtitle={booking.business.area}
+          fields={[
+            {
+              label: t("dates"),
+              value: formatStayDates(booking.checkIn, booking.checkOut, locale as Locale),
+            },
+            { label: t("room"), value: booking.room.name },
+            { label: t("guestsLabel"), value: t("guests", { count: booking.guestCount }) },
+            { label: t("passenger"), value: booking.guestName },
+            { label: t("checkInFrom"), value: booking.business.checkInTime },
+          ]}
+          stub={
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold text-muted">
+                  {t("reference")} {booking.reference}
+                </p>
+                <p className="mt-1 flex gap-3 text-lg font-semibold">
+                  <span>{t("total")}</span>
+                  <span className="tabular-nums">{money(booking.totalCents)}</span>
+                </p>
+              </div>
+              {booking.status === "CONFIRMED" ? <Postmark className="size-16 shrink-0" spin /> : null}
+            </div>
+          }
+        />
+      </aside>
+    </div>
+  );
+}

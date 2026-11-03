@@ -137,6 +137,8 @@ async function assertCanJoin(invitation: FoundInvitation, userId: string | null)
 /** Creates the membership with the invitation's role, once, and records it for the person and the business. */
 async function join(invitation: FoundInvitation, userId: string, now: Date) {
   await runInTransaction(async (tx) => {
+    // Counted again with the business locked: two people joining at once cannot both take the last place.
+    await assertPlanAllowsAnother(invitation.businessId, "members", tx);
     if (!(await invitations.markAccepted(tx, invitation.id, userId, now))) {
       throw conflict("This invitation can't be used any more.");
     }

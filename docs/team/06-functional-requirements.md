@@ -35,7 +35,10 @@ Rules for the online modes (1 and 2):
   (`holdHours`, 24 hours by default) to confirm or decline. If they do not answer, the booking expires and the guest
   gets a full automatic refund. The guest's money is never stuck.
 - **Refunds are always full and automatic.** Whoever cancels, the guest gets the full amount back through Whish or
-  Stripe. The owner accepts this when choosing an online mode (it is written in the payment policy).
+  Stripe.
+- **A stay that has started can no longer be cancelled**, by the guest or the owner. A guest who arrives and leaves
+  early is not refunded: they stayed. This also means a refund never gives back money already paid out to the owner
+  (payouts only release stays that have started). The owner accepts this when choosing an online mode (it is written in the payment policy).
 
 For mode 3, payments made outside the platform are between the owner and the guest. The platform does not record
 or handle them. This is written in the payment policy.
@@ -188,6 +191,11 @@ submission (Friday 13 November).
   would be emailed. Guests get their bookings' updates on every device of their account.
 - **F20. Install the app.** The site can be added to a phone's home screen and opens like an app, with an offline
   page when there is no signal.
+- **F24. About and Contact (bonus, approved by Sami on 2 November).** An About page tells why booking direct
+  matters, how a booking works, the three booking modes and our promises. A Contact page lets anyone send the
+  Mabeet team a message (name, email, topic, message): it is emailed to the team's inbox with the sender as the
+  reply address, nothing is stored, and one address can send five an hour. It also offers a WhatsApp chat. Each
+  way shows only when its setting (`CONTACT_EMAIL`, `CONTACT_WHATSAPP`) is set.
 
 ---
 
