@@ -561,6 +561,18 @@ host's answer time), or arrange payment with the host.
 **New:** no "Deposit: {amount}" line; the amount is always the full total. A cancelled paid booking says "Refunded
 in full".
 
+**Built so far** (`src/app/(site)/b/[token]/`, drawn by `BookingView`): the heading for the booking's status, the step bar
+(`bookingProgress`: sent and paid when confirmed at once, sent, paid and confirmed with the host's approval, sent and
+confirmed offline; none once the booking ended), then what to do next. While it waits for payment: the amount, the
+10-minute `HoldCountdown` and `PayOnline` (Wouroud's, Whish and card). After paying, or offline: the host's answer
+time counting down, and offline how to pay the host (their instructions, or a fallback sentence). An ended booking
+(declined, expired, cancelled) shows the refund and "Book other dates". Then the host's WhatsApp, `GuestCancelButton`
+(asks first; the wording promises a refund only for online payments; hidden from the check-in day on, as the engine
+refuses), and the boarding pass with a postmark once confirmed. The countdown starts from the seconds the server says
+are left, so a phone with the wrong clock is right. `BookingWatcher` asks the server again every 4 s while paying and
+every 15 or 30 s while the host decides, only while the tab is in view, and stops when nothing more can change. Not built
+yet: phone alerts (`PhoneAlerts`) and "Near your stay".
+
 #### `/o/[slug]` Experience or service (F8, bonus)
 
 Like the place page: title row, gallery, summary, what is included, `ThingsToKnow`, "Where you meet" map,

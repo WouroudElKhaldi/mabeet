@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { cache } from "react";
 import { placeParams } from "@/modules/bookings";
 import { initialStay, PlaceView } from "@/modules/directory";
-import { getPlace } from "@/modules/directory/server";
-
-// The page and its title both ask for the place; asked twice in one request it is read once.
-const loadPlace = cache(getPlace);
+import { loadPlace } from "@/modules/directory/server";
 
 type PageProps = {
   params: Promise<{ slug: string }>;

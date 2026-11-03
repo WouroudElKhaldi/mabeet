@@ -329,7 +329,16 @@
       "unavailable": "Online payment isn't available right now. Message the host.",
       "paid": "Paid online: {amount}",
       "refunded": "Refunded to you: {amount}"
-    }
+    },
+    "cancel": {
+      "title": "Cancel this booking?",
+      "bodyOnline": "The dates open up again and the host is told. Anything you paid online is refunded to you in full.",
+      "bodyOffline": "The dates open up again and the host is told.",
+      "confirm": "Cancel booking",
+      "reason": "Reason (optional)"
+    },
+    "bookAgain": "Book other dates",
+    "refundNote": "Your online payment is refunded in full."
   },
   "auth": {
     "name": "Full name",
