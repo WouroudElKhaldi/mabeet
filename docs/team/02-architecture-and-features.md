@@ -1423,6 +1423,12 @@ up the plan's rooms. Tests: `booking-unit.integration.test.ts` (rooms).
 Add a member by email with a role, change their role, or remove them. Create, change and delete roles. Only an owner
 can make or change an owner. Nobody can change their own access. Code: `team-service.ts`.
 
+Managing the team (`team.manage`) and managing the roles (`roles.manage`) are two permissions. The list of roles is
+readable with either one, because inviting someone or changing a member's role picks one of them. The Team page
+(`/dashboard/[id]/team`) shows each part only to a member holding its own permission, and offers only what the service
+allows: `team-access.ts` (in the module's `index.ts`) reads the same rules, so a screen never offers a role the person
+cannot give, a change to their own access, or an owner's row to someone who is not an owner.
+
 ---
 
 ## Part 8. How to build screens

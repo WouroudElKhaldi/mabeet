@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import { findUngrantable, type Permission, toPermissions } from "@/config/permissions";
 import { recordAction } from "@/modules/audit/server";
-import { requirePermission, type TenantContext } from "@/server/auth/tenant-context";
+import { can, requirePermission, type TenantContext } from "@/server/auth/tenant-context";
 import { prisma, runInTransaction } from "@/server/db/client";
 import { duplicateAsConflict } from "@/server/db/constraint-errors";
 import { conflict, forbidden, notFound } from "@/server/errors";
@@ -26,7 +26,8 @@ function assertCanGrant(ctx: TenantContext, permissions: readonly Permission[]):
 }
 
 export function listRoles(ctx: TenantContext) {
-  requirePermission(ctx, "roles.manage");
+  // Inviting someone or changing a member's role picks one of these, so whoever manages the team sees them too.
+  if (!can(ctx, "team.manage")) requirePermission(ctx, "roles.manage");
   return team.listRoles(prisma, ctx.businessId);
 }
 

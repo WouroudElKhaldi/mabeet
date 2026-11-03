@@ -800,7 +800,17 @@
         "ACCEPTED": "Accepted",
         "CANCELLED": "Cancelled",
         "EXPIRED": "Expired"
-      }
+      },
+      "intro": "Invite the people who run your place with you, and choose what each one can do.",
+      "phoneHint": "With country code, e.g. +961 71 123 456",
+      "noInvitations": "No invitations yet. Use the form above to invite someone.",
+      "noRoleToGive": "There is no role you can give yet: you can only give a role when you have all of its permissions yourself.",
+      "ownerRole": "Owners can do everything here, including money and plans. This role can't be changed or deleted.",
+      "roleLocked": "This role has permissions you don't have, so only someone who has them all can change it.",
+      "nameError": "Write their full name (2 to 80 letters).",
+      "emailError": "Check the email address.",
+      "phoneError": "Use the international format, e.g. +96171123456.",
+      "roleNameError": "Give the role a name of 2 to 40 letters."
     },
     "reviews": {
       "title": "Reviews",
