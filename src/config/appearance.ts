@@ -32,3 +32,8 @@ export function isPalette(value: string): value is Palette {
 /** Each visitor chooses light or dark; the choice is kept in this browser. */
 export type Mode = "light" | "dark";
 export const MODE_STORAGE_KEY = "mabeet-mode";
+
+/** A category's name in the reader's language: both Arabic variants read the Arabic name. */
+export function categoryName(category: { nameEn: string; nameAr: string }, locale: string): string {
+  return isArabic(locale) ? category.nameAr : category.nameEn;
+}
