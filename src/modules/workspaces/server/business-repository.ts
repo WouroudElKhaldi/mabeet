@@ -69,6 +69,7 @@ export function findPublicBusinessBySlug(db: Db, slug: string) {
 /** The settings the dashboard edits, with when the owner accepted full refunds for online payments. */
 const settingsFields = {
   name: true,
+  slug: true,
   description: true,
   area: true,
   region: true,
