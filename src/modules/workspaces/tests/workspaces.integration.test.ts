@@ -27,6 +27,14 @@ describe("creating a place", () => {
     ]);
   });
 
+  it("works out the region from the town, so search finds the place by its region", async () => {
+    const owner = await createUser();
+    const inTown = await createWorkspace(owner.id, { name: "Beit Ehden", area: "Ehden" });
+    const unknown = await createWorkspace(owner.id, { name: "Beit Somewhere", area: "Nowhere Valley" });
+    const noTown = await createWorkspace(owner.id, { name: "Beit Nameless" });
+    expect([inTown.region, unknown.region, noTown.region]).toEqual(["north", null, null]);
+  });
+
   it("gives two places with the same name different booking links", async () => {
     const owner = await createUser();
     const name = `Beit Batroun ${randomUUID()}`;

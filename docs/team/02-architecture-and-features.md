@@ -1311,7 +1311,7 @@ text box is saved as nothing. How money flows is the owner's alone, so changing 
 `acceptOnlineTerms`, also needs the owner. An online mode (`AUTOMATIC`, `ONLINE_APPROVAL`) is refused until the
 owner has accepted "online payments are always refunded in full" once (`acceptOnlineTerms: true` saves
 `onlineTermsAcceptedAt`); bookings already made keep their own mode. The region is the host's pick, or the one the
-town they typed is in (`regionOfArea`, `src/config/regions.ts`). Tags and accessibility come from
+town they typed is in (`regionOfArea`, `src/config/regions.ts`); a new place gets it from its town when it is created (`createWorkspace`). Tags and accessibility come from
 `src/config/listing.ts`, currencies from `CURRENCIES` in `enums.ts`. `categories` are slugs of the admin's place
 categories (`listCategories("HOME")` from `admin/server`), checked first and saved as the place's exact set: the
 others are marked deleted and a category picked again is brought back, never added twice. Tests:
