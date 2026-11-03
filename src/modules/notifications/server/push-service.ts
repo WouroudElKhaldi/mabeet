@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db/client";
 import { appUrl } from "@/server/email/notices";
+import { env } from "@/server/env";
 import type { Message } from "@/server/email/templates";
 import { type PushDevice, type PushMessage, pushEnabled, sendPush } from "@/server/push/send";
 import * as devices from "./push-repository";
@@ -7,6 +8,9 @@ import * as devices from "./push-repository";
 // Push notifications follow the emails: whoever is emailed about something also gets it on every device they turned
 // push on. Each module's notify job pushes after its email has gone, through `pushToPeople`, which never throws: a
 // push outage must not make the job send its email again.
+
+/** The key browsers need to turn push on, or null when push is not set up on this server. */
+export const pushPublicKey = (): string | null => (pushEnabled() ? (env.VAPID_PUBLIC_KEY ?? null) : null);
 
 /** Turns push on for this device, for the signed-in person. */
 export function followOnDevice(userId: string, device: PushDevice): Promise<void> {

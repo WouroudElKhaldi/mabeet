@@ -6,9 +6,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-/** The account's pages that exist. Favourites, activity and notifications join as they are built. */
+/** The account's pages that exist. Favourites and activity join as they are built. */
 const TABS = [
   { key: "trips", href: "/account" },
+  { key: "notifications", href: "/account/notifications" },
   { key: "privacy", href: "/account/privacy" },
 ] as const;
 

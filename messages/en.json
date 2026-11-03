@@ -1860,7 +1860,8 @@
     "iosSteps": "In Safari, tap Share, then Add to Home Screen.",
     "manualSteps": "Use your browser's menu and choose Install app or Add to Home Screen.",
     "offlineTitle": "You're offline",
-    "offlineBody": "Mabeet needs a connection to show live availability. Check your signal and try again."
+    "offlineBody": "Mabeet needs a connection to show live availability. Check your signal and try again.",
+    "notSetUp": "Notifications are not switched on for Mabeet yet. You still get every update by email."
   },
   "refundPolicy": {
     "full": "Online payments are always refunded in full."
