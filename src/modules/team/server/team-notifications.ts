@@ -1,3 +1,4 @@
+import { noticeAsPush, pushToPeople } from "@/modules/notifications/server";
 import { prisma } from "@/server/db/client";
 import { appUrl, firstName, noticeLanguage, queueNotice } from "@/server/email/notices";
 import { sendEmail } from "@/server/email/send";
@@ -115,5 +116,6 @@ const invitationAccepted = defineJob(
       idempotencyKey: `invitation-accepted-${invited.id}`,
       ...render(message.title, message, l),
     });
+    await pushToPeople([host.id], () => noticeAsPush(message));
   },
 );

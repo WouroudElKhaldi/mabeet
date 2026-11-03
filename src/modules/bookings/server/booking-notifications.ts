@@ -1,5 +1,6 @@
 import type { BookingStatus, FeedSource } from "@prisma/client";
 import { isOnlineMode } from "@/config/enums";
+import { noticeAsPush, pushToPeople } from "@/modules/notifications/server";
 import { listPeopleWhoDecideBookings } from "@/modules/team/server";
 import { prisma } from "@/server/db/client";
 import { appUrl, firstName, type NoticeLanguage, noticeLanguage, queueNotice } from "@/server/email/notices";
@@ -58,6 +59,7 @@ async function loadNotice(bookingId: string) {
     businessName: booking.business.name,
     paymentInstructions: booking.business.paymentInstructions,
     locale: noticeLanguage(booking.locale),
+    guestUserId: booking.guestUserId,
     guestName: booking.guestName,
     // A closed account's email is a placeholder, so then only the address typed on the booking is used.
     guestEmail: booking.guestEmail ?? (booking.guestUser.isDeleted ? null : booking.guestUser.email),
@@ -85,7 +87,10 @@ type Notice = NonNullable<Awaited<ReturnType<typeof loadNotice>>>;
 const bookingPage = (notice: Notice) => appUrl(`/b/${notice.publicToken}`);
 const bookingsPage = (businessId: string) => appUrl(`/dashboard/${businessId}/bookings`);
 
-/** Tells the people who can decide bookings: one email per language. */
+/**
+ * Tells the people who can decide bookings: one email per language, then a push to each of their devices in their
+ * own language. The push comes after the emails, so a retried email never pushes twice.
+ */
 async function tellHosts(businessId: string, build: (l: Lang) => Letter) {
   const hosts = await listPeopleWhoDecideBookings(businessId);
   const languages = [...new Set(hosts.map((host) => noticeLanguage(host.locale)))];
@@ -99,12 +104,19 @@ async function tellHosts(businessId: string, build: (l: Lang) => Letter) {
       });
     }),
   );
+  const languageOf = new Map(hosts.map((host) => [host.id, noticeLanguage(host.locale)]));
+  await pushToPeople(
+    hosts.map((host) => host.id),
+    (userId) => noticeAsPush(build(languageOf.get(userId) ?? "en").message),
+  );
 }
 
-/** Tells the guest by email, when there is an address to write to. */
+/** Tells the guest by email, when there is an address to write to, then on every device of their account. */
 async function tellGuest(notice: Notice, { subject, idempotencyKey, message }: Letter) {
-  if (!notice.guestEmail) return;
-  await sendEmail({ to: notice.guestEmail, idempotencyKey, ...render(subject, message, notice.locale) });
+  if (notice.guestEmail) {
+    await sendEmail({ to: notice.guestEmail, idempotencyKey, ...render(subject, message, notice.locale) });
+  }
+  await pushToPeople([notice.guestUserId], () => noticeAsPush(message));
 }
 
 // ---------- A request waiting for the owner ----------
