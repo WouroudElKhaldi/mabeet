@@ -91,6 +91,21 @@ describe("the host MCP", () => {
     expect(calls.every((call) => call.channel === "mcp" && call.outcome === "ok")).toBe(true);
   });
 
+  it("reports the place's numbers like its analytics page, money already formatted", async () => {
+    const { key } = await placeWithKey();
+    const report = await tool(key.secret, "get_report");
+    expect(report).toMatchObject({
+      isError: false,
+      payload: { currency: "USD", nightsSold: 0, directRevenue: "$0.00", commissionSaved: "$0.00" },
+    });
+    expect(await tool(key.secret, "get_savings")).toMatchObject({
+      payload: { savings: [{ currency: "USD", directRevenue: "$0.00" }], planFees: [] },
+    });
+    expect(await tool(key.secret, "get_report", { from: "2026-12-10", to: "2026-12-01" })).toMatchObject({
+      isError: true,
+    });
+  });
+
   it("marks guests' words as data, never as instructions", async () => {
     const { business, room, key } = await placeWithKey();
     const guest = await createUser("Guest");

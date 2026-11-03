@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BOOKING_STATUSES } from "@/config/enums";
+import { getBusinessReport, getSavings } from "@/modules/analytics/server";
 import { findFreeRooms, getCalendar, listBookings } from "@/modules/bookings/server";
 import { listRooms } from "@/modules/rooms/server";
 import { listWorkspaces } from "@/modules/team/server";
@@ -7,7 +8,7 @@ import { getPlaceBasics } from "@/modules/workspaces/server";
 import { can, type TenantContext } from "@/server/auth/tenant-context";
 import { resolveContext } from "@/server/auth/resolve-context";
 import { invalid, notFound } from "@/server/errors";
-import { parseIsoDate, toDateRange, toIsoDate } from "@/utils/dates";
+import { addDays, parseIsoDate, toDateRange, toIsoDate, todayUtc } from "@/utils/dates";
 import { type AiTool, defineTool } from "./tool";
 
 // Tools for owners and staff, through their own AI app. Each one calls the same service the dashboard uses, so the
@@ -16,6 +17,8 @@ import { type AiTool, defineTool } from "./tool";
 
 const isoDate = z.iso.date().describe("YYYY-MM-DD");
 const MAX_BOOKINGS = 50;
+/** The report covers this many days, today included, unless asked for a period. */
+const DEFAULT_REPORT_DAYS = 30;
 
 /** Text a guest wrote, marked so the model treats it as data and never as instructions. */
 const guestWritten = (text: string | null) => (text ? { guestWritten: text } : null);
@@ -57,6 +60,35 @@ async function resolvePlaceContext(ctx: TenantContext, place: string | undefined
 }
 
 const SINGLE_PLACE_TOOLS = [
+  team({
+    name: "get_report",
+    description: `The place's numbers over a period (the last ${DEFAULT_REPORT_DAYS} days unless given), the same as its analytics page: occupancy, nights sold and available, direct revenue, average price per direct night, the commission saved versus Airbnb or Booking.com, nights by channel and by month, revenue by month, requests by outcome and the host's typical answer time. Use it to write a report for the member. "to" is the day after the last day.`,
+    input: z.object({ from: isoDate.optional(), to: isoDate.optional() }),
+    requires: "analytics.read",
+    mutates: false,
+    run: async ({ from, to }, ctx) => {
+      const end = to ?? toIsoDate(addDays(todayUtc(), 1));
+      const start = from ?? toIsoDate(addDays(parseIsoDate(end), -DEFAULT_REPORT_DAYS));
+      // A plain object (no refinement), so the tool can gain the `place` argument; the order is checked here.
+      if (end <= start) throw invalid("The end must be after the start");
+      return getBusinessReport(ctx, toDateRange({ checkIn: start, checkOut: end }));
+    },
+  }),
+  team({
+    name: "get_savings",
+    description:
+      "Since the place joined: its confirmed direct revenue and the commission booking direct saved it (per currency, at its own rate), and what it paid Mabeet for its plan.",
+    input: z.object({}),
+    requires: "analytics.read",
+    mutates: false,
+    run: async (_input, ctx) => {
+      const { savings, planFees } = await getSavings(ctx);
+      return {
+        savings,
+        planFees: planFees.map((fee) => ({ currency: fee.currency, paidCents: fee.cents })),
+      };
+    },
+  }),
   team({
     name: "list_rooms",
     description:

@@ -655,8 +655,8 @@ ones too. `POST /api/mcp` (`answerHostMcp`, `host-mcp.ts`): 401 without a workin
 the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_rooms`, `check_availability`
 (`findFreeRooms`), `get_calendar` and `list_bookings`, each with the optional `place` (`resolvePlaceContext`: by
 id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
-come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. Not yet: the
-report tools (they wait for the analytics numbers, `getBusinessReport`), OAuth sign-in, and the actions. Tests:
+come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. `get_report` (`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give
+the same numbers as the analytics page. Not yet: OAuth sign-in, and the actions. Tests:
 `mcp-isolation.integration.test.ts` (assistant).
 
 ### A. AI: the guest's assistant and guest MCP
