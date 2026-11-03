@@ -1,6 +1,7 @@
-# With the domain: the website on https://${DOMAIN}, with the certificate deploy/request-certificate.sh requested.
-# Plain HTTP only answers Let's Encrypt's renewal check and sends everything else to https. The security headers
-# (HSTS, CSP...) come from next.config.ts, not from here.
+# With the domain: the website on https://${DOMAIN}, with the certificate deploy/request-certificate.sh requested
+# for the domain and its www. Plain HTTP only answers Let's Encrypt's renewal check, and every other address (http,
+# www) goes to https://${DOMAIN}, so the site has one address. The security headers (HSTS, CSP...) come from
+# next.config.ts, not from here.
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -14,6 +15,20 @@ server {
     location / {
         return 301 https://${DOMAIN}$request_uri;
     }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name www.${DOMAIN};
+    server_tokens off;
+
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    return 301 https://${DOMAIN}$request_uri;
 }
 
 server {

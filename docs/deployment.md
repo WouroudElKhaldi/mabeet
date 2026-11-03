@@ -232,25 +232,33 @@ and `.env.example` as usual, then add its name to the deploy job in `.github/wor
 
 ## Adding the domain
 
-When we buy the domain (for example `mabeet.app`), nothing in the code changes:
+Our domain is `mabeet-lb.com`, at Cloudflare. Nothing in the code changes:
 
-1. **Point it at the server.** At the domain's DNS: an `A` record for the domain → `<SERVER_IP>`. Wait until
-   `ping mabeet.app` answers with that address.
-2. **Get the certificate**, on the server, while the site still runs on plain http:
+1. **Point it at the server.** In Cloudflare, DNS → Records: two `A` records, `@` and `www`, both → `<SERVER_IP>`,
+   both **DNS only (grey cloud)**. Leave SSL/TLS as it is: with the grey cloud, Cloudflare only answers DNS, and the
+   server makes its own https. Wait until `nslookup mabeet-lb.com 8.8.8.8` answers with the droplet's address (with
+   the orange cloud it answers with Cloudflare's, `104.21...` or `172.67...`).
+2. **Get the certificate**, on the server, while the site still runs on plain http. One certificate covers
+   `mabeet-lb.com` and `www.mabeet-lb.com`, so both records must point at the server first:
 
    ```bash
    cd /opt/mabeet
-   CERTBOT_EMAIL=omar@example.com bash deploy/request-certificate.sh mabeet.app
+   CERTBOT_EMAIL=omar@example.com bash deploy/request-certificate.sh mabeet-lb.com
    ```
 
    If it fails, check the DNS before trying again: Let's Encrypt refuses a domain for an hour after 5 failures.
 
-3. **Set the `DOMAIN` variable** in GitHub's `production` environment to `mabeet.app`, and run the deploy again
-   (Actions → CI → "Run workflow" on `main`). The deploy switches nginx to https, sends http to https, and sets
-   `BETTER_AUTH_URL` to `https://mabeet.app`.
-4. **Then, the outside services:** verify the domain on Resend and set `EMAIL_FROM`; give R2 a custom domain
-   (`images.mabeet.app`) and set `R2_PUBLIC_URL` to it; move Stripe's webhook to
-   `https://mabeet.app/api/webhooks/stripe`.
+3. **Set the `DOMAIN` variable** in GitHub's `production` environment to `mabeet-lb.com` (without `www`), and run
+   the deploy again (Actions → CI → "Run workflow" on `main`). The deploy switches nginx to https, sends http and
+   `www` to `https://mabeet-lb.com`, and sets `BETTER_AUTH_URL` to it.
+4. **Then, the outside services:** verify the domain on Resend (its records in Cloudflare, DNS only) and set
+   `EMAIL_FROM`; give R2 a custom domain (`images.mabeet-lb.com`) and set `R2_PUBLIC_URL` to it; move Stripe's
+   webhook to `https://mabeet-lb.com/api/webhooks/stripe`.
+
+**Cloudflare's proxy (orange cloud) is not set up.** Behind it, every visitor reaches nginx from a Cloudflare address,
+so the rate limits would count all visitors as one. Turning it on needs nginx to read the visitor's address from
+Cloudflare's `CF-Connecting-IP` header first, then SSL/TLS set to Full (strict), never Flexible (it would loop on
+redirects).
 
 Sign-in cookies are tied to the site's address, so everyone signs in once more after the switch. The certificate
 renews by itself (the `certbot` service checks twice a day; nginx reloads every 6 hours).
