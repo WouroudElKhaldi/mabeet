@@ -74,3 +74,6 @@ export const PHOTO_AREAS = [
   "VIEW",
   "OTHER",
 ] as const satisfies readonly PhotoArea[];
+
+/** Analytics for the place on screen, or for every place the member may read the numbers of. */
+export type AnalyticsScope = "place" | "all";

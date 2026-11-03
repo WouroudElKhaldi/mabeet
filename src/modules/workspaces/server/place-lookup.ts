@@ -18,6 +18,14 @@ export function findBookablePlace(slug: string) {
 }
 
 /**
+ * For analytics: each place's name, currency, commission rate and how it is booked. A plain read: the caller checks
+ * the member may read its numbers.
+ */
+export function findPlacesForReports(businessIds: readonly string[]) {
+  return businesses.findPlacesForReports(prisma, businessIds);
+}
+
+/**
  * For search: the listed places matching `filters`, at most `take`, with their categories as slugs. A place the owner
  * has not listed keeps its page but is never found here.
  */

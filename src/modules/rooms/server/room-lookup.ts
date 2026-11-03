@@ -48,6 +48,11 @@ export function listRoomNames(businessId: string, db: Db = prisma) {
   return rooms.listRoomNames(db, businessId);
 }
 
+/** For analytics: the live units of the kind a place is booked by, so occupancy is out of the right number. */
+export function countActiveUnits(businessId: string, kind: RoomKind, db: Db = prisma) {
+  return rooms.countActiveUnits(db, businessId, kind);
+}
+
 /** For search: the units of these places that match `filters`, each place's of the kind it is booked by. */
 export function findSearchUnits(
   places: ReadonlyArray<{ businessId: string; kind: RoomKind }>,

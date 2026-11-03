@@ -183,6 +183,11 @@ export function listRoomNames(db: Db, businessId: string) {
   });
 }
 
+/** For analytics: how many live units of one kind a place has, the nights it could sell each night. */
+export function countActiveUnits(db: Db, businessId: string, kind: RoomKind) {
+  return db.room.count({ where: { businessId, kind, active: true, isDeleted: false } });
+}
+
 /** What a guest can ask of a unit in search; each filter left out is not checked. */
 export interface UnitFilters {
   /** It sleeps at least this many. */

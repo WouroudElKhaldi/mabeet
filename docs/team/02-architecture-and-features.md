@@ -724,6 +724,21 @@ Revenue is added up per currency, never mixed. All numbers come from the databas
 in `analytics-repository.ts`. Code: `analytics-service.ts`, `dashboard/[businessId]/analytics/page.tsx`,
 `analytics-charts.tsx`.
 
+**What exists today** (`src/modules/analytics/server/analytics-service.ts`). The night and booking sums live in
+`bookings`, which owns those tables (`booking-stats-repository.ts`, raw SQL by business; `getStayNumbers`,
+`getLifetimeDirectRevenue`, `getPlaceSnapshots` in its `server.ts`), so the `analytics` module has no database
+code of its own: it reads them, the units (`countActiveUnits`, rooms), the places (`findPlacesForReports`,
+workspaces) and the plan fees (`getPlanFeesPaid`, billing). A night counts as sold when it is a confirmed direct
+stay, closed by the host or imported, on a unit of the kind the place is booked by, out of the live units of that kind
+times the nights of the period. `getBusinessReport(ctx, range)` (`analytics.read`): occupancy, nights sold,
+direct revenue (confirmed stays, for their nights inside the period), average price per direct night, commission
+saved (revenue × the place's rate), channels, nights by month, requests by outcome, typical answer time.
+`getSavings(ctx)`: since the place joined, per currency, and the plan fees paid. `getAnalytics(ctx, scope, range)`:
+one place or every place the member may read, with totals (money per currency). `getPlacesOverview(userId)`: each of
+the person's places with today's numbers where they may read bookings. Route: `GET /api/workspaces/{id}/analytics`
+(`from`, `to`; the last 30 days by default, two years at most). Reviews are not built, so there is no rating yet.
+Tests: `analytics.integration.test.ts` (analytics).
+
 ### B. Background work
 
 Two kinds, by how much they matter:
@@ -1299,6 +1314,19 @@ notifications. We only accept push subscriptions from real browser push services
 signed-in person (booking needs an account), and one browser endpoint is one row (`endpoint` is unique): subscribing
 again replaces its keys, and someone else subscribing on the same browser takes it over. Pages are never served from the
 cache, because availability must always be live.
+
+**What exists today:** `src/server/push/` sends (`sendPush`, signed with `VAPID_*`; without both keys push is off) and
+checks addresses (`isPushServiceUrl`: only Google, Mozilla, Apple and Windows push services, over https). The
+`notifications` module keeps the devices: `POST /api/me/push` (the browser's `PushSubscription.toJSON()`, signed in,
+20 changes an hour) and `DELETE /api/me/push` (`{ endpoint }`, only the person's own device). `pushToPeople(userIds,
+messageFor)` reaches every device of those people whose account is open, each in its owner's words; a device its
+push service calls gone (404, 410) is deleted; it never throws. The notify jobs push after their email has gone
+(`tellHosts` and `tellGuest` in `booking-notifications.ts`, and "they joined your team" in
+`team-notifications.ts`), using `noticeAsPush(message)`: the email's title, first line and button link. So a retried
+email never pushes twice, and a push failure never sends an email again. A guest with no email address still gets the
+push. `public/sw.js` shows the notification and opens its page (only pages of this site). The switch on screen
+(`PhoneAlerts`) comes with the account's notifications tab. Tests: `push.test.ts` and
+`push-devices.integration.test.ts` (notifications).
 
 ### R. Reviews
 

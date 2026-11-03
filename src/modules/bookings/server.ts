@@ -22,5 +22,12 @@ export {
   startBookingCheckout,
 } from "./server/booking-payments";
 export { findFreeRooms, getTakenNights } from "./server/availability-service";
+export {
+  type ChannelNights,
+  getLifetimeDirectRevenue,
+  getPlaceSnapshots,
+  getStayNumbers,
+  type MonthlyNights,
+} from "./server/booking-stats";
 export { stayIssue } from "./server/booking-policy";
 export { addBlock, getCalendar, getCalendarBoard, removeBlock } from "./server/closed-dates-service";

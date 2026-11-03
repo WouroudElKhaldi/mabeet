@@ -10,3 +10,4 @@ export {
   startCheckout,
   startWhishPlanCheckout,
 } from "./server/billing-service";
+export { getPlanFeesPaid } from "./server/plan-fees";
