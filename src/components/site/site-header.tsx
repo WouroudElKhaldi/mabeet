@@ -2,18 +2,43 @@ import { LayoutDashboard, LogIn } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { AppearanceMenu } from "@/components/theme/appearance-menu";
+import type { NavGroup } from "@/components/shell/nav";
 import { SlideLabel, slideParent } from "@/components/ui/slide-label";
 import { listWorkspaces } from "@/modules/team/server";
 import { getCurrentUser } from "@/server/http/session";
 import { HeaderShell } from "./header-shell";
 import { NavLink } from "./nav-link";
+import { SiteMenu } from "./site-menu";
 import { Wordmark } from "./wordmark";
 
 export async function SiteHeader() {
-  const [t, user] = await Promise.all([getTranslations("nav"), getCurrentUser()]);
+  const [t, footer, user] = await Promise.all([
+    getTranslations("nav"),
+    getTranslations("footer"),
+    getCurrentUser(),
+  ]);
   // Anyone who works in a place (owner, admin or staff) gets a way back to it; /dashboard opens the one place, or
   // all of them side by side.
   const worksInAPlace = user ? (await listWorkspaces(user.id)).length > 0 : false;
+  // On a phone the links below make way for a menu, grouped like the footer.
+  const phoneNav: NavGroup[] = [
+    {
+      label: footer("guests"),
+      items: [
+        { href: "/search", label: t("explore"), icon: "explore" },
+        { href: "/assistant", label: t("assistant"), icon: "assistant" },
+      ],
+    },
+    {
+      label: footer("hosts"),
+      items: [
+        worksInAPlace
+          ? { href: "/dashboard", label: t("dashboard"), icon: "overview" }
+          : { href: "/host", label: t("host"), icon: "place" },
+        { href: "/pricing", label: t("pricing"), icon: "pricing" },
+      ],
+    },
+  ];
   return (
     <HeaderShell>
       <div className="mx-auto flex h-20 max-w-360 items-center gap-3 px-4 sm:px-6 lg:px-10">
@@ -34,7 +59,9 @@ export async function SiteHeader() {
               {t("host")}
             </NavLink>
           )}
-          <AppearanceMenu />
+          <div className="hidden md:block">
+            <AppearanceMenu />
+          </div>
           {user ? (
             <Link
               href="/account"
@@ -57,6 +84,7 @@ export async function SiteHeader() {
               </SlideLabel>
             </Link>
           )}
+          <SiteMenu nav={phoneNav} title={t("menu")} />
         </div>
       </div>
     </HeaderShell>
