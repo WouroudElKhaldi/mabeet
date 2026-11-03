@@ -1,11 +1,19 @@
 import { BOOKABLE_ROOM_KIND, MAX_STAY_NIGHTS } from "@/config/booking-limits";
-import { getTakenNights, listMyBookings, stayIssue } from "@/modules/bookings/server";
-import { findRoomForBooking, listPlacePhotos, listPublicUnits, priceStay } from "@/modules/rooms/server";
-import { findBookablePlace, getPublicPlace } from "@/modules/workspaces/server";
+import { findFreeRooms, getTakenNights, listMyBookings, stayIssue } from "@/modules/bookings/server";
+import {
+  findPlaceCovers,
+  findRoomForBooking,
+  findSearchUnits,
+  listPlacePhotos,
+  listPublicUnits,
+  priceStay,
+  priceStays,
+} from "@/modules/rooms/server";
+import { findBookablePlace, getPublicPlace, listListedPlaces } from "@/modules/workspaces/server";
 import { notFound } from "@/server/errors";
-import { countNights, type DateRange } from "@/utils/dates";
-import { toIsoDate } from "@/utils/dates";
-import type { GuestTrip, PublicPlace, RoomAvailability, RoomQuote } from "../types";
+import { countNights, type DateRange, toIsoDate } from "@/utils/dates";
+import type { PlaceSearch } from "../search-query";
+import type { GuestTrip, PlaceCard, PublicPlace, RoomAvailability, RoomQuote, SearchOffer } from "../types";
 
 // The public side: what a guest can see and ask before signing in. Nothing here takes or frees nights; the booking
 // engine does. Whether a stay can be booked is the engine's own rule (`stayIssue`), so a quote never promises what
@@ -100,4 +108,92 @@ export async function listMyTrips(guestUserId: string): Promise<GuestTrip[]> {
     place: { name: booking.business.name, slug: booking.business.slug },
     roomName: booking.room.name,
   }));
+}
+
+/** Most places a search reads before it checks their rooms, for each card it may show. */
+const PLACES_READ_PER_RESULT = 3;
+/** Most rooms one availability read takes (`findFreeRooms`). */
+const ROOMS_PER_READ = 500;
+
+/** The rooms of `roomIds` free on every night of `range`, in reads of at most `ROOMS_PER_READ`. */
+async function freeRoomsAmong(roomIds: string[], range: DateRange, now: Date): Promise<Set<string>> {
+  const reads = [];
+  for (let start = 0; start < roomIds.length; start += ROOMS_PER_READ) {
+    reads.push(findFreeRooms(roomIds.slice(start, start + ROOMS_PER_READ), range, now));
+  }
+  return new Set((await Promise.all(reads)).flat());
+}
+
+const cheapest = (values: number[]) => Math.min(...values);
+
+/**
+ * Listed places that have a unit fitting the search, cheapest night first within each place. Without dates every
+ * fitting unit counts, at its base price. With dates a unit counts only when the booking engine would take the stay
+ * (`stayIssue`: not past, not too far, its minimum nights, its guests) and it is free on every night, priced night
+ * by night. A few queries however many places: the places, their units and covers, then the free rooms and prices.
+ * The website, the guest's AI and the guest MCP all call this, so they always agree.
+ */
+export async function searchPlaces(search: PlaceSearch, now: Date = new Date()): Promise<PlaceCard[]> {
+  const places = await listListedPlaces(search, search.limit * PLACES_READ_PER_RESULT);
+  const [units, covers] = await Promise.all([
+    findSearchUnits(
+      places.map((place) => ({ businessId: place.id, kind: BOOKABLE_ROOM_KIND[place.bookingUnit] })),
+      search,
+    ),
+    findPlaceCovers(places.map((place) => place.id)),
+  ]);
+
+  const { range } = search;
+  let fitting = units;
+  let prices = new Map<string, { nights: { rateCents: number }[]; totalCents: number }>();
+  if (range) {
+    const bookable = units.filter(
+      (unit) => stayIssue({ range, guests: search.guests, room: unit }, now) === null,
+    );
+    const [free, quotes] = await Promise.all([
+      freeRoomsAmong(
+        bookable.map((unit) => unit.id),
+        range,
+        now,
+      ),
+      priceStays(bookable, range),
+    ]);
+    fitting = bookable.filter((unit) => free.has(unit.id));
+    prices = quotes;
+  }
+
+  const cards: PlaceCard[] = [];
+  for (const place of places) {
+    const placeUnits = fitting.filter((unit) => unit.businessId === place.id);
+    if (placeUnits.length === 0) continue;
+    const offers: SearchOffer[] = placeUnits.map((unit) => {
+      const quote = prices.get(unit.id);
+      return {
+        roomId: unit.id,
+        name: unit.name,
+        capacity: unit.capacity,
+        bedrooms: unit.bedrooms,
+        beds: unit.beds,
+        bathrooms: unit.bathrooms,
+        amenities: unit.amenities,
+        nightlyFromCents: quote ? cheapest(quote.nights.map((night) => night.rateCents)) : unit.baseRateCents,
+        stayTotalCents: quote ? quote.totalCents : null,
+      };
+    });
+    offers.sort((first, second) => first.nightlyFromCents - second.nightlyFromCents);
+    const totals = offers.flatMap((offer) => (offer.stayTotalCents === null ? [] : [offer.stayTotalCents]));
+    cards.push({
+      slug: place.slug,
+      name: place.name,
+      area: place.area,
+      currency: place.currency,
+      photo: covers.get(place.id) ?? placeUnits.find((unit) => unit.photos.length > 0)?.photos[0] ?? null,
+      categories: place.categories,
+      nightlyFromCents: cheapest(offers.map((offer) => offer.nightlyFromCents)),
+      stayTotalFromCents: totals.length > 0 ? cheapest(totals) : null,
+      offers,
+    });
+    if (cards.length === search.limit) break;
+  }
+  return cards;
 }

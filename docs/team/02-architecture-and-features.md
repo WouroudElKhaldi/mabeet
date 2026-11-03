@@ -1204,7 +1204,7 @@ Tests: `photos.integration.test.ts` (rooms), with R2 faked and a failed save tha
 
 `directory-service.ts` is the public side:
 
-- `searchPlaces`: filters and dates. It uses two availability queries for all results together, never one per place.
+- `searchPlaces(search, now)`: filters and dates (see "Search" below).
 - `getPlace`, `checkAvailability`, `quoteRoom`, `getTakenNights`.
 
 Availability itself lives in `bookings` (it owns the night rows), behind `bookings/server.ts`
@@ -1220,6 +1220,18 @@ Availability itself lives in `bookings` (it owns the night rows), behind `bookin
   `findFreeRooms` takes 500 rooms at most. Tests: `availability.integration.test.ts`.
 
 The website search, the guest's AI and the guest MCP all use it, so they always agree.
+
+**Search.** `searchPlaces(search, now)` in `directory-service.ts` gives a `PlaceCard` per listed place that has a unit
+fitting the search, in at most a few queries however many places: `listListedPlaces` (workspaces: listed, live,
+not deleted, by town or region, words, categories, tags and accessibility), then `findSearchUnits` and
+`findPlaceCovers` (rooms: each place's units of the kind it books by, by guests, base price, amenities, bedrooms,
+bathrooms and beds), then, with dates, `findFreeRooms` (bookings) and `priceStays` (rooms, one query for every
+room's special prices). With dates a unit counts only when `stayIssue` has nothing against the stay and it is free
+on every night, so search never shows what booking would refuse. A region ("North Lebanon", "الشمال") matches the
+region a place stores or any of its towns (`areasMatching` in `src/config/regions.ts`). Nothing is returned rather
+than a near miss. The address holds the search (`searchParams` in `directory/schemas.ts`: wrong values are dropped,
+dates are kept only as a stay a guest could book) and `toPlaceSearch` turns it into the service's input, prices into
+minor units. Tests: `place-search.integration.test.ts` and `schemas.test.ts` (directory).
 
 **What exists today:** `quoteRoom(slug, roomId, { range, guests }, now?)` in `src/modules/directory/server/directory-service.ts`,
 behind `GET /api/public/places/{slug}/rooms/{roomId}/quote` (no sign-in, 120 a minute from one address). It gives each

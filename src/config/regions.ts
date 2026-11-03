@@ -124,7 +124,7 @@ const normalize = (text: string) =>
     .trim();
 
 /** A region's key from its name in English, Arabic or Arabizi ("north lebanon" → "north"), or undefined. */
-function regionNamed(text: string): RegionKey | undefined {
+export function regionNamed(text: string): RegionKey | undefined {
   const wanted = text.trim().toLowerCase();
   return (Object.keys(REGIONS) as RegionKey[]).find(
     (key) => key === wanted || (REGIONS[key].names as readonly string[]).includes(wanted),
@@ -145,4 +145,10 @@ export function regionOfArea(area: string | null | undefined): RegionKey | null 
       (REGIONS[key].areas as readonly string[]).some((town) => text.includes(` ${town} `)),
     ) ?? null
   );
+}
+
+/** The towns to look for when a guest searches `area`: a region's towns ("North Lebanon"), or the town itself. */
+export function areasMatching(area: string): readonly string[] {
+  const region = regionNamed(area);
+  return region ? REGIONS[region].areas : [area.trim()];
 }
