@@ -1,20 +1,36 @@
-# The production shape on one machine: the production build of the website, the job worker, Postgres and Redis,
-# the same image DigitalOcean runs. For working on the code, use docker-compose.yml (`docker compose up`) instead.
+# The production shape: the production build of the website, the job worker, Postgres and Redis. The live server
+# runs this file (docs/deployment.md), with nginx and certbot in front of the website (the `server` profile). For
+# working on the code, use docker-compose.yml (`docker compose up`) instead.
 # Settings come from .env (DATABASE_URL and REDIS_URL are overridden to point at the db and redis services).
-#   docker compose -f docker-compose.prod.yml up --build
+#   docker compose -f docker-compose.prod.yml up --build            # on your computer: http://localhost:3000
 #   docker compose -f docker-compose.prod.yml up --scale worker=2   # more workers share the queues
+
+# The website, the worker and the migrations are one image. On the server, IMAGE and IMAGE_TAG name the image GitHub
+# Actions built and pushed; on your computer `--build` builds it as mabeet:local.
+x-app: &app
+  image: ${IMAGE:-mabeet}:${IMAGE_TAG:-local}
+  build:
+    context: .
+    # The public address of the R2 photo bucket, from .env, allowed for <Image> at build time.
+    args:
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+  env_file: .env
+
+# The database password comes from the server's .env. Use letters and digits only: it is also part of this address.
+x-database-url: &database-url postgresql://${POSTGRES_USER:-mabeet}:${POSTGRES_PASSWORD:-mabeet}@db:5432/${POSTGRES_DB:-mabeet}
+
 services:
   db:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_USER: mabeet
-      POSTGRES_PASSWORD: mabeet
-      POSTGRES_DB: mabeet
+      POSTGRES_USER: ${POSTGRES_USER:-mabeet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mabeet}
+      POSTGRES_DB: ${POSTGRES_DB:-mabeet}
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mabeet"]
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s
       retries: 10
 
@@ -40,30 +56,27 @@ services:
       interval: 5s
       retries: 10
 
+  # Runs once on every start, then stops. The website and the worker wait for it, so a failed migration leaves the
+  # running version in place.
   migrate:
-    build: .
+    <<: *app
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
-    env_file: .env
     environment:
-      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+      DATABASE_URL: *database-url
     depends_on:
       db: { condition: service_healthy }
 
   web:
-    build:
-      context: .
-      # The public address of the R2 photo bucket, from .env, allowed for <Image> at build time.
-      args:
-        R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+    <<: *app
     command: ["pnpm", "start"]
     restart: unless-stopped
-    env_file: .env
     environment:
-      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+      DATABASE_URL: *database-url
       REDIS_URL: redis://redis:6379
       JOBS_MODE: queue
+    # Only this computer reaches it directly. On the server, visitors come through nginx.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
@@ -71,17 +84,57 @@ services:
   # Must always run beside the website in production: without it, AI answers, emails and scheduled jobs wait in
   # the queue. Comes back by itself after a crash or a reboot.
   worker:
-    build: .
+    <<: *app
     command: ["pnpm", "worker"]
     restart: unless-stopped
-    env_file: .env
     environment:
-      DATABASE_URL: postgresql://mabeet:mabeet@db:5432/mabeet
+      DATABASE_URL: *database-url
       JOBS_MODE: queue
     # Lets in-flight jobs finish on a deploy (the worker waits up to 60s).
     stop_grace_period: 70s
     depends_on:
       migrate: { condition: service_completed_successfully }
 
+  # The server's front door on ports 80 and 443: the website on https://DOMAIN only, never on the IP address.
+  # NGINX_SITE picks its configuration from deploy/nginx/: "https", or "certificate-check" for the moment the first
+  # deploy gets the certificate (deploy/remote-deploy.sh chooses). nginx fills ${DOMAIN} in the file when it starts.
+  nginx:
+    image: nginx:1.30-alpine
+    profiles: [server]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-}
+    volumes:
+      - ./deploy/nginx/${NGINX_SITE:-https}.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    depends_on:
+      - web
+    # Reloads every 6 hours, so a certificate certbot renewed is used without a restart. nginx starts through the
+    # image's own entrypoint, which is what fills in the template.
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "while :; do sleep 6h; nginx -s reload; done & exec /docker-entrypoint.sh nginx -g 'daemon off;'",
+      ]
+
+  # Renews the certificate when it is close to expiring. The first deploy gets the first one
+  # (deploy/remote-deploy.sh).
+  certbot:
+    image: certbot/certbot:v5.9.0
+    profiles: [server]
+    restart: unless-stopped
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint:
+      ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $$!; done"]
+
 volumes:
   db-data:
+  certbot-certs:
+  certbot-www:
