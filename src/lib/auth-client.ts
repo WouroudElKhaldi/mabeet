@@ -1,10 +1,15 @@
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { inferAdditionalFields } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 // The browser's side of sign-in. locale is set at sign-up from the language the person is using, so their emails
-// come in it.
+// come in it. oauthProviderClient carries an AI app's signed OAuth request through sign-in, the choice of a place
+// and consent.
 export const authClient = createAuthClient({
-  plugins: [inferAdditionalFields({ user: { locale: { type: "string", required: false } } })],
+  plugins: [
+    inferAdditionalFields({ user: { locale: { type: "string", required: false } } }),
+    oauthProviderClient(),
+  ],
 });
 
 /**

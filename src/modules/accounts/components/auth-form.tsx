@@ -15,11 +15,16 @@ import { afterSignIn } from "@/utils/sign-in-url";
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const t = useTranslations("auth");
   const locale = useLocale();
-  // One way in: after signing in, /home sends admins, hosts and guests each to their own place. `next`, the
-  // booking a signed-out guest started (only ever a path on this site), rides along through sign-in and sign-up.
+  // One way in: after signing in, /home sends admins, hosts and guests each to their own place. Two things may
+  // ride along and must survive sign-in and sign-up: an AI app's OAuth request, and `next`, the booking a
+  // signed-out guest started (only ever a path on this site).
   const params = useSearchParams();
   const next = afterSignIn(params.get("next"));
-  const carriedQuery = params.has("next") ? `?next=${encodeURIComponent(next)}` : "";
+  const carriedQuery = params.has("client_id")
+    ? `?${params.toString()}`
+    : params.has("next")
+      ? `?next=${encodeURIComponent(next)}`
+      : "";
   // A confirmation link that has expired or was used already comes back here with ?error= (from /home).
   const [error, setError] = useState<string | null>(params.get("error") ? t("linkExpired") : null);
   const [pending, setPending] = useState(false);
@@ -60,6 +65,12 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
                   : t("genericError"),
       );
       setPending(false);
+      return;
+    }
+    // Signing in to connect an AI app: the OAuth flow continues at the address the server answers with.
+    const oauthNext = (result.data as { url?: string } | null)?.url;
+    if (params.has("client_id") && oauthNext) {
+      window.location.assign(oauthNext);
       return;
     }
     // With email verification on, sign-up creates the account but no session until the link is opened.

@@ -11,3 +11,9 @@ export const keyInput = z.object({
 
 /** /api/workspaces/{businessId}/keys/{keyId} */
 export const keyParams = workspaceParams.extend({ keyId: id });
+
+/** The place picked while connecting an AI app by signing in. */
+export const workspaceChoice = z.object({ businessId: id });
+
+/** /api/workspaces/{businessId}/connected-apps/{connectionId} */
+export const connectionParams = workspaceParams.extend({ connectionId: id });
