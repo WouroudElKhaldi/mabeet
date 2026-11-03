@@ -658,9 +658,10 @@ ones too. `POST /api/mcp` (`answerHostMcp`, `host-mcp.ts`): 401 without a workin
 the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_rooms`, `check_availability`
 (`findFreeRooms`), `get_calendar` and `list_bookings`, each with the optional `place` (`resolvePlaceContext`: by
 id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
-come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. Not yet: the
-report tools (they wait for the analytics numbers, `getBusinessReport`) and the actions. Tests:
-`mcp-isolation.integration.test.ts` and `mcp-oauth.integration.test.ts` (assistant).
+come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. `get_report`
+(`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give
+the same numbers as the analytics page. Not yet: the actions. Tests: `mcp-isolation.integration.test.ts` and
+`mcp-oauth.integration.test.ts` (assistant).
 
 **OAuth sign-in** (for ChatGPT, Claude.ai and any app that connects without a key). Better Auth's `jwt` and
 `oauthProvider` plugins (`src/server/auth/better-auth.ts`) make Mabeet the app's sign-in server. The app finds it
