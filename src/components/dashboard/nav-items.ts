@@ -25,6 +25,7 @@ export const DASHBOARD_PAGES = {
   bookings: { group: "bookings", path: "bookings", icon: "bookings", anyOf: ["bookings.read"], tab: true },
   calendar: { group: "bookings", path: "calendar", icon: "calendar", anyOf: ["calendar.read"], tab: true },
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
+  settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
 } as const satisfies Partial<Record<NavLabel, DashboardPage>>;
 
 type DashboardPageName = keyof typeof DASHBOARD_PAGES;
