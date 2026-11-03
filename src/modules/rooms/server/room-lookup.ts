@@ -42,6 +42,11 @@ export async function priceStay(
   return quoteStay({ range, baseRateCents: room.baseRateCents, overrides });
 }
 
+/** For the calendar: the place's rooms by name, deleted ones left out, switched-off ones kept (their nights stay). */
+export function listRoomNames(businessId: string, db: Db = prisma) {
+  return rooms.listRoomNames(db, businessId);
+}
+
 /** For analytics: the live units of the kind a place is booked by, so occupancy is out of the right number. */
 export function countActiveUnits(businessId: string, kind: RoomKind, db: Db = prisma) {
   return rooms.countActiveUnits(db, businessId, kind);

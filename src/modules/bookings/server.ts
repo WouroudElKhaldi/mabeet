@@ -30,4 +30,4 @@ export {
   type MonthlyNights,
 } from "./server/booking-stats";
 export { stayIssue } from "./server/booking-policy";
-export { addBlock, getCalendar, removeBlock } from "./server/closed-dates-service";
+export { addBlock, getCalendar, getCalendarBoard, removeBlock } from "./server/closed-dates-service";

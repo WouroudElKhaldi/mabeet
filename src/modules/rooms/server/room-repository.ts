@@ -174,6 +174,15 @@ export async function findRateOverrides(db: Db, businessId: string, roomId: stri
   return new Map(overrides.map((override) => [toIsoDate(override.date), override.rateCents]));
 }
 
+/** For the calendar: every room the place has not deleted, its rooms first and then its whole-place unit. */
+export function listRoomNames(db: Db, businessId: string) {
+  return db.room.findMany({
+    where: { businessId, isDeleted: false },
+    orderBy: [{ kind: "asc" }, { createdAt: "asc" }],
+    select: { id: true, name: true, kind: true, active: true },
+  });
+}
+
 /** For analytics: how many live units of one kind a place has, the nights it could sell each night. */
 export function countActiveUnits(db: Db, businessId: string, kind: RoomKind) {
   return db.room.count({ where: { businessId, kind, active: true, isDeleted: false } });

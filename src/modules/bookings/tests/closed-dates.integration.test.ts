@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { memberWith, prisma, stay } from "@tests/integration/helpers";
 import { addDays } from "@/utils/dates";
-import { addBlock, cancelBooking, confirmBooking, getCalendar, removeBlock, requestBooking } from "../server";
+import {
+  addBlock,
+  cancelBooking,
+  confirmBooking,
+  getCalendar,
+  getCalendarBoard,
+  removeBlock,
+  requestBooking,
+} from "../server";
 import { importStay, placeWithRoom, requestFor } from "./fixtures";
 
 // Closed dates share the bookings' overlap rule and room lock, and every change to our own nights re-checks the
@@ -53,6 +61,39 @@ describe("closing dates by hand", () => {
     const outsider = await memberWith(place.business.id, ["bookings.read"]);
     await expect(getCalendar(outsider, {})).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(getCalendar(reader, {})).resolves.toEqual([]);
+  });
+
+  it("gives the calendar screen the rooms by name to anyone who may read the calendar", async () => {
+    const place = await placeWithRoom();
+    const off = await prisma.room.create({
+      data: {
+        businessId: place.business.id,
+        name: "Old annex",
+        baseRateCents: 5_000,
+        exportToken: crypto.randomUUID(),
+        active: false,
+      },
+    });
+    const gone = await prisma.room.create({
+      data: {
+        businessId: place.business.id,
+        name: "Gone",
+        baseRateCents: 5_000,
+        exportToken: crypto.randomUUID(),
+        isDeleted: true,
+      },
+    });
+    const range = stay(10, 2);
+    await addBlock(place.ctx, block(place.room.id, range));
+
+    const reader = await memberWith(place.business.id, ["calendar.read"]);
+    const board = await getCalendarBoard(reader, {});
+    expect(board.rooms.map((room) => room.id)).toEqual([place.room.id, off.id]);
+    expect(board.rooms.map((room) => room.id)).not.toContain(gone.id);
+    expect(board.occupancy.map((night) => night.kind)).toEqual(["MANUAL"]);
+
+    const outsider = await memberWith(place.business.id, ["rooms.read"]);
+    await expect(getCalendarBoard(outsider, {})).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("shows every source of taken nights in one calendar, six weeks by default", async () => {
