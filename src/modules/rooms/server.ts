@@ -8,6 +8,7 @@ export {
   hasWholePlaceUnit,
   listPlacePhotos,
   listPublicUnits,
+  listRoomNames,
   priceStay,
   priceStays,
 } from "./server/room-lookup";

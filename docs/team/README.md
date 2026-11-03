@@ -131,7 +131,7 @@ commit>`, and open it as a pull request into `main`; the site goes back to the r
   - A migration is never deleted: a new migration undoes it. On your own branch, start a step again with
     `git restore` or `git reset`; never rewrite `main` or `development`.
 - **Never put secrets in the repository:** no keys, passwords or tokens in code, commits, screenshots or Discord.
-  Yours go in `.env`; live ones in DigitalOcean's settings and GitHub secrets. A secret pushed by mistake is
+  Yours go in `.env`; live ones in GitHub's `production` environment (`docs/deployment.md`). A secret pushed by mistake is
   replaced, not just deleted.
 
 ---

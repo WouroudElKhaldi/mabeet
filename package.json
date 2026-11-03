@@ -21,6 +21,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
     "admins:create": "tsx scripts/create-admins.ts",
     "brand:assets": "tsx scripts/brand-assets.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm knip && pnpm test",

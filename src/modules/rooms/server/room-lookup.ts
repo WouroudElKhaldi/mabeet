@@ -43,6 +43,11 @@ export async function priceStay(
   return quoteStay({ range, baseRateCents: room.baseRateCents, overrides });
 }
 
+/** For the calendar: the place's rooms by name, deleted ones left out, switched-off ones kept (their nights stay). */
+export function listRoomNames(businessId: string, db: Db = prisma) {
+  return rooms.listRoomNames(db, businessId);
+}
+
 /** For search: the units of these places that match `filters`, each place's of the kind it is booked by. */
 export function findSearchUnits(
   places: ReadonlyArray<{ businessId: string; kind: RoomKind }>,
