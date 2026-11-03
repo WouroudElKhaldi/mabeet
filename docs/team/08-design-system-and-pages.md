@@ -458,6 +458,10 @@ Changes for the new project (from `06-functional-requirements.md`) are marked **
 
 ### 8.1 Public site (header and footer from `SiteHeader` and `SiteFooter`)
 
+The header's end side: "Become a host", the appearance menu, then the account avatar (or Sign in). For someone who
+works in a place (owner, admin or staff), "Become a host" gives way to **Dashboard** (`/dashboard`, which opens the one
+place or all of them), shown on a phone as its icon alone.
+
 #### `/` Home (F1)
 
 1. **Hero:** a two-column band (`lg:grid-cols-[1.1fr_1fr]`). Start side: a `font-poster` title, a short line, and
