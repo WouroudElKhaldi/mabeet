@@ -18,8 +18,14 @@ describe("dashboardNav", () => {
   it("lists each page the member may open under its group, with its address in this business", () => {
     expect(dashboardNav(member(["bookings.read"]))).toEqual([
       {
+        group: "today",
+        items: [{ href: "/dashboard/b1", label: "overview", icon: "overview", tab: true, end: true }],
+      },
+      {
         group: "bookings",
-        items: [{ href: "/dashboard/b1/bookings", label: "bookings", icon: "bookings", tab: true }],
+        items: [
+          { href: "/dashboard/b1/bookings", label: "bookings", icon: "bookings", tab: true, end: false },
+        ],
       },
     ]);
   });
@@ -30,7 +36,16 @@ describe("dashboardNav", () => {
 
   it("reads the same permissions the page itself checks", () => {
     for (const permission of DASHBOARD_PAGES.bookings.anyOf) {
-      expect(dashboardNav(member([permission])).flatMap(({ items }) => items)).toHaveLength(1);
+      const labels = dashboardNav(member([permission])).flatMap(({ items }) =>
+        items.map((item) => item.label),
+      );
+      expect(labels).toContain("bookings");
+    }
+    for (const permission of DASHBOARD_PAGES.overview.anyOf) {
+      const labels = dashboardNav(member([permission])).flatMap(({ items }) =>
+        items.map((item) => item.label),
+      );
+      expect(labels).toContain("overview");
     }
   });
 });

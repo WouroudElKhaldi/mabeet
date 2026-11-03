@@ -705,6 +705,14 @@ review form are not built yet; the tab bar comes with the second one.
 
 ### 8.4 Host dashboard (`AppShell`, every page starts with `PageHeader`)
 
+**Built so far** (Today and All my places): `/dashboard/[id]` is the place's home (menu entry `overview`, open to
+members who read bookings or the numbers): the four `StatTile`s over the last 90 days, the savings panel per currency
+(direct bookings, commission saved, plan fees in that currency, kept), up to 20 requests waiting as `BookingRow`s, then
+`BarChart` of nights by month and `ShareBar` of channels (`channelColor` in `analytics`). Each part shows only to a
+role that reads it. `/dashboard` is "All my places" in its own `AppShell` (the person's places as the menu): today's
+totals, then a card per place, numbers only where their role reads bookings; one place goes straight to it, none to
+`/host`. `StatTile`, `BarChart` and `ShareBar` are shared in `components/ui`.
+
 | Page                       | Feature     | Sections, top to bottom                                                                                                                                                                                                                                                                                                                                         |
 | -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/dashboard` All my places | F12         | `PageHeader` "All my places"; one card per place: arrivals today, requests waiting, money                                                                                                                                                                                                                                                                       |
