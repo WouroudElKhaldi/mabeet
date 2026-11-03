@@ -1,4 +1,4 @@
-import type { BookingMode, BookingUnit, PhotoArea } from "@prisma/client";
+import type { BookingMode, BookingStatus, BookingUnit, PhotoArea } from "@prisma/client";
 import type { StayIssue } from "@/config/booking-limits";
 
 // What the public side shows and asks. Plain values only (money as whole cents, dates as ISO text), so a page can
@@ -55,6 +55,8 @@ export interface PublicPlace {
   currency: string;
   checkInTime: string;
   checkOutTime: string;
+  /** How many hours the host has to answer a request (the online-with-approval and offline modes). */
+  holdHours: number;
   houseRules: string | null;
   bookingUnit: BookingUnit;
   bookingMode: BookingMode;
@@ -64,4 +66,20 @@ export interface PublicPlace {
   units: PublicUnit[];
   /** The rooms, to show. At a place booked whole they are not bookable on their own. */
   rooms: PublicUnit[];
+}
+
+/** One of a guest's stays, as their trips list shows it: no payment details, no guest contact, only what the list needs. */
+export interface GuestTrip {
+  /** The secret in the booking's private link, /b/{publicToken}. */
+  publicToken: string;
+  reference: string;
+  status: BookingStatus;
+  bookingMode: BookingMode;
+  checkIn: string;
+  checkOut: string;
+  guestCount: number;
+  totalCents: number;
+  currency: string;
+  place: { name: string; slug: string };
+  roomName: string;
 }

@@ -532,6 +532,16 @@ End: a `BoardingPass` summary (place, room, dates, nights) with the `PriceBreakd
 **New:** the button is "Book and pay" (modes 1 and 2) or "Send request" (mode 3). There is no deposit line: the total
 is what is paid.
 
+**Built so far** (`src/app/(site)/p/[slug]/book/`): a signed-out guest is sent to sign in and comes straight back with the
+stay in the address (`?room=&checkIn=&checkOut=&guests=`, from the place page); a missing or unreadable stay sends the
+guest back to the place page to choose. A stay that cannot be booked (an issue code, or a taken night) shows why and a
+"Pick other dates" button instead of the form. `GuestDetailsForm` (name, mobile number, optional email, guests, a note)
+checks the fields before sending, in the guest's language, and tidies the number into the international form the booking
+needs (`normalizePhone`: "71 123 456" becomes +96171123456); the button spins and stays disabled until the page
+leaves, so a double tap never books twice. On success the guest goes to `/b/{token}`. `StaySummary` is the boarding
+pass with the stay and the total. The note under the form follows the mode: pay online at once (and, with approval, the
+host's answer time), or arrange payment with the host.
+
 #### `/p/[slug]/contact` Contact host (F2a)
 
 1. Title and the host's usual response time.
@@ -554,6 +564,18 @@ is what is paid.
 
 **New:** no "Deposit: {amount}" line; the amount is always the full total. A cancelled paid booking says "Refunded
 in full".
+
+**Built so far** (`src/app/(site)/b/[token]/`, drawn by `BookingView`): the heading for the booking's status, the step bar
+(`bookingProgress`: sent and paid when confirmed at once, sent, paid and confirmed with the host's approval, sent and
+confirmed offline; none once the booking ended), then what to do next. While it waits for payment: the amount, the
+10-minute `HoldCountdown` and `PayOnline` (Wouroud's, Whish and card). After paying, or offline: the host's answer
+time counting down, and offline how to pay the host (their instructions, or a fallback sentence). An ended booking
+(declined, expired, cancelled) shows the refund and "Book other dates". Then the host's WhatsApp, `GuestCancelButton`
+(asks first; the wording promises a refund only for online payments; hidden from the check-in day on, as the engine
+refuses), and the boarding pass with a postmark once confirmed. The countdown starts from the seconds the server says
+are left, so a phone with the wrong clock is right. `BookingWatcher` asks the server again every 4 s while paying and
+every 15 or 30 s while the host decides, only while the tab is in view, and stops when nothing more can change. Not built
+yet: phone alerts (`PhoneAlerts`) and "Near your stay".
 
 #### `/o/[slug]` Experience or service (F8, bonus)
 
@@ -672,6 +694,14 @@ Tabs at the top (`AccountTabs`):
 - `/account/activity`: what you did, newest first.
 - `/account/notifications`: notifications on this device (`PhoneAlerts`).
 - `/account/privacy`: download or delete your data (`PrivacyControls`).
+
+**Built so far** (`/account`, `src/app/(site)/account/`): the greeting with Sign out, then the guest's trips in two lists,
+**Upcoming** (alive and not over, soonest first: what waits for payment or the host stands out) and **Past stays**
+(over, declined, expired or cancelled, newest first; a stay is over on its check-out day). Each trip is a card that
+links to its booking page, with the place, the room, the dates, the guests, the price and a status label in the guest's
+words; a long place name gives way to the label. With no trips: "No trips yet. Where to first?" and a button to explore.
+A signed-out visitor signs in and comes back. The other tabs (favourites, activity, notifications, privacy) and the
+review form are not built yet; the tab bar comes with the second one.
 
 ### 8.4 Host dashboard (`AppShell`, every page starts with `PageHeader`)
 

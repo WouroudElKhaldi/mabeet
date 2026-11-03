@@ -1252,7 +1252,17 @@ Tests: `public-place.integration.test.ts` (workspaces) and `public-units.integra
 rooms, or the one whole-place unit) with their photos, its `rooms` to show (at a place booked whole, the rooms inside it),
 and its photos (the rooms' photos when it has none of its own). `getRoomAvailability(slug, roomId, range)` is the calendar's
 read, behind `GET /api/public/places/{slug}/rooms/{roomId}/availability` (no sign-in, 120 a minute from one address): the
-taken nights as dates, for the year ahead by default (`AVAILABILITY_DAYS`), for the same rooms a quote accepts. The place page's parts and the
+taken nights as dates, for the year ahead by default (`AVAILABILITY_DAYS`), for the same rooms a quote accepts.
+The guest's booking route is `POST /api/public/places/{slug}/bookings` (`requireUser`, 10 requests per 10 minutes per guest): it
+calls `requestBooking` with the guest taken from the session, and answers `{ publicToken, reference, status }` only. The
+book page (`/p/{slug}/book`) is its screen.
+The guest's own booking page is `/b/{token}`: `getBookingForGuest` (someone else's link is "not found"), then
+`refreshGuestPayments` first when the booking waits for its payment, so a guest back from the payment page sees it at
+once. `POST /api/public/bookings/{token}/cancel` (`requireUser`, 10 requests per 10 minutes) calls `cancelStayAsGuest`
+with a reason that is optional; the engine refuses once the stay has started (409) and refunds online payments in full.
+The guest's trips are `listMyTrips(guestUserId)` (directory, over `listMyBookings`): a `GuestTrip` per stay with only what the
+list needs (no payments, no guest contact, no hold time). The page `/account` and `GET /api/me/bookings` both read it;
+`splitTrips` divides it into upcoming and past. The place page's parts and the
 booking box are built too (see `08`, "Built so far").
 
 ### P. Pricing

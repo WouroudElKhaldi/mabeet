@@ -218,7 +218,7 @@ paths:
       tags:
         - Guests
       summary: "Request a stay: holds the room at once (rate limited)"
-      description: Signed-in user.
+      description: Signed-in user. Who the guest is comes from the session, never the body. The room is held at once; what happens next depends on the place's mode. Only the link to the booking and where it stands are returned.
       security:
         - session: []
       parameters:
@@ -279,7 +279,23 @@ paths:
                 - checkOut
       responses:
         "201":
-          description: Success
+          description: The room is held
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  publicToken:
+                    type: string
+                    description: The secret in the booking's private link, /b/{publicToken}.
+                  reference:
+                    type: string
+                  status:
+                    type: string
+                required:
+                  - publicToken
+                  - reference
+                  - status
         "400":
           description: Invalid input
           content:
@@ -524,7 +540,7 @@ paths:
       tags:
         - Guests
       summary: The signed-in guest cancels their own booking before check-in or the session (rate limited)
-      description: Signed-in user.
+      description: Signed-in user, and only their own booking (someone else's is 404). Allowed while the booking waits for payment or for the host, or once confirmed, and before the check-in day (409 after). Anything paid online is refunded in full. A reason is optional.
       security:
         - session: []
       parameters:
@@ -546,7 +562,18 @@ paths:
                   maxLength: 300
       responses:
         "200":
-          description: Success
+          description: The booking is cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - CANCELLED
+                required:
+                  - status
         "400":
           description: Invalid input
           content:
@@ -580,13 +607,76 @@ paths:
       tags:
         - Guests
       summary: The signed-in guest's stays
-      description: Signed-in user.
+      description: Signed-in user. Only their own stays, newest first. Nothing about payments or contact details; each stay carries the secret of its booking link (`publicToken`, /b/{publicToken}).
       security:
         - session: []
       parameters: []
       responses:
         "200":
           description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    publicToken:
+                      type: string
+                    reference:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                        - HELD
+                        - AWAITING_PAYMENT
+                        - CONFIRMED
+                        - DECLINED
+                        - EXPIRED
+                        - CANCELLED
+                    bookingMode:
+                      type: string
+                      enum:
+                        - AUTOMATIC
+                        - ONLINE_APPROVAL
+                        - OFFLINE
+                    checkIn:
+                      type: string
+                      format: date
+                    checkOut:
+                      type: string
+                      format: date
+                    guestCount:
+                      type: integer
+                    totalCents:
+                      type: integer
+                      description: The full price, in whole minor units.
+                    currency:
+                      type: string
+                    place:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                      required:
+                        - name
+                        - slug
+                    roomName:
+                      type: string
+                  required:
+                    - publicToken
+                    - reference
+                    - status
+                    - bookingMode
+                    - checkIn
+                    - checkOut
+                    - guestCount
+                    - totalCents
+                    - currency
+                    - place
+                    - roomName
         "400":
           description: Invalid input
           content:
