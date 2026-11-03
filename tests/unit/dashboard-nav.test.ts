@@ -25,7 +25,7 @@ describe("dashboardNav", () => {
   });
 
   it("hides a page the member's role does not open, and the group left empty", () => {
-    expect(dashboardNav(member(["rooms.read", "calendar.read"]))).toEqual([]);
+    expect(dashboardNav(member(["guests.contact"]))).toEqual([]);
   });
 
   it("reads the same permissions the page itself checks", () => {

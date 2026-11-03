@@ -904,8 +904,11 @@ Page: `/dashboard/{id}/calendar`. Views: month, week and rooms.
 - Click a stay to see its details.
 - Double-click a day (or press "Close dates") to close nights.
 
-Code: `calendar-board.tsx` (views, selecting), `calendar-side-panel.tsx`, `close-dates-form.tsx`,
-`calendar-model.ts` (types and date helpers).
+Code (in `src/modules/bookings/`): `components/calendar-board.tsx` (views, selecting), `calendar-side-panel.tsx`,
+`close-dates-form.tsx`, and `calendar-model.ts` (types and date helpers). The page reads `getCalendarBoard(ctx, query)`:
+the place's rooms by name (`listRoomNames` from `rooms/server`: switched-off rooms kept, their nights stay) with the
+same nights as `getCalendar`, under `calendar.read` alone, so a member who may see the calendar sees the rooms on it.
+`?month=2026-11` picks the month; the view chosen is kept in this browser.
 
 ### C. Closed dates (blocks)
 
@@ -1545,6 +1548,7 @@ listBookings(ctx: TenantContext, filters: { status?, roomId?, from?: Date, to?: 
 listMyBookings(guestUserId: string): Promise<Booking[]>   // the guest's trips, newest first
 
 getCalendar(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read
+getCalendarBoard(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read: { rooms, occupancy }
 addBlock(ctx: TenantContext, input: { roomId: string; range: DateRange; note: string | null }, now?: Date)   // blocks.manage
 removeBlock(ctx: TenantContext, blockId: string, now?: Date)   // blocks.manage
 // Closing taken nights gives 409 "Those nights are already booked or closed."

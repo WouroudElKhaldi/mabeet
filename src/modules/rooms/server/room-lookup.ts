@@ -41,3 +41,8 @@ export async function priceStay(
   const overrides = await rooms.findRateOverrides(db, room.businessId, room.id, range);
   return quoteStay({ range, baseRateCents: room.baseRateCents, overrides });
 }
+
+/** For the calendar: the place's rooms by name, deleted ones left out, switched-off ones kept (their nights stay). */
+export function listRoomNames(businessId: string, db: Db = prisma) {
+  return rooms.listRoomNames(db, businessId);
+}
