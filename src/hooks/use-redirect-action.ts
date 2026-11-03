@@ -5,12 +5,16 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { errorMessage } from "@/lib/api-client";
 
-/** Where our own server may send a visitor: a page of this site, or an https address (Stripe, Whish...). */
-export function isSafeRedirect(url: unknown): url is string {
+/**
+ * Where our own server may send a visitor: a page of this site (by path, or by full address, which is http on a
+ * computer running the site, as the Whish simulator's page is there), or an https address (Stripe, Whish...).
+ */
+export function isSafeRedirect(url: unknown, siteOrigin: string): url is string {
   if (typeof url !== "string" || /[\\\u0000-\u001f]/.test(url)) return false;
   if (url.startsWith("/")) return !url.startsWith("//");
   try {
-    return new URL(url).protocol === "https:";
+    const target = new URL(url);
+    return target.protocol === "https:" || target.origin === siteOrigin;
   } catch {
     return false;
   }
@@ -31,7 +35,8 @@ export function useRedirectAction() {
     setPending(true);
     try {
       const { url } = await work();
-      if (!isSafeRedirect(url)) throw new Error("The server sent an address this site does not follow");
+      if (!isSafeRedirect(url, window.location.origin))
+        throw new Error("The server sent an address this site does not follow");
       if (url.startsWith("/")) router.push(url);
       else window.location.assign(url);
     } catch (caught) {
