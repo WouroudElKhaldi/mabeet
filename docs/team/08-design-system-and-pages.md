@@ -243,6 +243,10 @@ const nav: NavGroup[] = [
 return <AppShell nav={nav}>{children}</AppShell>;
 ```
 
+- The host dashboard's layout (`src/app/dashboard/[businessId]/layout.tsx`) builds this from `DASHBOARD_PAGES` in
+  `src/components/dashboard/nav-items.ts`: one line per page, added in the pull request that adds the page, with its
+  group, path, icon and the permissions that open it (`anyOf`). The page opens with
+  `requirePageAccess(businessId, DASHBOARD_PAGES.<page>.anyOf)`, so the menu never offers a page that answers 404.
 - An item has `href`, `label`, `icon` (a name from `nav-icons.ts`: add one there if a page needs another), `end` (on only
   for exactly this address: the menu's home page) and `tab` (also in the bar at the bottom of a phone; the first four
   marked, the rest are behind "More"). The page being shown is marked from the address, and the top bar names it.
