@@ -28,6 +28,7 @@ export {
   getPlaceSnapshots,
   getStayNumbers,
   type MonthlyNights,
+  type MonthlyRevenue,
 } from "./server/booking-stats";
 export { stayIssue } from "./server/booking-policy";
 export { addBlock, getCalendar, removeBlock } from "./server/closed-dates-service";

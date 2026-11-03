@@ -7,6 +7,7 @@ import {
   getPlaceSnapshots,
   getStayNumbers,
   type MonthlyNights,
+  type MonthlyRevenue,
 } from "@/modules/bookings/server";
 import { countActiveUnits } from "@/modules/rooms/server";
 import { listWorkspaces } from "@/modules/team/server";
@@ -33,6 +34,8 @@ export interface BusinessReport {
   commissionSavedCents: number;
   channels: ChannelNights[];
   monthly: MonthlyNights[];
+  /** Confirmed direct revenue by the month stays begin, in the place's currency. */
+  monthlyRevenue: MonthlyRevenue[];
   /** Requests made in the period, by what became of them. */
   requests: Record<string, number>;
   medianResponseMinutes: number | null;
@@ -67,6 +70,7 @@ export async function getBusinessReport(ctx: TenantContext, range: DateRange): P
     commissionSavedCents: Math.round((numbers.directRevenueCents * place.commissionRateBps) / 10_000),
     channels: numbers.channels,
     monthly: numbers.monthly,
+    monthlyRevenue: numbers.monthlyRevenue,
     requests: numbers.requests,
     medianResponseMinutes: numbers.medianResponseMinutes,
   };
@@ -165,10 +169,21 @@ function sumBy(rows: Array<{ key: string; value: number }>): Array<[string, numb
 
 const total = (values: number[]) => values.reduce((sum, value) => sum + value, 0);
 
-/** Several places' reports as one: nights add up, money adds up per currency and is never mixed. */
+/**
+ * Several places' reports as one: nights add up, money adds up per currency and is never mixed. Revenue by month is
+ * charted in one currency, the first place's; the other places' money stays in the per-place rows.
+ */
 function combine(reports: BusinessReport[]) {
+  const revenueCurrency = reports[0]?.currency ?? "USD";
   const nightsSold = total(reports.map((report) => report.nightsSold));
   const nightsAvailable = total(reports.map((report) => report.nightsAvailable));
+  const channelNights = new Map<ChannelNights["channel"], number>();
+  for (const { channel, nights } of reports.flatMap((report) => report.channels)) {
+    channelNights.set(channel, (channelNights.get(channel) ?? 0) + nights);
+  }
+  const responseTimes = reports.flatMap((report) =>
+    report.medianResponseMinutes === null ? [] : [report.medianResponseMinutes],
+  );
   return {
     nightsSold,
     nightsAvailable,
@@ -193,9 +208,18 @@ function combine(reports: BusinessReport[]) {
     )
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, nights]) => ({ month, nights })),
-    channels: sumBy(
-      reports.flatMap((report) => report.channels.map((row) => ({ key: row.channel, value: row.nights }))),
+    revenueCurrency,
+    revenueByMonth: sumBy(
+      reports
+        .filter((report) => report.currency === revenueCurrency)
+        .flatMap((report) => report.monthlyRevenue.map((row) => ({ key: row.month, value: row.cents }))),
     )
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, cents]) => ({ month, cents })),
+    // Each place's typical answer time, averaged: a rough figure across places, exact for one.
+    medianResponseMinutes:
+      responseTimes.length === 0 ? null : Math.round(total(responseTimes) / responseTimes.length),
+    channels: [...channelNights]
       .map(([channel, nights]) => ({ channel, nights }))
       .sort((a, b) => b.nights - a.nights),
   };

@@ -30,6 +30,7 @@ export const DASHBOARD_PAGES = {
     tab: true,
   },
   bookings: { group: "bookings", path: "bookings", icon: "bookings", anyOf: ["bookings.read"], tab: true },
+  analytics: { group: "money", path: "analytics", icon: "analytics", anyOf: ["analytics.read"] },
 } as const satisfies Partial<Record<NavLabel, DashboardPage>>;
 
 type DashboardPageName = keyof typeof DASHBOARD_PAGES;
