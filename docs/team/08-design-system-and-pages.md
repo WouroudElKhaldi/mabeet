@@ -717,7 +717,10 @@ members who read bookings or the numbers): the four `StatTile`s over the last 90
 `BarChart` of nights by month and `ShareBar` of channels (`channelColor` in `analytics`). Each part shows only to a
 role that reads it. `/dashboard` is "All my places" in its own `AppShell` (the person's places as the menu): today's
 totals, then a card per place, numbers only where their role reads bookings; one place goes straight to it, none to
-`/host`. `StatTile`, `BarChart` and `ShareBar` are shared in `components/ui`.
+`/host`. `StatTile`, `BarChart` and `ShareBar` are shared in `components/ui`. `/dashboard/[id]/analytics` (menu, Money, `analytics.read`):
+the filters as a plain form (30, 90 or 365 days, any period, this place or all), eight numbers, nights and revenue
+by month, channels and requests by outcome (`ShareBar`), and a row per place when there are several. No rating until
+reviews are built; the AI report is a later bonus.
 
 | Page                       | Feature     | Sections, top to bottom                                                                                                                                                                                                                                                                                                                                                                            |
 | -------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -74,6 +74,28 @@ export async function directRevenueCents(db: Db, businessId: string, range: Date
   return moneyNumber(row?.cents ?? 0);
 }
 
+export interface MonthlyRevenue {
+  /** YYYY-MM */
+  month: string;
+  cents: number;
+}
+
+/** Confirmed direct revenue by the month stays begin, for the stays beginning in the range. */
+export async function revenueByMonth(
+  db: Db,
+  businessId: string,
+  range: DateRange,
+): Promise<MonthlyRevenue[]> {
+  const rows = await db.$queryRaw<Array<{ month: string; cents: bigint }>>`
+    SELECT to_char("checkIn", 'YYYY-MM') AS month, SUM("totalCents")::bigint AS cents
+    FROM "Booking"
+    WHERE "businessId" = ${businessId} AND "isDeleted" = false AND status = 'CONFIRMED'
+      AND "checkIn" >= ${range.checkIn}::date AND "checkIn" < ${range.checkOut}::date
+    GROUP BY 1
+    ORDER BY 1`;
+  return rows.map((row) => ({ month: row.month, cents: moneyNumber(row.cents) }));
+}
+
 /** Every confirmed direct booking since the place joined, by currency. */
 export async function lifetimeDirectRevenue(db: Db, businessId: string) {
   const rows = await db.$queryRaw<Array<{ currency: string; cents: bigint }>>`

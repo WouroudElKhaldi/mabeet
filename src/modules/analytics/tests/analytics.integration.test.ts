@@ -69,6 +69,7 @@ describe("a place's report", () => {
       ]),
     );
     expect(report.monthly.reduce((sum, month) => sum + month.nights, 0)).toBe(6);
+    expect(report.monthlyRevenue.reduce((sum, month) => sum + month.cents, 0)).toBe(20_000);
   });
 
   it("counts only the nights inside the period, and never another business's", async () => {
