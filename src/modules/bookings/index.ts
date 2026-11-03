@@ -14,3 +14,4 @@ export {
   guestCancelInput,
   placeParams,
 } from "./schemas";
+export { BookingRow } from "./components/booking-row";

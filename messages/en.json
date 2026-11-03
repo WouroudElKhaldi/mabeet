@@ -622,7 +622,18 @@
       "method": "Method",
       "save": "Save",
       "sessionsTitle": "Experiences & services",
-      "staysTitle": "Stays"
+      "staysTitle": "Stays",
+      "intro": "Answer requests before they expire, and follow every stay.",
+      "tabsLabel": "Show",
+      "emptyTabs": {
+        "requests": "No requests waiting for you. You're all caught up.",
+        "upcoming": "No upcoming stays yet. Share your place's page to get the first booking.",
+        "past": "No past stays yet.",
+        "all": "No bookings yet. Share your place's page to get the first one."
+      },
+      "answerWithin": "Answer {time}",
+      "payWithin": "Guest pays {time}",
+      "timeUp": "Time is up: it ends in a few minutes"
     },
     "calendar": {
       "title": "Calendar",
@@ -1740,6 +1751,11 @@
       "title": "Cancel {name}'s invitation?",
       "body": "The link in their email stops working. You can invite them again later.",
       "confirm": "Cancel invitation"
+    },
+    "confirmBooking": {
+      "title": "Confirm this booking?",
+      "body": "The guest is told by email that their stay is confirmed.",
+      "confirm": "Confirm"
     }
   },
   "plans": {

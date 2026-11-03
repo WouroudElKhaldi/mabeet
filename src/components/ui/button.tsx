@@ -10,8 +10,9 @@ interface ButtonStyle {
   size?: ButtonSize;
 }
 
+// Tailwind 4 leaves buttons with the arrow cursor, so the hand is set here for every button and button-like link.
 const base =
-  "inline-flex items-center justify-center font-semibold transition duration-150 ease-(--ease-out) " +
+  "inline-flex cursor-pointer items-center justify-center font-semibold transition duration-150 ease-(--ease-out) " +
   "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 " +
   "aria-disabled:pointer-events-none aria-disabled:opacity-40";
 
