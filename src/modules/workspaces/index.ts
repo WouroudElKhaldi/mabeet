@@ -2,4 +2,5 @@
 // code lives behind ./server.ts.
 export { settingsInput, workspaceInput } from "./schemas";
 export { CreateWorkspaceForm } from "./components/create-workspace-form";
+export { PlaceEssentials } from "./components/place-essentials";
 export { SettingsForm } from "./components/settings-form";
