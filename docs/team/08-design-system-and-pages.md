@@ -225,7 +225,8 @@ Tailwind 4: one step = `0.25rem` = 4 pixels. `p-4` = 16px, `gap-6` = 24px. We us
 - **Top bar:** `h-16`, sticky, `bg-paper/85 backdrop-blur-xl border-b border-line`. It holds: the menu button on
   phones, the area and page name, "Ask AI", "View site", the bell, light/dark, language, and the account button.
 - **Phone tab bar:** fixed at the bottom on phones (`lg:hidden`), `bg-paper/90 backdrop-blur-xl`, with the safe
-  area (`pb-[env(safe-area-inset-bottom)]`). The page gets `pb-24` so nothing hides behind it.
+  area (`pb-[env(safe-area-inset-bottom)]`). The page gets `pb-24` so nothing hides behind it. A menu with no tab
+  pages (all of someone's places) has no bar: the top bar's menu button opens the same drawer.
 - **Phone menu:** a drawer from the start side, `w-[86%] max-w-80`, over a `bg-ink/40` layer.
 - **Back button:** `BackLink` at the top of every page (`mb-4`). It goes to the parent page.
 
@@ -406,28 +407,28 @@ the keyboard focus away.
 
 ### 6.4 Page structure
 
-| Component                               | File                      | Use                                                                                                                                |
-| --------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `AppShell`                              | `shell/app-shell.tsx`     | The dashboard and admin frame (Part 4.3)                                                                                           |
-| `PageHeader`                            | `shell/page-header.tsx`   | The title block of every dashboard and admin page: a small `glow` bar, the title, an intro, and actions on the end side. `mb-8`.   |
-| `Panel`                                 | `shell/page-header.tsx`   | A titled card on a dashboard page (`panelClass` + `text-xl` title + optional intro and action)                                     |
-| `BackLink`                              | `shell/back-link.tsx`     | The Back button                                                                                                                    |
-| `Pagination`                            | `shell/pagination.tsx`    | Page numbers for long lists                                                                                                        |
-| `NotificationBell`, `NotificationList`  | `shell/`                  | The bell (latest 5) and the full list                                                                                              |
-| `StatTile`                              | `dashboard/stat-tile.tsx` | One number with its label (percent, count or money)                                                                                |
-| `BarChart`, analytics charts            | `dashboard/`              | Charts, coloured with tokens and `channel-colors.ts`                                                                               |
-| `SiteHeader`, `SiteFooter`, `SearchBar` | `site/`                   | The public site's header, footer and search                                                                                        |
-| `NavLink`, `LogoMark`                   | `site/`                   | A header link with the glow bar on hover and on the current page; the logo's arch alone, in the text colour                        |
-| `Section`, `ExamplePrompt`              | `site/`                   | A titled part of a public page; something to try typing into an AI app, shown as a chat message                                    |
-| `StoryRail`, `StoryChapter`             | `site/`                   | One journey line through a long page, filling as you scroll with the Mabeet mark travelling; a chapter with its stop on it         |
-| `StatBand`, `BigStat`, `Journey`        | `site/`                   | A dark band of striking figures; one figure (put a `CountUp` in it); a path of numbered stops on a dashed line that draws itself   |
-| `Eyebrow`, `LandscapeBand`              | `site/`                   | The tinted pill above a big title; the closing band with Mount Lebanon behind a title and actions                                  |
-| `WhatsAppLink`, `CountUp`, `Reveal`     | `site/`, `ui/`            | A button opening a WhatsApp chat; a number that counts up when seen; plays its children's motion once when scrolled into view      |
-| `TopicCard`, `OnThisPage`               | `site/`                   | A numbered topic card that leans in 3D (glow bar, filled tile on hover); links to a long page's sections                           |
-| `TiltCard`, `ReceiptCard`               | `brand/`                  | Any card leaning toward the mouse in 3D (`--px`/`--py` for `Sheen`); promises on a till receipt in a `BrandScene`, with a postmark |
-| `PageIntro`, `PageNote`                 | `site/page-intro.tsx`     | A public page's centred poster title and line; the small print at its end                                                          |
-| `HeroHeading`, `IconPoints`             | `site/`                   | The big title and intro of a page that sells something; reasons with an accent icon, two to a row                                  |
-| `PlanCards`, `PlanPicker`               | `billing/`                | The three plans side by side; the plan to start on, picked in place as `ChoiceLinks`, with its price and limits                    |
+| Component                                           | File                    | Use                                                                                                                                |
+| --------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `AppShell`                                          | `shell/app-shell.tsx`   | The dashboard and admin frame (Part 4.3)                                                                                           |
+| `PageHeader`                                        | `shell/page-header.tsx` | The title block of every dashboard and admin page: a small `glow` bar, the title, an intro, and actions on the end side. `mb-8`.   |
+| `Panel`                                             | `shell/page-header.tsx` | A titled card on a dashboard page (`panelClass` + `text-xl` title + optional intro and action)                                     |
+| `BackLink`                                          | `shell/back-link.tsx`   | The Back button                                                                                                                    |
+| `Pagination`                                        | `shell/pagination.tsx`  | Page numbers for long lists                                                                                                        |
+| `NotificationBell`, `NotificationList`              | `shell/`                | The bell (latest 5) and the full list                                                                                              |
+| `StatTile`                                          | `ui/stat-tile.tsx`      | One number with its label (percent, count or money); a long number shrinks to the tile's width (`cqi`) instead of being cut        |
+| `BarChart`, analytics charts                        | `dashboard/`            | Charts, coloured with tokens and `channel-colors.ts`                                                                               |
+| `SiteHeader`, `SiteFooter`, `SearchBar`, `SiteMenu` | `site/`                 | The public site's header, footer and search, and the header's menu on phones                                                       |
+| `NavLink`, `LogoMark`                               | `site/`                 | A header link with the glow bar on hover and on the current page; the logo's arch alone, in the text colour                        |
+| `Section`, `ExamplePrompt`                          | `site/`                 | A titled part of a public page; something to try typing into an AI app, shown as a chat message                                    |
+| `StoryRail`, `StoryChapter`                         | `site/`                 | One journey line through a long page, filling as you scroll with the Mabeet mark travelling; a chapter with its stop on it         |
+| `StatBand`, `BigStat`, `Journey`                    | `site/`                 | A dark band of striking figures; one figure (put a `CountUp` in it); a path of numbered stops on a dashed line that draws itself   |
+| `Eyebrow`, `LandscapeBand`                          | `site/`                 | The tinted pill above a big title; the closing band with Mount Lebanon behind a title and actions                                  |
+| `WhatsAppLink`, `CountUp`, `Reveal`                 | `site/`, `ui/`          | A button opening a WhatsApp chat; a number that counts up when seen; plays its children's motion once when scrolled into view      |
+| `TopicCard`, `OnThisPage`                           | `site/`                 | A numbered topic card that leans in 3D (glow bar, filled tile on hover); links to a long page's sections                           |
+| `TiltCard`, `ReceiptCard`                           | `brand/`                | Any card leaning toward the mouse in 3D (`--px`/`--py` for `Sheen`); promises on a till receipt in a `BrandScene`, with a postmark |
+| `PageIntro`, `PageNote`                             | `site/page-intro.tsx`   | A public page's centred poster title and line; the small print at its end                                                          |
+| `HeroHeading`, `IconPoints`                         | `site/`                 | The big title and intro of a page that sells something; reasons with an accent icon, two to a row                                  |
+| `PlanCards`, `PlanPicker`                           | `billing/`              | The three plans side by side; the plan to start on, picked in place as `ChoiceLinks`, with its price and limits                    |
 
 ### 6.5 AI components: `src/components/assistant/`
 
@@ -461,6 +462,11 @@ Changes for the new project (from `06-functional-requirements.md`) are marked **
 The header's end side: "Become a host", the appearance menu, then the account avatar (or Sign in). For someone who
 works in a place (owner, admin or staff), "Become a host" gives way to **Dashboard** (`/dashboard`, which opens the one
 place or all of them), shown on a phone as its icon alone.
+
+Below `md:` the header has no room for its links: a menu button (`SiteMenu`, `src/components/site/site-menu.tsx`) at
+the end opens a drawer from the start side (`SheetDialog placement="start"` with `NavLinks`, as the dashboard's phone
+menu), with the pages grouped like the footer (Guests: Explore, Trip Assistant; Hosts: Become a host or Dashboard,
+Pricing) and light/dark and the language, which leave the header on a phone to make room for the button.
 
 #### `/` Home (F1)
 
@@ -514,7 +520,7 @@ Experiences and services have no tab yet: they come with their module (F8).
 
    End column: the sticky `BookingWidget` (dates, guests, nightly price and total, the Book button).
 
-4. On phones the booking box becomes a bar fixed at the bottom with the price and the button.
+4. On phones the booking box comes after the text, and a bar held at the bottom shows the price and the button.
 
 **New:** no deposit and no refund policy in the booking box. It says how this place works in one line (the mode):
 "Pay online, confirmed at once", "Pay online, the host confirms", or "Arrange payment with the host".
@@ -534,7 +540,8 @@ link to `/p/{slug}/book?room=&guests=&checkIn=&checkOut=`, which the book page r
 nights for the year ahead (the availability route) and shows them as taken in the calendar; a stay that crosses one
 (the room was switched, or somebody booked meanwhile) says "Those nights are taken" and cannot be booked. It takes `initial` (the room,
 dates and guests of the page's address) and sends only a stay that fits: the calendar drops anything that does not.
-On a phone a bar fixed at the bottom shows the "from" price and leads to the box (`#booking`).
+On a phone a bar held at the bottom shows the "from" price and leads to the box (`#booking`). It is `sticky`, not
+`fixed`: it rides along the place's page and stops at its end, so it never covers the site's footer.
 
 #### `/p/[slug]/photos` Photo tour (F2)
 
