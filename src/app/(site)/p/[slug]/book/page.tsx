@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { cache } from "react";
 import { ButtonLink } from "@/components/ui/button";
 import type { Locale } from "@/config/appearance";
 import { MAX_STAY_NIGHTS } from "@/config/booking-limits";
 import { isOnlineMode } from "@/config/enums";
 import { placeParams } from "@/modules/bookings";
 import { GuestDetailsForm, initialStay, StaySummary } from "@/modules/directory";
-import { getPlace, getRoomAvailability, quoteRoom } from "@/modules/directory/server";
+import { getRoomAvailability, loadPlace, quoteRoom } from "@/modules/directory/server";
 import { requirePageUser } from "@/server/http/session";
 import { toDateRange } from "@/utils/dates";
 import { formatMoney } from "@/utils/format";
 import { clampGuests } from "@/utils/guest-count";
-
-const loadPlace = cache(getPlace);
 
 type PageProps = {
   params: Promise<{ slug: string }>;

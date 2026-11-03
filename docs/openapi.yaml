@@ -540,7 +540,7 @@ paths:
       tags:
         - Guests
       summary: The signed-in guest cancels their own booking before check-in or the session (rate limited)
-      description: Signed-in user.
+      description: Signed-in user, and only their own booking (someone else's is 404). Allowed while the booking waits for payment or for the host, or once confirmed, and before the check-in day (409 after). Anything paid online is refunded in full. A reason is optional.
       security:
         - session: []
       parameters:
@@ -562,7 +562,18 @@ paths:
                   maxLength: 300
       responses:
         "200":
-          description: Success
+          description: The booking is cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - CANCELLED
+                required:
+                  - status
         "400":
           description: Invalid input
           content:
