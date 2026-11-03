@@ -218,7 +218,7 @@ paths:
       tags:
         - Guests
       summary: "Request a stay: holds the room at once (rate limited)"
-      description: Signed-in user.
+      description: Signed-in user. Who the guest is comes from the session, never the body. The room is held at once; what happens next depends on the place's mode. Only the link to the booking and where it stands are returned.
       security:
         - session: []
       parameters:
@@ -279,7 +279,23 @@ paths:
                 - checkOut
       responses:
         "201":
-          description: Success
+          description: The room is held
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  publicToken:
+                    type: string
+                    description: The secret in the booking's private link, /b/{publicToken}.
+                  reference:
+                    type: string
+                  status:
+                    type: string
+                required:
+                  - publicToken
+                  - reference
+                  - status
         "400":
           description: Invalid input
           content:

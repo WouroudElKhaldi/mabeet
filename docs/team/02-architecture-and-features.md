@@ -1252,7 +1252,10 @@ Tests: `public-place.integration.test.ts` (workspaces) and `public-units.integra
 rooms, or the one whole-place unit) with their photos, its `rooms` to show (at a place booked whole, the rooms inside it),
 and its photos (the rooms' photos when it has none of its own). `getRoomAvailability(slug, roomId, range)` is the calendar's
 read, behind `GET /api/public/places/{slug}/rooms/{roomId}/availability` (no sign-in, 120 a minute from one address): the
-taken nights as dates, for the year ahead by default (`AVAILABILITY_DAYS`), for the same rooms a quote accepts. The place page's parts and the
+taken nights as dates, for the year ahead by default (`AVAILABILITY_DAYS`), for the same rooms a quote accepts.
+The guest's booking route is `POST /api/public/places/{slug}/bookings` (`requireUser`, 10 requests per 10 minutes per guest): it
+calls `requestBooking` with the guest taken from the session, and answers `{ publicToken, reference, status }` only. The
+book page (`/p/{slug}/book`) is its screen. The place page's parts and the
 booking box are built too (see `08`, "Built so far").
 
 ### P. Pricing
