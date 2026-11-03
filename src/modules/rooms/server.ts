@@ -2,13 +2,16 @@
 // private to the module.
 export {
   countActiveUnits,
+  findPlaceCovers,
   findRoomForBooking,
   findRoomUnits,
+  findSearchUnits,
   hasWholePlaceUnit,
   listPlacePhotos,
   listPublicUnits,
   listRoomNames,
   priceStay,
+  priceStays,
 } from "./server/room-lookup";
 export {
   chooseBookingUnit,

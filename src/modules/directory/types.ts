@@ -83,3 +83,34 @@ export interface GuestTrip {
   place: { name: string; slug: string };
   roomName: string;
 }
+
+/** A unit a search found for the guest: free on their dates (when they gave dates) and fitting what they asked. */
+export interface SearchOffer {
+  roomId: string;
+  name: string;
+  capacity: number;
+  bedrooms: number;
+  beds: number;
+  bathrooms: number;
+  amenities: string[];
+  /** The cheapest night: the base price without dates, the cheapest night of the stay with them. */
+  nightlyFromCents: number;
+  /** The whole stay, or null when the guest gave no dates. */
+  stayTotalCents: number | null;
+}
+
+/** A place in search results, with the units that fit. */
+export interface PlaceCard {
+  slug: string;
+  name: string;
+  area: string | null;
+  currency: string;
+  /** The place's first photo, else its first unit's, else none. */
+  photo: PublicPhoto | null;
+  /** Category slugs. */
+  categories: string[];
+  nightlyFromCents: number;
+  /** The cheapest whole stay, or null without dates. */
+  stayTotalFromCents: number | null;
+  offers: SearchOffer[];
+}

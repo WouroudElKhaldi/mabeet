@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { areasMatching, regionNamed } from "@/config/regions";
 import type { Db, Tx } from "@/server/db/client";
 
 export function slugExists(db: Db, slug: string) {
@@ -145,5 +146,77 @@ export function findPlacesForReports(db: Db, businessIds: readonly string[]) {
   return db.business.findMany({
     where: { id: { in: [...businessIds] }, isDeleted: false },
     select: { id: true, name: true, slug: true, currency: true, commissionRateBps: true, bookingUnit: true },
+  });
+}
+
+/** What a guest can ask of a place itself in search; what they ask of its rooms is the rooms module's. */
+export interface PlaceFilters {
+  /** A town, or a region ("North Lebanon", "الشمال"). */
+  area?: string;
+  /** Words in the place's name, description or town. */
+  text?: string;
+  /** The place is in at least one of these categories. */
+  categories?: readonly string[];
+  /** The place has at least one of these tags. */
+  tags?: readonly string[];
+  /** The place has every one of these accessibility features. */
+  accessibility?: readonly string[];
+}
+
+/**
+ * Where a place is, from what a guest typed: a region matches the region the place stores, or any of its towns for a
+ * place whose region is not known; anything else is matched as a town.
+ */
+function inArea(text: string): Prisma.BusinessWhereInput {
+  const region = regionNamed(text);
+  const towns = areasMatching(text).map((town) => ({
+    area: { contains: town, mode: "insensitive" as const },
+  }));
+  return { OR: region ? [{ region }, ...towns] : towns };
+}
+
+/**
+ * Places in search: live, listed by their owner, and matching every filter, oldest first. Only what a result card
+ * shows, never the owner's settings.
+ */
+export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number) {
+  return db.business.findMany({
+    where: {
+      listedPublicly: true,
+      status: "ACTIVE",
+      isDeleted: false,
+      tags: filters.tags?.length ? { hasSome: [...filters.tags] } : undefined,
+      accessibility: filters.accessibility?.length ? { hasEvery: [...filters.accessibility] } : undefined,
+      categories: filters.categories?.length
+        ? { some: { categorySlug: { in: [...filters.categories] }, isDeleted: false } }
+        : undefined,
+      AND: [
+        filters.area ? inArea(filters.area) : {},
+        filters.text
+          ? {
+              OR: [
+                { name: { contains: filters.text, mode: "insensitive" } },
+                { description: { contains: filters.text, mode: "insensitive" } },
+                { area: { contains: filters.text, mode: "insensitive" } },
+              ],
+            }
+          : {},
+      ],
+    },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      area: true,
+      currency: true,
+      bookingUnit: true,
+      categories: {
+        where: { isDeleted: false },
+        select: { categorySlug: true },
+        orderBy: { categorySlug: "asc" },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+    take,
   });
 }

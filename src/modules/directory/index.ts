@@ -10,3 +10,5 @@ export { StaySummary } from "./components/stay-summary";
 export { availabilityQuery, quoteQuery, roomParams } from "./schemas";
 export { initialStay } from "./summary";
 export { splitTrips } from "./trips";
+export { searchParams } from "./schemas";
+export { toPlaceSearch } from "./search-query";

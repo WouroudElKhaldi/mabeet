@@ -3,6 +3,7 @@ import { type Db, prisma } from "@/server/db/client";
 import type { DateRange } from "@/utils/dates";
 import { quoteStay, type StayQuote } from "./pricing";
 import * as rooms from "./room-repository";
+import type { UnitFilters } from "./room-repository";
 
 // What other modules read about a room. The booking engine calls these inside its own transaction, with the room
 // already locked, so it passes its `tx`.
@@ -50,4 +51,37 @@ export function listRoomNames(businessId: string, db: Db = prisma) {
 /** For analytics: the live units of the kind a place is booked by, so occupancy is out of the right number. */
 export function countActiveUnits(businessId: string, kind: RoomKind, db: Db = prisma) {
   return rooms.countActiveUnits(db, businessId, kind);
+}
+
+/** For search: the units of these places that match `filters`, each place's of the kind it is booked by. */
+export function findSearchUnits(
+  places: ReadonlyArray<{ businessId: string; kind: RoomKind }>,
+  filters: UnitFilters,
+  db: Db = prisma,
+) {
+  return rooms.findSearchUnits(db, places, filters);
+}
+
+/** For search: each place's first photo of its own, by place. A place with none of its own is left out. */
+export function findPlaceCovers(businessIds: readonly string[], db: Db = prisma) {
+  return rooms.findPlaceCovers(db, businessIds);
+}
+
+/** The price of the same stay in many rooms, by room: two rooms or two hundred, one query. */
+export async function priceStays(
+  units: ReadonlyArray<{ id: string; baseRateCents: number }>,
+  range: DateRange,
+  db: Db = prisma,
+): Promise<Map<string, StayQuote>> {
+  const overrides = await rooms.findRateOverridesForRooms(
+    db,
+    units.map((unit) => unit.id),
+    range,
+  );
+  return new Map(
+    units.map((unit) => [
+      unit.id,
+      quoteStay({ range, baseRateCents: unit.baseRateCents, overrides: overrides.get(unit.id) ?? new Map() }),
+    ]),
+  );
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/server/db/client";
 import * as businesses from "./business-repository";
+import type { PlaceFilters } from "./business-repository";
 
 // What other modules read about a place.
 
@@ -22,4 +23,16 @@ export function findBookablePlace(slug: string) {
  */
 export function findPlacesForReports(businessIds: readonly string[]) {
   return businesses.findPlacesForReports(prisma, businessIds);
+}
+
+/**
+ * For search: the listed places matching `filters`, at most `take`, with their categories as slugs. A place the owner
+ * has not listed keeps its page but is never found here.
+ */
+export async function listListedPlaces(filters: PlaceFilters, take: number) {
+  const places = await businesses.findListedBusinesses(prisma, filters, take);
+  return places.map(({ categories, ...place }) => ({
+    ...place,
+    categories: categories.map((category) => category.categorySlug),
+  }));
 }

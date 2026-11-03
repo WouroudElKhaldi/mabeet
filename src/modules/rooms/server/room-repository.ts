@@ -1,4 +1,4 @@
-import type { Prisma, RoomKind } from "@prisma/client";
+import type { PhotoArea, Prisma, RoomKind } from "@prisma/client";
 import type { Db, Tx } from "@/server/db/client";
 import { type DateRange, toIsoDate } from "@/utils/dates";
 
@@ -186,4 +186,94 @@ export function listRoomNames(db: Db, businessId: string) {
 /** For analytics: how many live units of one kind a place has, the nights it could sell each night. */
 export function countActiveUnits(db: Db, businessId: string, kind: RoomKind) {
   return db.room.count({ where: { businessId, kind, active: true, isDeleted: false } });
+}
+
+/** What a guest can ask of a unit in search; each filter left out is not checked. */
+export interface UnitFilters {
+  /** It sleeps at least this many. */
+  guests: number;
+  /** Its base price per night is within these, in minor units. */
+  minRateCents?: number;
+  maxRateCents?: number;
+  /** It has every one of these amenities. */
+  amenities?: readonly string[];
+  minBedrooms?: number;
+  minBathrooms?: number;
+  minBeds?: number;
+}
+
+/**
+ * For search: the live units of these places, each place's of the kind it is booked by, that match every filter,
+ * with their first photo. One query however many places.
+ */
+export function findSearchUnits(
+  db: Db,
+  places: ReadonlyArray<{ businessId: string; kind: RoomKind }>,
+  filters: UnitFilters,
+) {
+  if (places.length === 0) return Promise.resolve([]);
+  return db.room.findMany({
+    where: {
+      OR: places.map(({ businessId, kind }) => ({ businessId, kind })),
+      active: true,
+      isDeleted: false,
+      capacity: { gte: filters.guests },
+      baseRateCents:
+        filters.minRateCents === undefined && filters.maxRateCents === undefined
+          ? undefined
+          : { gte: filters.minRateCents, lte: filters.maxRateCents },
+      amenities: filters.amenities?.length ? { hasEvery: [...filters.amenities] } : undefined,
+      bedrooms: filters.minBedrooms ? { gte: filters.minBedrooms } : undefined,
+      bathrooms: filters.minBathrooms ? { gte: filters.minBathrooms } : undefined,
+      beds: filters.minBeds ? { gte: filters.minBeds } : undefined,
+    },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      businessId: true,
+      name: true,
+      capacity: true,
+      bedrooms: true,
+      beds: true,
+      bathrooms: true,
+      baseRateCents: true,
+      minNights: true,
+      amenities: true,
+      photos: { ...publicPhoto, take: 1 },
+    },
+  });
+}
+
+type PublicPhotoRow = { id: string; url: string; alt: string | null; area: PhotoArea | null };
+
+/** The first photo of each place's own gallery (not a room's), in the host's order, for search's result cards. */
+export async function findPlaceCovers(db: Db, businessIds: readonly string[]) {
+  if (businessIds.length === 0) return new Map<string, PublicPhotoRow>();
+  const photos = await db.photo.findMany({
+    where: { businessId: { in: [...businessIds] }, roomId: null, offeringId: null, isDeleted: false },
+    orderBy: publicPhoto.orderBy,
+    select: { ...publicPhoto.select, businessId: true },
+  });
+  const covers = new Map<string, PublicPhotoRow>();
+  for (const { businessId, ...photo } of photos) if (!covers.has(businessId)) covers.set(businessId, photo);
+  return covers;
+}
+
+/** The special prices of many rooms on the nights of a stay, by room then ISO date. One query. */
+export async function findRateOverridesForRooms(db: Db, roomIds: readonly string[], range: DateRange) {
+  const overrides = await db.rateOverride.findMany({
+    where: {
+      roomId: { in: [...roomIds] },
+      date: { gte: range.checkIn, lt: range.checkOut },
+      isDeleted: false,
+    },
+    select: { roomId: true, date: true, rateCents: true },
+  });
+  const byRoom = new Map<string, Map<string, number>>();
+  for (const override of overrides) {
+    const rates = byRoom.get(override.roomId) ?? new Map<string, number>();
+    rates.set(toIsoDate(override.date), override.rateCents);
+    byRoom.set(override.roomId, rates);
+  }
+  return byRoom;
 }
