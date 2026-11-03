@@ -87,3 +87,12 @@ export async function saveBookingUnit(businessId: string, bookingUnit: BookingUn
   const { name } = await businesses.updateBusinessSettings(tx, businessId, { bookingUnit });
   return name;
 }
+
+/**
+ * What every dashboard page may show of the place, to any of its members: its name, the currency its prices are in,
+ * and whether it is booked room by room or as a whole.
+ */
+export async function getPlaceBasics(ctx: TenantContext) {
+  const { name, currency, bookingUnit, bookingMode } = await loadSettings(ctx.businessId);
+  return { name, currency, bookingUnit, bookingMode };
+}

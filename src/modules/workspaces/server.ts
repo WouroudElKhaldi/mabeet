@@ -2,4 +2,4 @@
 // private to the module.
 export { createWorkspace } from "./server/onboarding-service";
 export { findBookablePlace, getPublicPlace } from "./server/place-lookup";
-export { getSettings, saveBookingUnit, updateSettings } from "./server/settings-service";
+export { getPlaceBasics, getSettings, saveBookingUnit, updateSettings } from "./server/settings-service";

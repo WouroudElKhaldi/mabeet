@@ -11,3 +11,6 @@ export {
   roomUpdate,
   specialPriceInput,
 } from "./schemas";
+export { PhotoManager } from "./components/photo-manager";
+export { RoomEditor } from "./components/room-editor";
+export { SpecialPrices } from "./components/special-prices";
