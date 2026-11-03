@@ -42,6 +42,8 @@ const schema = z.object({
   WHISH_SECRET: optional(z.string()),
   WHISH_WEBSITE_URL: optional(z.string()),
   EMAIL_FROM: z.string().default("Mabeet <onboarding@resend.dev>"),
+  // The password of every demo account `pnpm db:seed` creates. Unset: "demo-password-123" (never on the live site).
+  SEED_PASSWORD: optional(z.string().min(8)),
   // How people reach the Mabeet team from the Contact page. Each one that is unset is simply not offered.
   CONTACT_EMAIL: optional(z.email()),
   // The team's WhatsApp number with its country code, digits only (96170123456).

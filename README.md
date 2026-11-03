@@ -88,8 +88,14 @@ pnpm dev                    # the website on http://localhost:3000 and the job w
 Every setting is in [.env.example](.env.example), grouped and explained. To start, only the database URLs,
 `BETTER_AUTH_SECRET` and `CRON_SECRET` are needed. Without the others the app still runs: emails are printed to the
 log, Whish runs on its simulator, rate limits count in memory, push is off, and photos are kept in Postgres. The live site
-stores photos in Cloudflare R2 (free tier). Live values go in DigitalOcean's
-settings and GitHub secrets, never in the repository.
+stores photos in Cloudflare R2 (free tier). Live values go in GitHub's `production` environment, never in the
+repository.
+
+## The live site
+
+Every merge to `main` that passes the checks goes live by itself: GitHub Actions builds the image and starts it on
+our DigitalOcean server, behind nginx. [docs/deployment.md](docs/deployment.md) explains how it works, how to set up
+the server and GitHub once, how to add the domain, and how to undo a bad release.
 
 ## Useful commands
 
@@ -104,10 +110,13 @@ settings and GitHub secrets, never in the repository.
 | `pnpm db:deploy`                    | Applies every migration                                                                          |
 | `pnpm db:migrate`                   | Creates a new migration (the database keeper only)                                               |
 | `pnpm db:studio`                    | Browse the database                                                                              |
+| `pnpm db:seed`                      | Demo data: categories, 5 demo places (every booking mode, one booked whole), demo accounts       |
 | `pnpm run docs`                     | Regenerates the ERDs from the schema and `docs/openapi.yaml` from the JSON                       |
 | `pnpm admins:create "Name <email>"` | Makes platform admins and writes their sign-in details to `.admin-credentials` (never committed) |
 
-Later tasks add `pnpm db:seed` and `pnpm test:e2e`.
+`pnpm db:seed` is safe to run again (it leaves what exists). The demo accounts are `host@`, `staff@`, `guest@` and
+`admin@mabeet.test`, with the password `SEED_PASSWORD` (`demo-password-123` when it is empty). Later tasks add
+`pnpm test:e2e`.
 
 ## The database
 

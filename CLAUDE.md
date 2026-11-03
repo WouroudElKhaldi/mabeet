@@ -121,7 +121,8 @@ The app is a modular monolith: one Next.js app, one database, split into feature
   screen calls `api.run`. Never await slow work on the request path.
 - Functions that depend on the time take `now = new Date()` as the last argument, so tests can set the time.
 - Settings come from `env` (`src/server/env.ts`), never `process.env`. A new setting is declared there, explained in
-  `.env.example`, and added to `docker-compose.prod.yml` if production needs it.
+  `.env.example`, and, if the live site needs it, added to the deploy job in `.github/workflows/ci.yml` and to
+  GitHub (`docs/deployment.md`).
 - A new bell entry needs four things: the log call, the action in `notification-feed-service.ts`, an icon (and link)
   in `notification-list.tsx`, and its text in the three message files. A new email or push is a `notify` job in the
   module that owns the event (`<module>-notifications.ts`), built like `notifyInvitation` in

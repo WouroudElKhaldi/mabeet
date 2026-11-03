@@ -1,4 +1,5 @@
 import { recordAction } from "@/modules/audit/server";
+import { listRoomNames } from "@/modules/rooms/server";
 import { requirePermission, type TenantContext } from "@/server/auth/tenant-context";
 import { prisma, runInTransaction } from "@/server/db/client";
 import { overlapAsConflict } from "@/server/db/constraint-errors";
@@ -33,6 +34,16 @@ export async function getCalendar(ctx: TenantContext, query: CalendarQuery, now 
     throw invalid(`Show at most ${MAX_WINDOW_DAYS} days at once`);
   }
   return bookings.listOccupancy(prisma, ctx.businessId, { checkIn, checkOut }, query.roomId);
+}
+
+/**
+ * The calendar screen: the place's rooms and every taken night in the window, read under the calendar's own
+ * permission, so a member who may see the calendar sees the rooms' names on it.
+ */
+export async function getCalendarBoard(ctx: TenantContext, query: CalendarQuery, now = new Date()) {
+  requirePermission(ctx, "calendar.read");
+  const [rooms, occupancy] = await Promise.all([listRoomNames(ctx.businessId), getCalendar(ctx, query, now)]);
+  return { rooms, occupancy };
 }
 
 interface BlockInput {

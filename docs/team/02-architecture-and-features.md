@@ -78,8 +78,9 @@ Our product gives the host one booking page, one calendar, and a database that r
 - **DeepSeek:** our own AI model, for the last bonuses only (the dashboard assistant, the website travel
   assistant, the AI report). Changing to another AI provider means changing one file.
 - **Vitest:** unit tests (no database) and integration tests (real database).
-- **DigitalOcean with Docker:** hosting for the website and the PostgreSQL database. One Docker image runs twice: as
-  the website (`pnpm start`) and as the job worker (`pnpm worker`). Real emails are sent with Resend from our own
+- **DigitalOcean with Docker:** hosting for the website and the PostgreSQL database, on one server (a droplet)
+  behind nginx (`docs/deployment.md`). One Docker image runs twice: as the website (`pnpm start`) and as the job
+  worker (`pnpm worker`). Real emails are sent with Resend from our own
   domain.
 - **pg-boss:** job queues kept in our own PostgreSQL (in a `pgboss` schema), so slow AI work, emails and scheduled
   jobs run in the worker, not in the web request. The queues need no Redis.
@@ -93,8 +94,10 @@ Our product gives the host one booking page, one calendar, and a database that r
 - An optional setting uses the `optional(...)` helper, so an empty value in a copied `.env.example` counts as unset.
   Give it a sensible default or a clear fallback (Redis: count in memory; Resend: print emails to the log).
 - Add it to `.env.example` with a comment saying what it is for and what happens without it.
-- If production needs it, add it to `docker-compose.prod.yml` (a service address such as `REDIS_URL` points at the
-  service by name). Only a setting the build itself checks needs a placeholder in the `Dockerfile` build step.
+- If the live site needs it, add its name to the deploy job's list in `.github/workflows/ci.yml` and its value to
+  GitHub's `production` environment (`docs/deployment.md`). A service address such as `REDIS_URL` goes in
+  `docker-compose.prod.yml` instead, pointing at the service by name. Only a setting the build itself checks needs a
+  placeholder in the `Dockerfile` build step.
 - Tests set their own values in `tests/integration/setup-env.ts` (their own database, no real email, jobs inline).
 
 ### The checks CI runs
@@ -904,8 +907,11 @@ Page: `/dashboard/{id}/calendar`. Views: month, week and rooms.
 - Click a stay to see its details.
 - Double-click a day (or press "Close dates") to close nights.
 
-Code: `calendar-board.tsx` (views, selecting), `calendar-side-panel.tsx`, `close-dates-form.tsx`,
-`calendar-model.ts` (types and date helpers).
+Code (in `src/modules/bookings/`): `components/calendar-board.tsx` (views, selecting), `calendar-side-panel.tsx`,
+`close-dates-form.tsx`, and `calendar-model.ts` (types and date helpers). The page reads `getCalendarBoard(ctx, query)`:
+the place's rooms by name (`listRoomNames` from `rooms/server`: switched-off rooms kept, their nights stay) with the
+same nights as `getCalendar`, under `calendar.read` alone, so a member who may see the calendar sees the rooms on it.
+`?month=2026-11` picks the month; the view chosen is kept in this browser.
 
 ### C. Closed dates (blocks)
 
@@ -1311,7 +1317,7 @@ text box is saved as nothing. How money flows is the owner's alone, so changing 
 `acceptOnlineTerms`, also needs the owner. An online mode (`AUTOMATIC`, `ONLINE_APPROVAL`) is refused until the
 owner has accepted "online payments are always refunded in full" once (`acceptOnlineTerms: true` saves
 `onlineTermsAcceptedAt`); bookings already made keep their own mode. The region is the host's pick, or the one the
-town they typed is in (`regionOfArea`, `src/config/regions.ts`). Tags and accessibility come from
+town they typed is in (`regionOfArea`, `src/config/regions.ts`); a new place gets it from its town when it is created (`createWorkspace`). Tags and accessibility come from
 `src/config/listing.ts`, currencies from `CURRENCIES` in `enums.ts`. `categories` are slugs of the admin's place
 categories (`listCategories("HOME")` from `admin/server`), checked first and saved as the place's exact set: the
 others are marked deleted and a category picked again is brought back, never added twice. Tests:
@@ -1436,7 +1442,8 @@ They are only for a manual or outside run: on DigitalOcean the worker runs every
 - API keys are stored as hashes and shown only once. Read-only keys lose every write permission.
 - Raw SQL only with safe `$queryRaw` templates (values are never pasted into the SQL text).
 - Webhooks (calls from Stripe) are checked by signature and applied only once.
-- No secrets in the repository. Live secrets are in the DigitalOcean server's settings and in GitHub secrets.
+- No secrets in the repository. Live secrets are in GitHub's `production` environment; each deploy writes them to
+  the server's `.env` (`docs/deployment.md`).
 
 ---
 
@@ -1545,6 +1552,7 @@ listBookings(ctx: TenantContext, filters: { status?, roomId?, from?: Date, to?: 
 listMyBookings(guestUserId: string): Promise<Booking[]>   // the guest's trips, newest first
 
 getCalendar(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read
+getCalendarBoard(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read: { rooms, occupancy }
 addBlock(ctx: TenantContext, input: { roomId: string; range: DateRange; note: string | null }, now?: Date)   // blocks.manage
 removeBlock(ctx: TenantContext, blockId: string, now?: Date)   // blocks.manage
 // Closing taken nights gives 409 "Those nights are already booked or closed."
