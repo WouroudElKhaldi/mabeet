@@ -182,3 +182,8 @@ export function listRoomNames(db: Db, businessId: string) {
     select: { id: true, name: true, kind: true, active: true },
   });
 }
+
+/** For analytics: how many live units of one kind a place has, the nights it could sell each night. */
+export function countActiveUnits(db: Db, businessId: string, kind: RoomKind) {
+  return db.room.count({ where: { businessId, kind, active: true, isDeleted: false } });
+}

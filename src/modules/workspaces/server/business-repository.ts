@@ -139,3 +139,11 @@ export function findBookableBusinessBySlug(db: Db, slug: string) {
     },
   });
 }
+
+/** For analytics: what the reports need of each place, live ones only. */
+export function findPlacesForReports(db: Db, businessIds: readonly string[]) {
+  return db.business.findMany({
+    where: { id: { in: [...businessIds] }, isDeleted: false },
+    select: { id: true, name: true, slug: true, currency: true, commissionRateBps: true, bookingUnit: true },
+  });
+}

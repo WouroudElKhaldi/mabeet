@@ -724,6 +724,21 @@ Revenue is added up per currency, never mixed. All numbers come from the databas
 in `analytics-repository.ts`. Code: `analytics-service.ts`, `dashboard/[businessId]/analytics/page.tsx`,
 `analytics-charts.tsx`.
 
+**What exists today** (`src/modules/analytics/server/analytics-service.ts`). The night and booking sums live in
+`bookings`, which owns those tables (`booking-stats-repository.ts`, raw SQL by business; `getStayNumbers`,
+`getLifetimeDirectRevenue`, `getPlaceSnapshots` in its `server.ts`), so the `analytics` module has no database
+code of its own: it reads them, the units (`countActiveUnits`, rooms), the places (`findPlacesForReports`,
+workspaces) and the plan fees (`getPlanFeesPaid`, billing). A night counts as sold when it is a confirmed direct
+stay, closed by the host or imported, on a unit of the kind the place is booked by, out of the live units of that kind
+times the nights of the period. `getBusinessReport(ctx, range)` (`analytics.read`): occupancy, nights sold,
+direct revenue (confirmed stays, for their nights inside the period), average price per direct night, commission
+saved (revenue × the place's rate), channels, nights by month, requests by outcome, typical answer time.
+`getSavings(ctx)`: since the place joined, per currency, and the plan fees paid. `getAnalytics(ctx, scope, range)`:
+one place or every place the member may read, with totals (money per currency). `getPlacesOverview(userId)`: each of
+the person's places with today's numbers where they may read bookings. Route: `GET /api/workspaces/{id}/analytics`
+(`from`, `to`; the last 30 days by default, two years at most). Reviews are not built, so there is no rating yet.
+Tests: `analytics.integration.test.ts` (analytics).
+
 ### B. Background work
 
 Two kinds, by how much they matter:
