@@ -15,3 +15,11 @@ export function getPublicPlace(slug: string) {
 export function findBookablePlace(slug: string) {
   return businesses.findBookableBusinessBySlug(prisma, slug);
 }
+
+/**
+ * For analytics: each place's name, currency, commission rate and how it is booked. A plain read: the caller checks
+ * the member may read its numbers.
+ */
+export function findPlacesForReports(businessIds: readonly string[]) {
+  return businesses.findPlacesForReports(prisma, businessIds);
+}

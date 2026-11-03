@@ -173,3 +173,8 @@ export async function findRateOverrides(db: Db, businessId: string, roomId: stri
   });
   return new Map(overrides.map((override) => [toIsoDate(override.date), override.rateCents]));
 }
+
+/** For analytics: how many live units of one kind a place has, the nights it could sell each night. */
+export function countActiveUnits(db: Db, businessId: string, kind: RoomKind) {
+  return db.room.count({ where: { businessId, kind, active: true, isDeleted: false } });
+}

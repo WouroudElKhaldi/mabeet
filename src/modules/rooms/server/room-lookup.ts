@@ -41,3 +41,8 @@ export async function priceStay(
   const overrides = await rooms.findRateOverrides(db, room.businessId, room.id, range);
   return quoteStay({ range, baseRateCents: room.baseRateCents, overrides });
 }
+
+/** For analytics: the live units of the kind a place is booked by, so occupancy is out of the right number. */
+export function countActiveUnits(businessId: string, kind: RoomKind, db: Db = prisma) {
+  return rooms.countActiveUnits(db, businessId, kind);
+}
