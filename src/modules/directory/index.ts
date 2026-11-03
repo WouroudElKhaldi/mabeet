@@ -12,3 +12,4 @@ export { initialStay } from "./summary";
 export { splitTrips } from "./trips";
 export { searchParams } from "./schemas";
 export { toPlaceSearch } from "./search-query";
+export { Browse } from "./components/browse";
