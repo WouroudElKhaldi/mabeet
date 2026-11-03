@@ -1309,7 +1309,8 @@ Money is always whole cents, stored as `BigInt` and handled as a number (see "Ru
 
 ### P. Push notifications and installing the app
 
-The site can be installed on a phone. It has a manifest, icons and a service worker (`public/sw.js`) that shows
+The site can be installed on a phone. It has a manifest (`src/app/manifest.ts`: full screen from `/`, the icons of
+the site's palette from `public/brand/icons/{palette}/`), icons and a service worker (`public/sw.js`) that shows
 notifications. We only accept push subscriptions from real browser push services. A device always belongs to a
 signed-in person (booking needs an account), and one browser endpoint is one row (`endpoint` is unique): subscribing
 again replaces its keys, and someone else subscribing on the same browser takes it over. Pages are never served from the
