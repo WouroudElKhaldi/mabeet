@@ -15,7 +15,8 @@ import { UnitList } from "./unit-list";
 
 /**
  * A place's page: its photos and description, what it offers and the things to know, and the box where the guest
- * picks dates and books. On a phone the box comes after the text and a bar fixed at the bottom leads to it.
+ * picks dates and books. On a phone the box comes after the text and a bar held at the bottom leads to it. The bar is
+ * sticky, not fixed: it rides along the place's page and stops at its end, so it never covers the site's footer.
  */
 export async function PlaceView({
   place,
@@ -36,7 +37,7 @@ export async function PlaceView({
   const allUnits = whole ? [...place.units, ...place.rooms] : place.units;
 
   return (
-    <div className="mx-auto max-w-280 px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pb-16">
+    <div className="mx-auto max-w-280 px-4 pt-6 sm:px-6 lg:px-10 lg:pb-16">
       <PlaceHeader place={place} />
       <PhotoGallery name={place.name} photos={place.photos} />
       <div className="mt-8 grid gap-12 lg:grid-cols-[1fr_380px] lg:gap-20">
@@ -72,7 +73,7 @@ export async function PlaceView({
         </aside>
       </div>
       {place.units.length > 0 && fromRate !== null ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-between gap-4 border-t border-line bg-surface px-4 py-3 lg:hidden">
+        <div className="sticky bottom-0 z-20 -mx-4 mt-12 flex items-center justify-between gap-4 border-t border-line bg-surface px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 lg:hidden">
           <p className="font-semibold">
             <span className="text-sm font-normal text-muted">{card("from")} </span>
             {formatMoney(fromRate, place.currency, locale as Locale)}{" "}

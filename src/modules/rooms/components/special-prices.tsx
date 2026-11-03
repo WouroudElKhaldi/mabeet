@@ -87,7 +87,7 @@ export function SpecialPrices({
                   disabled={pending}
                   onClick={() => clear(price)}
                   aria-label={t("remove")}
-                  className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50"
+                  className="grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-surface hover:text-ink disabled:opacity-50"
                 >
                   <X className="size-4" aria-hidden />
                 </button>

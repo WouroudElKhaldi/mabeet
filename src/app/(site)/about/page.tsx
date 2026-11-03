@@ -95,7 +95,7 @@ export default async function AboutPage() {
               footer={t("glance.footer")}
             />
           </SceneLayer>
-          <SceneLayer depth={120} enter="stamp" className="absolute end-0 -top-6 size-24 sm:size-28">
+          <SceneLayer depth={120} enter="stamp" className="absolute end-3 -top-6 size-20 sm:end-0 sm:size-28">
             <Postmark className="size-full rotate-12" spin />
           </SceneLayer>
         </BrandScene>
