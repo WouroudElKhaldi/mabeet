@@ -7261,7 +7261,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Pick the workspace an AI app will act in, during OAuth",
-        "description": "Signed-in user.",
+        "description": "Signed-in user, who may use AI apps in that place; otherwise 403.",
         "security": [
           {
             "session": []
@@ -7277,7 +7277,9 @@
                 "type": "object",
                 "properties": {
                   "businessId": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   }
                 },
                 "required": ["businessId"]
@@ -9245,6 +9247,81 @@
             "session": []
           }
         ]
+      }
+    },
+    "/api/workspaces/{businessId}/connected-apps/{connectionId}": {
+      "delete": {
+        "tags": ["AI"],
+        "summary": "Disconnect an AI app the member connected to this place by signing in (OAuth); its next call is refused",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
       }
     }
   }

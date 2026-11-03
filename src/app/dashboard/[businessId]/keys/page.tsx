@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
 import { PageHeader, Panel } from "@/components/shell/page-header";
 import { KeyManager } from "@/modules/assistant";
-import { listKeys, listToolCalls } from "@/modules/assistant/server";
+import { listConnectedApps, listKeys, listToolCalls } from "@/modules/assistant/server";
 import { env } from "@/server/env";
 import { requirePageAccess } from "@/server/http/session";
 
@@ -12,16 +12,17 @@ type PageProps = { params: Promise<{ businessId: string }> };
 const CALLS_SHOWN = 20;
 
 /**
- * Connect your own AI app: make a personal key (read only), copy how to add it to Claude Code or a desktop app, and
- * see what the AI looked at in this place.
+ * Connect your own AI app: make a personal key (read only), copy how to add it to Claude Code or a desktop app, see
+ * and disconnect the apps connected by signing in, and see what the AI looked at in this place.
  */
 export default async function KeysPage({ params }: PageProps) {
   const { businessId } = await params;
   const ctx = await requirePageAccess(businessId, DASHBOARD_PAGES.keys.anyOf);
-  const [t, locale, keys, calls] = await Promise.all([
+  const [t, locale, keys, apps, calls] = await Promise.all([
     getTranslations("assistant.keys"),
     getLocale(),
     listKeys(ctx),
+    listConnectedApps(ctx),
     listToolCalls(ctx, CALLS_SHOWN),
   ]);
   const when = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
@@ -40,6 +41,7 @@ export default async function KeysPage({ params }: PageProps) {
             lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
             expiresAt: key.expiresAt?.toISOString() ?? null,
           }))}
+          apps={apps.map((app) => ({ ...app, connectedAt: app.connectedAt.toISOString() }))}
         />
         <Panel title={t("auditTitle")} intro={t("auditHint")}>
           {calls.length === 0 ? (

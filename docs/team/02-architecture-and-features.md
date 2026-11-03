@@ -659,8 +659,26 @@ the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_ro
 (`findFreeRooms`), `get_calendar` and `list_bookings`, each with the optional `place` (`resolvePlaceContext`: by
 id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
 come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. Not yet: the
-report tools (they wait for the analytics numbers, `getBusinessReport`), OAuth sign-in, and the actions. Tests:
-`mcp-isolation.integration.test.ts` (assistant).
+report tools (they wait for the analytics numbers, `getBusinessReport`) and the actions. Tests:
+`mcp-isolation.integration.test.ts` and `mcp-oauth.integration.test.ts` (assistant).
+
+**OAuth sign-in** (for ChatGPT, Claude.ai and any app that connects without a key). Better Auth's `jwt` and
+`oauthProvider` plugins (`src/server/auth/better-auth.ts`) make Mabeet the app's sign-in server. The app finds it
+from the 401 of `POST /api/mcp` (`WWW-Authenticate: Bearer resource_metadata=…`), then
+`/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`, registers itself (with PKCE)
+and sends the person to sign in. After signing in, `/oauth/workspace` asks which place (only places where they hold
+`ai.use`, `listConnectableWorkspaces`); `POST /api/oauth/workspace` keeps it on the sign-in session
+(`Session.mcpBusinessId`), and `/oauth/consent` shows what the app asks for. The consent is saved for that place
+(`OauthConsent.referenceId` is the business id) and the access token carries it as `business_id`. Only one access
+scope exists, `mcp:read`: tokens are read only, like keys. `MCP_RESOURCE`, `MCP_READ_SCOPE` and `mayConnectAi`
+live in the shared kernel (`src/server/auth/mcp-oauth.ts`) because Better Auth's setup needs them; the rest is in
+the assistant module. `authenticateMcpCaller` (`mcp-token.ts`) takes a key (`mbt_…`) or verifies the token
+(signature, issuer, audience `/api/mcp`, scope), and `contextForToken` (`mcp-oauth-service.ts`) then checks on
+every call that the member is still on the team with `ai.use` and that the consent still exists: tokens are signed,
+not stored, so this is what makes leaving or disconnecting work at once. The Connect AI page lists the member's
+connected apps (`listConnectedApps`) and disconnects one (`DELETE /api/workspaces/{id}/connected-apps/{connectionId}`,
+`disconnectApp`: its consent and tokens are deleted, and the action is logged). The access is not tied to a plan,
+like keys: the person's own AI app brings the model.
 
 ### A. AI: the guest's assistant and guest MCP
 

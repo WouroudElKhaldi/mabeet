@@ -1187,7 +1187,14 @@
       "auditTitle": "What the AI looked at",
       "auditHint": "Every tool call from a key or the assistant, newest first.",
       "noCalls": "No calls yet.",
-      "ok": "ok"
+      "ok": "ok",
+      "connectedApps": "Apps connected by signing in",
+      "signInHint": "ChatGPT, Claude.ai and other apps can connect without a key: add this address as a custom connector, then sign in to Mabeet and pick this place.",
+      "serverAddress": "MCP server address",
+      "noApps": "No apps connected this way yet.",
+      "unnamedApp": "An AI app",
+      "connectedOn": "Connected {when}",
+      "disconnect": "Disconnect"
     },
     "ideas": "Start with an idea",
     "idea": "Idea {number}",
@@ -1777,6 +1784,11 @@
       "title": "Confirm this booking?",
       "body": "The guest is told by email that their stay is confirmed.",
       "confirm": "Confirm"
+    },
+    "disconnectApp": {
+      "title": "Disconnect “{name}”?",
+      "body": "It stops working in this place at once. You can connect it again by signing in.",
+      "confirm": "Disconnect"
     }
   },
   "plans": {
@@ -1826,14 +1838,13 @@
     "failed": "That didn't work. Go back to your AI app and try connecting again.",
     "workspaceTitle": "Which workspace?",
     "workspaceBody": "The app will act in this one place only, with the access your role gives you.",
-    "noWorkspace": "None of your workspaces can connect an AI app yet. It needs the Pro or Business plan, and a role allowed to use the AI assistant.",
+    "noWorkspace": "You can't connect an AI app to any of your places. It needs a role allowed to use AI apps; ask the owner.",
     "continue": "Continue",
     "consentTitle": "Allow {app} to connect?",
     "anApp": "this app",
     "consentWhere": "It will work in {business}, as you.",
     "scopes": {
-      "mcp_read": "See bookings, the calendar, rooms, reviews and numbers your role can see",
-      "mcp_write": "Confirm or decline bookings and close dates, if your role allows it. The app asks you before each change.",
+      "mcp_read": "See the rooms, calendar, bookings and numbers your role can see. It can't change anything.",
       "offline_access": "Stay connected until you disconnect it",
       "profile": "Know your name and email"
     },

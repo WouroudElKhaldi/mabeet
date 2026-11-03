@@ -15,7 +15,6 @@
     "eslint-config-next",
     "eslint-config-prettier",
     "tailwindcss",
-    "@better-auth/oauth-provider",
     "@modelcontextprotocol/sdk",
     "aws4fetch",
     "ical-generator",

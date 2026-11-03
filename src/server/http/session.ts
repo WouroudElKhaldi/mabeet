@@ -10,11 +10,11 @@ import { signInUrl } from "@/utils/sign-in-url";
 // Sign-in for pages (server components). API routes use route() and tenantRoute() instead; both answer a
 // non-member the same way, with "not found", so neither reveals that a business exists.
 
+/** The sign-in session for server components, resolved once per request. */
+export const getCurrentSession = cache(async () => auth.api.getSession({ headers: await headers() }));
+
 /** The signed-in user for server components, resolved once per request. */
-export const getCurrentUser = cache(async () => {
-  const session = await auth.api.getSession({ headers: await headers() });
-  return session?.user ?? null;
-});
+export const getCurrentUser = cache(async () => (await getCurrentSession())?.user ?? null);
 
 /**
  * Signed-out visitors go to the one sign-in page; after signing in, /home sends them where their role belongs, or

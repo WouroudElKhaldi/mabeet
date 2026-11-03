@@ -110,6 +110,13 @@ export async function optionalUser(request: Request) {
   return session?.user ?? null;
 }
 
+/** The caller's sign-in session itself, for a step that keeps something on it (connecting an AI app). */
+export async function requireSession(request: Request) {
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session) throw unauthenticated();
+  return session;
+}
+
 export async function requireUser(request: Request) {
   const user = await optionalUser(request);
   if (!user) throw unauthenticated();

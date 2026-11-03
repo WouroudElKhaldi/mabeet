@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Trash2, TriangleAlert } from "lucide-react";
+import { KeyRound, Trash2, TriangleAlert, Unplug } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
@@ -15,6 +15,14 @@ import { api } from "@/lib/api-client";
 /** How long a new key may last, in days; "" is never. */
 const EXPIRY_CHOICES = ["30", "90", "365", ""] as const;
 
+/** An AI app the member connected to this place by signing in. */
+interface ConnectedApp {
+  id: string;
+  name: string | null;
+  /** ISO time. */
+  connectedAt: string;
+}
+
 interface McpKey {
   id: string;
   name: string;
@@ -26,16 +34,19 @@ interface McpKey {
 
 /**
  * The member's MCP keys: make one (its secret shown once, with the lines to paste into Claude Code or a desktop AI
- * app), see their own, and revoke one behind a confirmation. Every key is read only.
+ * app), see their own, and revoke one behind a confirmation. Every key is read only. Below them, the apps the member
+ * connected by signing in instead (ChatGPT, Claude.ai), each with a way to disconnect it.
  */
 export function KeyManager({
   businessId,
   mcpUrl,
   keys,
+  apps,
 }: {
   businessId: string;
   mcpUrl: string;
   keys: McpKey[];
+  apps: ConnectedApp[];
 }) {
   const t = useTranslations("assistant.keys");
   const tConfirm = useTranslations("confirm");
@@ -65,6 +76,15 @@ export function KeyManager({
       confirmLabel: tConfirm("revokeKey.confirm"),
     });
     if (answer) await run(() => api.delete(`/api/workspaces/${businessId}/keys/${key.id}`));
+  };
+
+  const disconnect = async (app: ConnectedApp) => {
+    const answer = await confirm({
+      title: tConfirm("disconnectApp.title", { name: app.name ?? t("unnamedApp") }),
+      body: tConfirm("disconnectApp.body"),
+      confirmLabel: tConfirm("disconnectApp.confirm"),
+    });
+    if (answer) await run(() => api.delete(`/api/workspaces/${businessId}/connected-apps/${app.id}`));
   };
 
   return (
@@ -173,6 +193,37 @@ export function KeyManager({
                 <Button size="sm" variant="ghost" disabled={pending} onClick={() => void revoke(key)}>
                   <Trash2 className="size-4" aria-hidden />
                   {t("revoke")}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+        <h2 className="text-2xl font-semibold">{t("connectedApps")}</h2>
+        <p className="text-muted">{t("signInHint")}</p>
+        <CopyField value={mcpUrl} label={t("serverAddress")} />
+        {apps.length === 0 ? (
+          <p className="text-muted">{t("noApps")}</p>
+        ) : (
+          <ul className="grid gap-2">
+            {apps.map((app) => (
+              <li
+                key={app.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface p-4 ring-1 ring-line"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold">{app.name ?? t("unnamedApp")}</p>
+                  {/* In the viewer's own time zone, which the server cannot know. */}
+                  <p className="text-sm text-muted" suppressHydrationWarning>
+                    {t("readOnly")} ·{" "}
+                    {t("connectedOn", { when: new Date(app.connectedAt).toLocaleString(locale) })}
+                  </p>
+                </div>
+                <Button size="sm" variant="ghost" disabled={pending} onClick={() => void disconnect(app)}>
+                  <Unplug className="size-4" aria-hidden />
+                  {t("disconnect")}
                 </Button>
               </li>
             ))}
