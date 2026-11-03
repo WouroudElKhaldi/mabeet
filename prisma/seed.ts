@@ -1,0 +1,377 @@
+/**
+ * Demo data, for your computer and the live demo. Every place is fictional and named "(demo)"; its photos are stock
+ * pictures, labelled as such, and its numbers are placeholders. Run with `pnpm db:seed`. Safe to run again: anything
+ * that exists is left as it is.
+ *
+ * It makes the platform categories, four demo accounts (host, front-desk staff, guest, admin; password SEED_PASSWORD),
+ * and five places that show every way to take bookings: online with the host's approval (the one shown on stage),
+ * automatic, offline, and one booked as a whole. The offline place starts with a request waiting for the host and a
+ * confirmed stay, so the bookings screen has something to show.
+ */
+import { config } from "dotenv";
+import type { AMENITIES } from "../src/config/amenities";
+
+const CATEGORIES = [
+  { slug: "mountain", nameEn: "Mountain", nameAr: "جبل", icon: "mountain" },
+  { slug: "beach", nameEn: "By the sea", nameAr: "على البحر", icon: "beach" },
+  { slug: "countryside", nameEn: "Countryside", nameAr: "ريف", icon: "countryside" },
+  { slug: "old-town", nameEn: "Old town", nameAr: "بلدة قديمة", icon: "old-town" },
+  { slug: "guesthouse", nameEn: "Guesthouse", nameAr: "بيت ضيافة", icon: "guesthouse" },
+  { slug: "cabin", nameEn: "Cabin", nameAr: "كوخ", icon: "cabin" },
+  { slug: "vineyard", nameEn: "Vineyard", nameAr: "كرم", icon: "vineyard" },
+  { slug: "ski", nameEn: "Ski", nameAr: "تزلّج", icon: "ski" },
+] as const;
+
+type Amenity = (typeof AMENITIES)[number];
+
+interface DemoRoom {
+  name: string;
+  description: string;
+  capacity: number;
+  beds: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  /** Per night, in cents. */
+  rate: number;
+  amenities: Amenity[];
+}
+
+interface DemoPlace {
+  name: string;
+  area: string;
+  description: string;
+  categories: Array<(typeof CATEGORIES)[number]["slug"]>;
+  bookingMode: "AUTOMATIC" | "ONLINE_APPROVAL" | "OFFLINE";
+  /** Booked as one whole unit, which takes turns with its rooms. */
+  wholePlace?: boolean;
+  /** Unsplash photo ids: stock photos, labelled as such, not the real place. */
+  photos: string[];
+  rooms: DemoRoom[];
+}
+
+const PLACES: DemoPlace[] = [
+  {
+    name: "Dar Al Sindiyan (demo)",
+    area: "Chouf",
+    description:
+      "A restored 19th-century stone house under oak trees, ten minutes from the cedar reserve. Breakfast is made from the garden.\n\nDemo listing.",
+    categories: ["mountain", "guesthouse"],
+    bookingMode: "ONLINE_APPROVAL",
+    photos: [
+      "1499696010180-025ef6e1a8f9",
+      "1505693416388-ac5ce068fe85",
+      "1464822759023-fed622ff2c3b",
+      "1522708323590-d24dbb6b0267",
+      "1544984243-ec57ea16fe25",
+    ],
+    rooms: [
+      {
+        name: "Arched room",
+        description: "Vaulted ceiling, a window on the valley.",
+        capacity: 2,
+        beds: 1,
+        rate: 9_500,
+        amenities: ["wifi", "breakfast", "heating", "view"],
+      },
+      {
+        name: "Family loft",
+        description: "Two levels and a small kitchen.",
+        capacity: 4,
+        beds: 3,
+        rate: 14_000,
+        amenities: ["wifi", "breakfast", "heating", "kitchen"],
+      },
+    ],
+  },
+  {
+    name: "Bayt El Bahr (demo)",
+    area: "Batroun",
+    description:
+      "Rooms facing the old harbour, a rooftop for sunsets and the souk around the corner.\n\nDemo listing.",
+    categories: ["beach", "old-town"],
+    bookingMode: "AUTOMATIC",
+    photos: [
+      "1520250497591-112f2f40a3f4",
+      "1582719478250-c89cae4dc85b",
+      "1571896349842-33c89424de2d",
+      "1590490360182-c33d57733427",
+      "1501785888041-af3ef285b470",
+    ],
+    rooms: [
+      {
+        name: "Sea room",
+        description: "A balcony over the water.",
+        capacity: 2,
+        beds: 1,
+        rate: 12_000,
+        amenities: ["wifi", "ac", "view", "generator"],
+      },
+      {
+        name: "Courtyard room",
+        description: "Quiet, opening on the lemon tree.",
+        capacity: 3,
+        beds: 2,
+        rate: 9_000,
+        amenities: ["wifi", "ac", "generator"],
+      },
+    ],
+  },
+  {
+    name: "Beit Ghazir (demo)",
+    area: "Ehden",
+    description:
+      "A family guesthouse on the main square, known for its mezze breakfast and hiking maps.\n\nDemo listing.",
+    categories: ["mountain", "guesthouse", "old-town"],
+    bookingMode: "OFFLINE",
+    photos: [
+      "1570129477492-45c003edd2be",
+      "1493809842364-78817add7ffb",
+      "1502672260266-1c1ef2d93688",
+      "1596394516093-501ba68a0ba6",
+      "1542314831-068cd1dbfeeb",
+    ],
+    rooms: [
+      {
+        name: "Square view",
+        description: "Overlooks the square.",
+        capacity: 2,
+        beds: 1,
+        rate: 8_500,
+        amenities: ["wifi", "breakfast", "view"],
+      },
+      {
+        name: "Garden twin",
+        description: "Two single beds, on the garden side.",
+        capacity: 2,
+        beds: 2,
+        rate: 8_000,
+        amenities: ["wifi", "breakfast", "garden"],
+      },
+    ],
+  },
+  {
+    name: "Kroum Cabin (demo)",
+    area: "Tannourine",
+    description:
+      "A timber cabin at the edge of the cedar forest, with a wood stove and trails from the door. Booked as a whole.\n\nDemo listing.",
+    categories: ["cabin", "mountain"],
+    bookingMode: "OFFLINE",
+    wholePlace: true,
+    photos: [
+      "1449844908441-8829872d2607",
+      "1510798831971-661eb04b3739",
+      "1518780664697-55e3ad937233",
+      "1587061949409-02df41d5e562",
+      "1595521624992-48a59aef95e3",
+    ],
+    rooms: [
+      {
+        name: "Forest bedroom",
+        description: "A double bed under the eaves.",
+        capacity: 2,
+        beds: 1,
+        rate: 6_000,
+        amenities: ["fireplace", "heating", "pets"],
+      },
+      {
+        name: "Bunk room",
+        description: "Two bunk beds for the children.",
+        capacity: 2,
+        beds: 2,
+        rate: 5_000,
+        amenities: ["heating", "pets"],
+      },
+    ],
+  },
+  {
+    name: "Karm Sunset (demo)",
+    area: "West Bekaa",
+    description:
+      "Rooms between the vines, wine tastings in the cellar and long tables at harvest.\n\nDemo listing.",
+    categories: ["vineyard", "countryside"],
+    bookingMode: "OFFLINE",
+    photos: [
+      "1512917774080-9991f1c4c750",
+      "1566073771259-6a8506099945",
+      "1600585154340-be6161a56a0c",
+      "1551882547-ff40c63fe5fa",
+      "1613490493576-7fde63acd811",
+    ],
+    rooms: [
+      {
+        name: "Vine room",
+        description: "A terrace on the vines.",
+        capacity: 2,
+        beds: 1,
+        rate: 13_000,
+        amenities: ["wifi", "ac", "breakfast", "pool"],
+      },
+    ],
+  },
+];
+
+/** The demo photos are stock pictures in the same order for every place: outside, a bedroom, a view, a living room, a terrace. */
+const PHOTO_AREAS = ["EXTERIOR", "BEDROOM", "VIEW", "LIVING_ROOM", "TERRACE"] as const;
+
+const stockPhotoUrl = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1600&q=75`;
+
+async function main() {
+  config({ quiet: true });
+  // Loaded after .env, because the server's settings are checked as soon as it is imported.
+  const { prisma } = await import("@/server/db/client");
+  const { env } = await import("@/server/env");
+  const { createVerifiedAccount, ensurePlatformAdmin, findAccountByEmail } =
+    await import("@/modules/accounts/server");
+  const { createWorkspace } = await import("@/modules/workspaces/server");
+  const { confirmBooking, requestBooking } = await import("@/modules/bookings/server");
+  const { resolveContext } = await import("@/server/auth/resolve-context");
+  const { secureToken } = await import("@/utils/tokens");
+  const { addDays, todayUtc } = await import("@/utils/dates");
+
+  const password = env.SEED_PASSWORD ?? "demo-password-123";
+
+  async function demoAccount(email: string, name: string) {
+    return (
+      (await findAccountByEmail(email)) ?? createVerifiedAccount({ email, name, password, locale: "en" })
+    );
+  }
+
+  async function seedPlace(place: DemoPlace, ownerId: string) {
+    if (await prisma.business.findFirst({ where: { name: place.name } })) return null;
+    const business = await createWorkspace(ownerId, { name: place.name, area: place.area });
+    const rooms = place.rooms.map((room) => ({
+      name: room.name,
+      description: room.description,
+      capacity: room.capacity,
+      beds: room.beds,
+      bedrooms: room.bedrooms ?? 1,
+      bathrooms: room.bathrooms ?? 1,
+      baseRateCents: room.rate,
+      amenities: room.amenities,
+      exportToken: secureToken(),
+    }));
+    const sum = (pick: (room: (typeof rooms)[number]) => number) =>
+      rooms.reduce((total, room) => total + pick(room), 0);
+    await prisma.business.update({
+      where: { id: business.id },
+      data: {
+        description: place.description,
+        listedPublicly: true,
+        bookingMode: place.bookingMode,
+        // The online modes need the owner to have accepted full refunds.
+        onlineTermsAcceptedAt: place.bookingMode === "OFFLINE" ? null : new Date(),
+        bookingUnit: place.wholePlace ? "WHOLE_PLACE" : "ROOMS",
+        whatsapp: "+96170000000",
+        paymentInstructions:
+          place.bookingMode === "OFFLINE"
+            ? "Pay by Whish to 70 000 000 (demo), with your booking reference."
+            : null,
+        houseRules: "No parties. Quiet after 11 pm.",
+        categories: { create: place.categories.map((categorySlug) => ({ categorySlug })) },
+        rooms: {
+          create: [
+            ...rooms,
+            // A place booked as a whole gets its one unit, its rooms added up.
+            ...(place.wholePlace
+              ? [
+                  {
+                    kind: "WHOLE_PLACE" as const,
+                    name: place.name,
+                    capacity: sum((room) => room.capacity),
+                    beds: sum((room) => room.beds),
+                    bedrooms: sum((room) => room.bedrooms),
+                    bathrooms: sum((room) => room.bathrooms),
+                    baseRateCents: sum((room) => room.baseRateCents),
+                    exportToken: secureToken(),
+                  },
+                ]
+              : []),
+          ],
+        },
+        photos: {
+          create: place.photos.map((id, position) => ({
+            url: stockPhotoUrl(id),
+            alt: `${place.name}, stock photo`,
+            area: PHOTO_AREAS[position] ?? null,
+            position,
+          })),
+        },
+      },
+    });
+    return business;
+  }
+
+  await prisma.$transaction(
+    CATEGORIES.map((category, position) =>
+      prisma.category.upsert({
+        where: { slug: category.slug },
+        create: { ...category, kind: "HOME", position },
+        update: { ...category, kind: "HOME", position, isDeleted: false },
+      }),
+    ),
+  );
+
+  await ensurePlatformAdmin({ name: "Demo Admin", email: "admin@mabeet.test", password });
+  const host = await demoAccount("host@mabeet.test", "Demo Host");
+  const staff = await demoAccount("staff@mabeet.test", "Demo Front Desk");
+  const guest = await demoAccount("guest@mabeet.test", "Demo Guest");
+
+  const created = [];
+  for (const place of PLACES) {
+    const business = await seedPlace(place, host.id);
+    if (business) created.push({ place, business });
+  }
+
+  // The front desk of the stage place, so roles can be tried without setting anything up.
+  const stage = await prisma.business.findFirstOrThrow({ where: { name: PLACES[0]?.name } });
+  const frontDesk = await prisma.role.findFirstOrThrow({
+    where: { businessId: stage.id, name: "Front desk" },
+  });
+  await prisma.membership.upsert({
+    where: { userId_businessId: { userId: staff.id, businessId: stage.id } },
+    create: { userId: staff.id, businessId: stage.id, roleId: frontDesk.id },
+    update: { roleId: frontDesk.id, status: "ACTIVE" },
+  });
+
+  // A request waiting for the host and a confirmed stay at the offline place, made through the booking engine.
+  const offline = created.find(({ place }) => place.name === "Beit Ghazir (demo)");
+  if (offline) {
+    const [first, second] = await prisma.room.findMany({
+      where: { businessId: offline.business.id, kind: "ROOM" },
+      orderBy: { createdAt: "asc" },
+    });
+    const today = todayUtc();
+    const stay = (roomId: string, fromToday: number, nights: number) => ({
+      businessSlug: offline.business.slug,
+      roomId,
+      range: { checkIn: addDays(today, fromToday), checkOut: addDays(today, fromToday + nights) },
+      guestCount: 2,
+      guestName: "Demo Guest",
+      guestPhone: "+96170000001",
+      guestEmail: guest.email,
+      guestNote: null,
+      guestUserId: guest.id,
+      locale: "en",
+    });
+    if (first && second) {
+      await requestBooking(stay(first.id, 7, 2));
+      const confirmed = await requestBooking(stay(second.id, 12, 3));
+      const ctx = await resolveContext(host.id, offline.business.id);
+      if (ctx) await confirmBooking(ctx, { bookingId: confirmed.id });
+    }
+  }
+
+  console.log(
+    `Seeded ${CATEGORIES.length} categories and ${created.length} new demo places (${PLACES.length - created.length} were already there).`,
+  );
+  console.log(
+    "Sign in as host@, staff@, guest@ or admin@mabeet.test with the SEED_PASSWORD (demo-password-123 if empty).",
+  );
+  await prisma.$disconnect();
+}
+
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
+});

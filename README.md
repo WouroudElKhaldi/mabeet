@@ -104,10 +104,13 @@ settings and GitHub secrets, never in the repository.
 | `pnpm db:deploy`                    | Applies every migration                                                                          |
 | `pnpm db:migrate`                   | Creates a new migration (the database keeper only)                                               |
 | `pnpm db:studio`                    | Browse the database                                                                              |
+| `pnpm db:seed`                      | Demo data: categories, 5 demo places (every booking mode, one booked whole), demo accounts       |
 | `pnpm run docs`                     | Regenerates the ERDs from the schema and `docs/openapi.yaml` from the JSON                       |
 | `pnpm admins:create "Name <email>"` | Makes platform admins and writes their sign-in details to `.admin-credentials` (never committed) |
 
-Later tasks add `pnpm db:seed` and `pnpm test:e2e`.
+`pnpm db:seed` is safe to run again (it leaves what exists). The demo accounts are `host@`, `staff@`, `guest@` and
+`admin@mabeet.test`, with the password `SEED_PASSWORD` (`demo-password-123` when it is empty). Later tasks add
+`pnpm test:e2e`.
 
 ## The database
 
