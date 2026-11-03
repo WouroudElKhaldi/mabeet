@@ -212,3 +212,11 @@ export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number
     take,
   });
 }
+
+/** For analytics: what the reports need of each place, live ones only. */
+export function findPlacesForReports(db: Db, businessIds: readonly string[]) {
+  return db.business.findMany({
+    where: { id: { in: [...businessIds] }, isDeleted: false },
+    select: { id: true, name: true, slug: true, currency: true, commissionRateBps: true, bookingUnit: true },
+  });
+}

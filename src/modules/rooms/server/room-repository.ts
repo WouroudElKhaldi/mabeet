@@ -263,3 +263,8 @@ export async function findRateOverridesForRooms(db: Db, roomIds: readonly string
   }
   return byRoom;
 }
+
+/** For analytics: how many live units of one kind a place has, the nights it could sell each night. */
+export function countActiveUnits(db: Db, businessId: string, kind: RoomKind) {
+  return db.room.count({ where: { businessId, kind, active: true, isDeleted: false } });
+}
