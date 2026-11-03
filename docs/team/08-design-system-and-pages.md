@@ -691,6 +691,14 @@ Tabs at the top (`AccountTabs`):
 - `/account/notifications`: notifications on this device (`PhoneAlerts`).
 - `/account/privacy`: download or delete your data (`PrivacyControls`).
 
+**Built so far** (`/account`, `src/app/(site)/account/`): the greeting with Sign out, then the guest's trips in two lists,
+**Upcoming** (alive and not over, soonest first: what waits for payment or the host stands out) and **Past stays**
+(over, declined, expired or cancelled, newest first; a stay is over on its check-out day). Each trip is a card that
+links to its booking page, with the place, the room, the dates, the guests, the price and a status label in the guest's
+words; a long place name gives way to the label. With no trips: "No trips yet. Where to first?" and a button to explore.
+A signed-out visitor signs in and comes back. The other tabs (favourites, activity, notifications, privacy) and the
+review form are not built yet; the tab bar comes with the second one.
+
 ### 8.4 Host dashboard (`AppShell`, every page starts with `PageHeader`)
 
 | Page                       | Feature     | Sections, top to bottom                                                                                                                                                                                                                                                                                                                                         |

@@ -1,10 +1,11 @@
 import { BOOKABLE_ROOM_KIND, MAX_STAY_NIGHTS } from "@/config/booking-limits";
-import { getTakenNights, stayIssue } from "@/modules/bookings/server";
+import { getTakenNights, listMyBookings, stayIssue } from "@/modules/bookings/server";
 import { findRoomForBooking, listPlacePhotos, listPublicUnits, priceStay } from "@/modules/rooms/server";
 import { findBookablePlace, getPublicPlace } from "@/modules/workspaces/server";
 import { notFound } from "@/server/errors";
 import { countNights, type DateRange } from "@/utils/dates";
-import type { PublicPlace, RoomAvailability, RoomQuote } from "../types";
+import { toIsoDate } from "@/utils/dates";
+import type { GuestTrip, PublicPlace, RoomAvailability, RoomQuote } from "../types";
 
 // The public side: what a guest can see and ask before signing in. Nothing here takes or frees nights; the booking
 // engine does. Whether a stay can be booked is the engine's own rule (`stayIssue`), so a quote never promises what
@@ -81,4 +82,22 @@ export async function getRoomAvailability(
   const room = await findRoomForBooking(place.id, roomId);
   if (!room?.active || room.kind !== BOOKABLE_ROOM_KIND[place.bookingUnit]) throw notFound("Room");
   return { roomId: room.id, takenNights: await getTakenNights(place.id, room.id, range, now) };
+}
+
+/** The signed-in guest's stays, newest first, as the trips list shows them. */
+export async function listMyTrips(guestUserId: string): Promise<GuestTrip[]> {
+  const bookings = await listMyBookings(guestUserId);
+  return bookings.map((booking) => ({
+    publicToken: booking.publicToken,
+    reference: booking.reference,
+    status: booking.status,
+    bookingMode: booking.bookingMode,
+    checkIn: toIsoDate(booking.checkIn),
+    checkOut: toIsoDate(booking.checkOut),
+    guestCount: booking.guestCount,
+    totalCents: booking.totalCents,
+    currency: booking.currency,
+    place: { name: booking.business.name, slug: booking.business.slug },
+    roomName: booking.room.name,
+  }));
 }

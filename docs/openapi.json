@@ -839,7 +839,7 @@
       "get": {
         "tags": ["Guests"],
         "summary": "The signed-in guest's stays",
-        "description": "Signed-in user.",
+        "description": "Signed-in user. Only their own stays, newest first. Nothing about payments or contact details; each stay carries the secret of its booking link (`publicToken`, /b/{publicToken}).",
         "security": [
           {
             "session": []
@@ -848,7 +848,79 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "publicToken": {
+                        "type": "string"
+                      },
+                      "reference": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": ["HELD", "AWAITING_PAYMENT", "CONFIRMED", "DECLINED", "EXPIRED", "CANCELLED"]
+                      },
+                      "bookingMode": {
+                        "type": "string",
+                        "enum": ["AUTOMATIC", "ONLINE_APPROVAL", "OFFLINE"]
+                      },
+                      "checkIn": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "checkOut": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "guestCount": {
+                        "type": "integer"
+                      },
+                      "totalCents": {
+                        "type": "integer",
+                        "description": "The full price, in whole minor units."
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "place": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["name", "slug"]
+                      },
+                      "roomName": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "publicToken",
+                      "reference",
+                      "status",
+                      "bookingMode",
+                      "checkIn",
+                      "checkOut",
+                      "guestCount",
+                      "totalCents",
+                      "currency",
+                      "place",
+                      "roomName"
+                    ]
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid input",
