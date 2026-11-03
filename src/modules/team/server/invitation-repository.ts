@@ -77,7 +77,7 @@ export function findInvitationForNotice(db: Db, invitationId: string) {
       businessId: true,
       business: { select: { name: true } },
       role: { select: { name: true } },
-      invitedBy: { select: { name: true, email: true, locale: true, isDeleted: true } },
+      invitedBy: { select: { id: true, name: true, email: true, locale: true, isDeleted: true } },
       acceptedBy: { select: { name: true } },
     },
   });

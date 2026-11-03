@@ -1282,6 +1282,19 @@ signed-in person (booking needs an account), and one browser endpoint is one row
 again replaces its keys, and someone else subscribing on the same browser takes it over. Pages are never served from the
 cache, because availability must always be live.
 
+**What exists today:** `src/server/push/` sends (`sendPush`, signed with `VAPID_*`; without both keys push is off) and
+checks addresses (`isPushServiceUrl`: only Google, Mozilla, Apple and Windows push services, over https). The
+`notifications` module keeps the devices: `POST /api/me/push` (the browser's `PushSubscription.toJSON()`, signed in,
+20 changes an hour) and `DELETE /api/me/push` (`{ endpoint }`, only the person's own device). `pushToPeople(userIds,
+messageFor)` reaches every device of those people whose account is open, each in its owner's words; a device its
+push service calls gone (404, 410) is deleted; it never throws. The notify jobs push after their email has gone
+(`tellHosts` and `tellGuest` in `booking-notifications.ts`, and "they joined your team" in
+`team-notifications.ts`), using `noticeAsPush(message)`: the email's title, first line and button link. So a retried
+email never pushes twice, and a push failure never sends an email again. A guest with no email address still gets the
+push. `public/sw.js` shows the notification and opens its page (only pages of this site). The switch on screen
+(`PhoneAlerts`) comes with the account's notifications tab. Tests: `push.test.ts` and
+`push-devices.integration.test.ts` (notifications).
+
 ### R. Reviews
 
 Only a guest who stayed may review, only once, and only after check-out. A review is one overall rating (1 to 5) and
