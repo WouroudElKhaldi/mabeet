@@ -5,10 +5,17 @@ import { settledFor } from "@/hooks/use-live-query";
 import { pickChoice } from "@/hooks/use-stored-choice";
 
 describe("isSafeRedirect", () => {
+  const site = "http://localhost:3000";
+
   it("follows a page of this site and an https address, such as a payment page", () => {
-    expect(isSafeRedirect("/b/abc123")).toBe(true);
-    expect(isSafeRedirect("/whish-simulator?pay=1")).toBe(true);
-    expect(isSafeRedirect("https://checkout.stripe.com/c/pay/cs_test_1")).toBe(true);
+    expect(isSafeRedirect("/b/abc123", site)).toBe(true);
+    expect(isSafeRedirect("/whish-simulator?pay=1", site)).toBe(true);
+    expect(isSafeRedirect("https://checkout.stripe.com/c/pay/cs_test_1", site)).toBe(true);
+  });
+
+  it("follows this site's own full address, even over http on a computer running the site", () => {
+    expect(isSafeRedirect("http://localhost:3000/whish-simulator/pay/kKjXTvy7", site)).toBe(true);
+    expect(isSafeRedirect("http://localhost:4000/whish-simulator/pay/kKjXTvy7", site)).toBe(false);
   });
 
   it("refuses anything that could take a visitor somewhere unexpected", () => {
@@ -22,14 +29,14 @@ describe("isSafeRedirect", () => {
       "/ok\nhttps://evil.example",
       "",
     ]) {
-      expect(isSafeRedirect(url), url).toBe(false);
+      expect(isSafeRedirect(url, site), url).toBe(false);
     }
   });
 
   it("refuses a missing or wrong answer from the server", () => {
-    expect(isSafeRedirect(undefined)).toBe(false);
-    expect(isSafeRedirect(null)).toBe(false);
-    expect(isSafeRedirect(42)).toBe(false);
+    expect(isSafeRedirect(undefined, site)).toBe(false);
+    expect(isSafeRedirect(null, site)).toBe(false);
+    expect(isSafeRedirect(42, site)).toBe(false);
   });
 });
 
