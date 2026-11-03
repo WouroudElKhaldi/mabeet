@@ -46,6 +46,16 @@ const moneyAsNumbers = Prisma.defineExtension({
 
 const createClient = () => new PrismaClient().$extends(moneyAsNumbers);
 
+/**
+ * The rows of a table `moneyAsNumbers` changes (rooms, bookings, payments...) are Prisma wrappers with a hidden symbol
+ * of their own, and React refuses to hand those to a client component ("Only plain objects can be passed"). A
+ * repository whose rows go straight to a client component returns them through this: the same fields, as plain
+ * objects (dates stay dates).
+ */
+export function plainRows<T extends object>(rows: T[]): T[] {
+  return rows.map((row) => ({ ...Object.fromEntries(Object.entries(row)) }) as T);
+}
+
 const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof createClient> };
 
 export const prisma = globalForPrisma.prisma ?? createClient();
