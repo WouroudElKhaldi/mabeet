@@ -2,6 +2,9 @@ import type { MetadataRoute } from "next";
 import { BRAND } from "@/config/brand";
 import { getSitePalette } from "@/modules/admin/server";
 
+// Made on each request, never while the site is built: the build has no database, and the palette can change.
+export const dynamic = "force-dynamic";
+
 /**
  * Makes Mabeet installable on phones and computers: from the browser's menu (or Share, Add to Home Screen on an
  * iPhone) it opens full screen like an app. The icon wears the site's palette, like the tab icon.
