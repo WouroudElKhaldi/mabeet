@@ -4418,6 +4418,26 @@ paths:
           description: Conflict, e.g. dates or seats just taken
         "429":
           description: Rate limited
+    get:
+      tags:
+        - AI
+      summary: "Not used: the host MCP is stateless (405)"
+      description: The MCP endpoint keeps no session, so only POST is answered.
+      security: []
+      parameters: []
+      responses:
+        "405":
+          description: Use POST
+    delete:
+      tags:
+        - AI
+      summary: "Not used: the host MCP is stateless (405)"
+      description: The MCP endpoint keeps no session, so only POST is answered.
+      security: []
+      parameters: []
+      responses:
+        "405":
+          description: Use POST
   /api/mcp/guest:
     post:
       tags:

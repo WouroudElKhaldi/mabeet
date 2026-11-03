@@ -648,6 +648,20 @@ Route: `POST /api/mcp`.
   only allows places the person belongs to. If a name fits several places, it refuses.
 - Every call is logged in `McpAuditLog`. The key's "last used" time is updated after the answer (`touchKey`).
 
+**What exists today** (`src/modules/assistant/server/`): personal keys (`api-key-service.ts`: `createKey`, `listKeys`,
+`revokeKey`, all under `ai.use`; routes `GET`/`POST /api/workspaces/{id}/keys` and `DELETE .../keys/{keyId}`). A key
+is `mbt_` and 32 random bytes; only its SHA-256 hash is stored, and the secret is shown once, when it is made. It is
+the member's own (nobody else lists or revokes it), read only, 90 days unless chosen (or never), and a platform admin
+visiting a business cannot make one. `authenticateKey` turns a key into the member's context (`channel: "mcp"`,
+`readOnly`) only while the same membership is active, so a removed member's keys stop at once, and revoked or expired
+ones too. `POST /api/mcp` (`answerHostMcp`, `host-mcp.ts`): 401 without a working key, 60 calls a minute per key,
+the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_rooms`, `check_availability`
+(`findFreeRooms`), `get_calendar` and `list_bookings`, each with the optional `place` (`resolvePlaceContext`: by
+id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
+come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. Not yet: the
+report tools (they wait for the analytics numbers, `getBusinessReport`), OAuth sign-in, and the actions. Tests:
+`mcp-isolation.integration.test.ts` (assistant).
+
 ### A. AI: the guest's assistant and guest MCP
 
 - For AI apps: `POST /api/mcp/guest` (public), built first.
