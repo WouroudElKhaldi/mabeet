@@ -234,7 +234,21 @@
     "pickDatesFirst": "Pick your dates",
     "noChargeYet": "Nothing is charged now. Your room is held while the host confirms.",
     "bookNow": "Book and pay",
-    "payOnlineNote": "You pay online after booking, with Whish or a card. Mabeet takes no commission."
+    "payOnlineNote": "You pay online after booking, with Whish or a card. Mabeet takes no commission.",
+    "issues": {
+      "PAST": "Check-in can't be in the past.",
+      "TOO_FAR": "Those dates are too far ahead.",
+      "TOO_LONG": "Stays are limited to {max} nights.",
+      "MIN_NIGHTS": "{count, plural, one {This room needs at least # night.} other {This room needs at least # nights.}}",
+      "CAPACITY": "{count, plural, one {This room sleeps up to # guest.} other {This room sleeps up to # guests.}}"
+    },
+    "modeLine": {
+      "AUTOMATIC": "Pay online, confirmed at once",
+      "ONLINE_APPROVAL": "Pay online, the host confirms",
+      "OFFLINE": "Arrange payment with the host"
+    },
+    "checkDates": "Check dates",
+    "tryAgain": "Try again"
   },
   "bookPage": {
     "title": "Book your stay",
