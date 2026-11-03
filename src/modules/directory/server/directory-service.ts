@@ -13,7 +13,15 @@ import { findBookablePlace, getPublicPlace, listListedPlaces } from "@/modules/w
 import { notFound } from "@/server/errors";
 import { countNights, type DateRange, toIsoDate } from "@/utils/dates";
 import type { PlaceSearch } from "../search-query";
-import type { GuestTrip, PlaceCard, PublicPlace, RoomAvailability, RoomQuote, SearchOffer } from "../types";
+import type {
+  GuestTrip,
+  PlaceAvailability,
+  PlaceCard,
+  PublicPlace,
+  RoomAvailability,
+  RoomQuote,
+  SearchOffer,
+} from "../types";
 
 // The public side: what a guest can see and ask before signing in. Nothing here takes or frees nights; the booking
 // engine does. Whether a stay can be booked is the engine's own rule (`stayIssue`), so a quote never promises what
@@ -196,4 +204,46 @@ export async function searchPlaces(search: PlaceSearch, now: Date = new Date()):
     if (cards.length === search.limit) break;
   }
   return cards;
+}
+
+/**
+ * Whether a place can be had for a stay: each unit it is booked by, free or not on every night, whether the stay fits
+ * it (`stayIssue`, the booking engine's own rule) and its price. Two reads however many units. Unknown, paused or
+ * deleted places are not found, like their page.
+ */
+export async function checkPlaceAvailability(
+  slug: string,
+  { range, guests }: { range: DateRange; guests: number | null },
+  now: Date = new Date(),
+): Promise<PlaceAvailability> {
+  const place = await getPlace(slug);
+  if (!place) throw notFound("Place");
+  const nightCount = countNights(range);
+  const [free, prices] = await Promise.all([
+    freeRoomsAmong(
+      place.units.map((unit) => unit.id),
+      range,
+      now,
+    ),
+    nightCount > MAX_STAY_NIGHTS
+      ? new Map<string, { totalCents: number }>()
+      : priceStays(
+          place.units.map((unit) => ({ id: unit.id, baseRateCents: unit.baseRateCents })),
+          range,
+        ),
+  ]);
+  return {
+    slug: place.slug,
+    name: place.name,
+    currency: place.currency,
+    nightCount,
+    units: place.units.map((unit) => ({
+      roomId: unit.id,
+      name: unit.name,
+      capacity: unit.capacity,
+      free: free.has(unit.id),
+      issue: stayIssue({ range, guests, room: unit }, now),
+      totalCents: prices.get(unit.id)?.totalCents ?? null,
+    })),
+  };
 }

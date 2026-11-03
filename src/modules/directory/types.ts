@@ -114,3 +114,25 @@ export interface PlaceCard {
   stayTotalFromCents: number | null;
   offers: SearchOffer[];
 }
+
+/** One unit of a place over the stay a guest asked about: free or not, whether it fits, and its price. */
+interface UnitAvailability {
+  roomId: string;
+  name: string;
+  capacity: number;
+  /** Free on every night of the stay. */
+  free: boolean;
+  /** Why the stay cannot be booked in it as asked (too few nights, too many guests…), or null. */
+  issue: StayIssue | null;
+  /** The whole stay; null when it is too long to price. */
+  totalCents: number | null;
+}
+
+/** A place over the stay a guest asked about: each unit it can be booked by. */
+export interface PlaceAvailability {
+  slug: string;
+  name: string;
+  currency: string;
+  nightCount: number;
+  units: UnitAvailability[];
+}
