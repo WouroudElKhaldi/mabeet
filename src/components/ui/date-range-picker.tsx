@@ -54,6 +54,11 @@ interface DateRangePickerProps extends Omit<
   maxDate?: string;
   /** The guesthouse's time zone, which decides what today is. */
   timeZone?: string;
+  /**
+   * `field` (the default) looks like the form's other inputs; `bare` has no frame of its own, for a button inside a
+   * bar that draws the frame (the site's search bar).
+   */
+  look?: "field" | "bare";
 }
 
 interface Session {
@@ -93,6 +98,7 @@ export function DateRangePicker({
   maxNights,
   maxDate,
   timeZone = DEFAULT_TIME_ZONE,
+  look = "field",
   ...buttonProps
 }: DateRangePickerProps) {
   const t = useTranslations("dates");
@@ -140,7 +146,12 @@ export function DateRangePicker({
         type="button"
         aria-haspopup="dialog"
         onClick={open}
-        className={clsx(inputClass, "grid grid-cols-2 items-center text-start")}
+        className={clsx(
+          look === "field"
+            ? inputClass
+            : "h-full w-full rounded-full px-6 py-3 outline-none focus-visible:ring-2 focus-visible:ring-ink",
+          "grid grid-cols-2 items-center text-start",
+        )}
         {...buttonProps}
       >
         <DateCell label={t("checkIn")} text={shown.checkIn} placeholder={t("addDate")} className="pe-3" />

@@ -473,6 +473,18 @@ Changes for the new project (from `06-functional-requirements.md`) are marked **
 `Browse` with its search bar and the filters dialog (`FiltersDialog`: price, categories, amenities,
 accessibility). Filters live in the web address, so a search can be shared. Results as a grid of cards.
 
+**Built so far** (home and `/search`, both reading `searchPlaces` from `directory/server` and the place categories from
+`listCategories("HOME")`): `Browse` (`src/modules/directory/components/`) is the categories, the filters and the
+grid, with `variant` "home" (a short row and "See all") or "search" (its own search bar and the count found).
+`CategoryBar` (icons from `src/config/category-icons.ts`, in a `ScrollRail` from `components/ui`), `FiltersDialog`,
+`PlaceCard` (photo, first category, town, the stay's total with dates or the night's price without) and
+`ResultsGrid`. `SearchBar` (`components/site`) is the pill: where (popular towns under it), when (the
+`DateRangePicker` in its `bare` look) and guests (a `GuestCounter` under it), then the round search button; on a
+phone its parts stack in one card. Every link is built by `searchHref` (`src/lib/search-url.ts`) and read back by
+`searchParams` (`directory/schemas.ts`). The home page's bands are `DirectReceipts` and `AiAppBand`
+(`components/brand`: the sample postcard, the places a real search for it finds, and a button to `/assistant`).
+Experiences and services have no tab yet: they come with their module (F8).
+
 #### `/p/[slug]` Place page (F2)
 
 1. **Title row:** place name (`text-[1.75rem]`), rating, area, and on the end side `ShareButton` and

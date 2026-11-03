@@ -124,12 +124,11 @@
       }
     },
     "concierge": {
-      "eyebrow": "Trip Assistant",
-      "title": "Describe the weekend. We'll find the place.",
-      "body": "Tell our assistant what you imagine, in English, Arabic or Arabizi. It only suggests places that are really free on your dates.",
-      "cta": "Ask the assistant",
+      "eyebrow": "Use it from your AI app",
+      "title": "Ask your AI app. It finds the place.",
+      "body": "Connect Mabeet to Claude or ChatGPT, then describe the trip in English, Arabic or Arabizi. It only suggests places that are really free on your dates.",
+      "cta": "See how to connect it",
       "sampleQuestion": "Quiet mountain weekend for two, hiking nearby, under $120 a night, 7 to 9 November",
-      "mcp": "Use it in Claude",
       "languages": "Speaks",
       "found": "Free",
       "postcard": "Dear assistant,",
