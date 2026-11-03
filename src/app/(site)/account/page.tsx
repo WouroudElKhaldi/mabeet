@@ -1,10 +1,8 @@
-import { Luggage } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { Eyebrow } from "@/components/site/eyebrow";
 import { Section } from "@/components/site/section";
 import { ButtonLink } from "@/components/ui/button";
-import { SignOutButton } from "@/modules/accounts";
+import { AccountHeader } from "@/modules/accounts";
 import { splitTrips, TripList } from "@/modules/directory";
 import { listMyTrips } from "@/modules/directory/server";
 import { requirePageUser } from "@/server/http/session";
@@ -26,15 +24,7 @@ export default async function AccountPage() {
 
   return (
     <div className="mx-auto max-w-280 px-4 pt-10 pb-16 sm:px-6 lg:px-10">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-4">
-          <Eyebrow icon={Luggage}>{t("eyebrow")}</Eyebrow>
-          <h1 className="font-poster text-[clamp(1.75rem,3.2vw,2.25rem)]">
-            {t("hello", { name: user.name })}
-          </h1>
-        </div>
-        <SignOutButton />
-      </div>
+      <AccountHeader name={user.name} />
 
       <div className="mt-10 flex max-w-3xl flex-col gap-10">
         {trips.length === 0 ? (

@@ -700,8 +700,12 @@ Tabs at the top (`AccountTabs`):
 (over, declined, expired or cancelled, newest first; a stay is over on its check-out day). Each trip is a card that
 links to its booking page, with the place, the room, the dates, the guests, the price and a status label in the guest's
 words; a long place name gives way to the label. With no trips: "No trips yet. Where to first?" and a button to explore.
-A signed-out visitor signs in and comes back. The other tabs (favourites, activity, notifications, privacy) and the
-review form are not built yet; the tab bar comes with the second one.
+A signed-out visitor signs in and comes back. Every account page starts with `AccountHeader` (`accounts` module: the
+greeting, Sign out and `AccountTabs`, which lists only the pages built: Trips and Privacy). `/account/privacy` is
+`PrivacyControls`: "Download my data" (`GET /api/me/export`, a JSON file) and "Delete my account", behind a
+confirmation where the guest types their email (`POST /api/me/delete`), then signed out to the home page; an only owner
+of a place is told to add another owner first. Favourites, activity, notifications and the review form are not built
+yet.
 
 ### 8.4 Host dashboard (`AppShell`, every page starts with `PageHeader`)
 
