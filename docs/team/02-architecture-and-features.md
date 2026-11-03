@@ -1259,7 +1259,10 @@ book page (`/p/{slug}/book`) is its screen.
 The guest's own booking page is `/b/{token}`: `getBookingForGuest` (someone else's link is "not found"), then
 `refreshGuestPayments` first when the booking waits for its payment, so a guest back from the payment page sees it at
 once. `POST /api/public/bookings/{token}/cancel` (`requireUser`, 10 requests per 10 minutes) calls `cancelStayAsGuest`
-with a reason that is optional; the engine refuses once the stay has started (409) and refunds online payments in full. The place page's parts and the
+with a reason that is optional; the engine refuses once the stay has started (409) and refunds online payments in full.
+The guest's trips are `listMyTrips(guestUserId)` (directory, over `listMyBookings`): a `GuestTrip` per stay with only what the
+list needs (no payments, no guest contact, no hold time). The page `/account` and `GET /api/me/bookings` both read it;
+`splitTrips` divides it into upcoming and past. The place page's parts and the
 booking box are built too (see `08`, "Built so far").
 
 ### P. Pricing

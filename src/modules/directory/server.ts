@@ -3,7 +3,7 @@
 import { cache } from "react";
 import { getPlace } from "./server/directory-service";
 
-export { getPlace, getRoomAvailability, quoteRoom } from "./server/directory-service";
+export { getPlace, getRoomAvailability, listMyTrips, quoteRoom } from "./server/directory-service";
 
 /** `getPlace`, read once however many times one request asks (a page and its title both do). */
 export const loadPlace = cache(getPlace);
