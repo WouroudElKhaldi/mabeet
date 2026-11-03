@@ -58,6 +58,14 @@ describe("api calls that work", () => {
     expect(fetchMock.mock.calls[2]?.[1]?.body).toBeUndefined();
   });
 
+  it("delete sends a JSON body when given one", async () => {
+    const fetchMock = serverAnswers(answer({}));
+    await api.delete("/api/me/push", { endpoint: "https://fcm.googleapis.com/x" });
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+      JSON.stringify({ endpoint: "https://fcm.googleapis.com/x" }),
+    );
+  });
+
   it("gives nothing back for an answer with no content", async () => {
     serverAnswers(answer(undefined, { status: 204 }));
     expect(await api.delete("/api/x")).toBeUndefined();

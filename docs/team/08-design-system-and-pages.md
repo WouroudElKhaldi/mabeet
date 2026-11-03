@@ -701,11 +701,13 @@ Tabs at the top (`AccountTabs`):
 links to its booking page, with the place, the room, the dates, the guests, the price and a status label in the guest's
 words; a long place name gives way to the label. With no trips: "No trips yet. Where to first?" and a button to explore.
 A signed-out visitor signs in and comes back. Every account page starts with `AccountHeader` (`accounts` module: the
-greeting, Sign out and `AccountTabs`, which lists only the pages built: Trips and Privacy). `/account/privacy` is
+greeting, Sign out and `AccountTabs`, which lists only the pages built: Trips, Notifications and Privacy).
+`/account/notifications` is `PhoneAlerts` (`notifications` module): turn push on or off for this device, or why it
+cannot be (blocked in the browser, not supported, or on iPhone not yet on the Home Screen); when the server has no
+push keys it says updates still come by email. `/account/privacy` is
 `PrivacyControls`: "Download my data" (`GET /api/me/export`, a JSON file) and "Delete my account", behind a
 confirmation where the guest types their email (`POST /api/me/delete`), then signed out to the home page; an only owner
-of a place is told to add another owner first. Favourites, activity, notifications and the review form are not built
-yet.
+of a place is told to add another owner first. Favourites, activity and the review form are not built yet.
 
 ### 8.4 Host dashboard (`AppShell`, every page starts with `PageHeader`)
 

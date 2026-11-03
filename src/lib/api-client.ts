@@ -169,7 +169,9 @@ export const api = {
   patch: <T>(url: string, body?: unknown, options?: RequestOptions) =>
     sendJson<T>("PATCH", url, body, options),
   put: <T>(url: string, body?: unknown, options?: RequestOptions) => sendJson<T>("PUT", url, body, options),
-  delete: <T = void>(url: string, options?: RequestOptions) => sendJson<T>("DELETE", url, undefined, options),
+  /** A body only when the thing to delete is named by more than its address (a push device by its endpoint). */
+  delete: <T = void>(url: string, body?: unknown, options?: RequestOptions) =>
+    sendJson<T>("DELETE", url, body, options),
   /** Photos and other files. The browser sets the content type itself, with the boundary the server needs. */
   upload: <T>(url: string, form: FormData, options?: RequestOptions) =>
     send<T>("POST", url, form, undefined, { ...options, timeoutMs: options?.timeoutMs ?? UPLOAD_TIMEOUT_MS }),
