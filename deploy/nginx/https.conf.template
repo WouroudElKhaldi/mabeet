@@ -1,11 +1,34 @@
-# With the domain: the website on https://${DOMAIN}, with the certificate deploy/request-certificate.sh requested
-# for the domain and its www. Plain HTTP only answers Let's Encrypt's renewal check, and every other address (http,
-# www) goes to https://${DOMAIN}, so the site has one address. The security headers (HSTS, CSP...) come from
+# The website on https://${DOMAIN}, with the certificate deploy/remote-deploy.sh got for the domain and its www.
+# http and www go to https://${DOMAIN}, so the site has one address; plain http also answers Let's Encrypt's renewal
+# check. The server's IP address and any other name get nothing. The security headers (HSTS, CSP...) come from
 # next.config.ts, not from here.
+
+# The IP address and any other name.
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
     server_name _;
+    server_tokens off;
+
+    # The connection is closed without an answer.
+    return 444;
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    server_tokens off;
+
+    # Refused before any certificate is shown, so the IP address never reveals the site.
+    ssl_reject_handshake on;
+}
+
+# http for the domain and its www.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN} www.${DOMAIN};
     server_tokens off;
 
     location /.well-known/acme-challenge/ {

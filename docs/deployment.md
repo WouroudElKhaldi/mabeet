@@ -1,7 +1,7 @@
 # Deployment: the live site
 
-How Mabeet goes live, what runs on the server, and everything to set up once: the server, GitHub, and later the
-domain. Omar owns the deployment (`docs/team/01-work-split.md`), but anyone on the team can follow this file.
+How Mabeet goes live, what runs on the server, and everything to set up once: the domain, the server and GitHub.
+The site has one address, `https://mabeet-lb.com`: never plain http, never the server's IP address. Omar owns the deployment (`docs/team/01-work-split.md`), but anyone on the team can follow this file.
 
 ## In short
 
@@ -20,7 +20,7 @@ GitHub Actions (.github/workflows/ci.yml)
         write the server's .env from GitHub's secrets and variables
         copy docker-compose.prod.yml, deploy/ and .env to the server (/opt/mabeet)
         run deploy/remote-deploy.sh on the server:
-            pull the image → back up the database → migrate → start the new version
+            pull the image → back up the database → migrate → (first deploy: get the certificate) → start
         check the site answers
    │
    ▼
@@ -35,13 +35,13 @@ One droplet runs everything with Docker Compose, from `docker-compose.prod.yml`:
 
 | Service   | What it does                                                                                                |
 | --------- | ----------------------------------------------------------------------------------------------------------- |
-| `nginx`   | The front door on ports 80 and 443. Sends visitors to the website. Serves https once we have the domain     |
+| `nginx`   | The front door on ports 80 and 443. Serves the website on `https://<DOMAIN>` only; the IP gets nothing      |
 | `web`     | The website (`pnpm start`). Only nginx reaches it                                                           |
 | `worker`  | The job worker (`pnpm worker`): emails, AI work, calendar sync, housekeeping. It runs every schedule itself |
 | `migrate` | Runs once on every deploy (`prisma migrate deploy`), then stops. The website and worker wait for it         |
 | `db`      | Postgres 17. Its data is in the `db-data` volume, which survives every deploy                               |
 | `redis`   | Rate-limit counters. Nothing in it needs to survive a restart                                               |
-| `certbot` | Renews the https certificate. Does nothing until the domain has one                                         |
+| `certbot` | Renews the https certificate, which the first deploy got                                                    |
 
 `web`, `worker` and `migrate` are the same image, built once by GitHub Actions. The server never sees the code and
 never builds anything: it only pulls the finished image. `nginx` and `certbot` belong to the `server` profile, so
@@ -55,10 +55,9 @@ The server's folder, `/opt/mabeet`, holds only what the deploy job copies there,
   docker-compose.prod.yml
   deploy/
     remote-deploy.sh          what each deploy runs on the server
-    request-certificate.sh    run once by hand, when we have the domain
     nginx/
-      http.conf.template      before the domain: the site on the IP address, plain http
-      https.conf.template     with the domain: https, with the certificate
+      https.conf.template               the website on https://<DOMAIN>, www and http sent to it
+      certificate-check.conf.template   first deploy only: answers Let's Encrypt's check, nothing else
   backups/                    a copy of the database before each deploy (the newest 14)
 ```
 
@@ -67,7 +66,7 @@ Because the `.env` names `COMPOSE_FILE` and `COMPOSE_PROFILES`, every command on
 
 ## Setting it up, once
 
-Three parts, in this order: the server, GitHub, then the first deploy.
+Four parts, in this order: the server, GitHub, the domain, then the first deploy.
 
 ### 1. The server (DigitalOcean droplet)
 
@@ -175,8 +174,9 @@ your own `.env`. No value may contain a single quote (`'`).
 
 | Name                 | Kind     | Value                                                                                             |
 | -------------------- | -------- | ------------------------------------------------------------------------------------------------- |
-| `SERVER_IP`          | Variable | The droplet's public IPv4 address. Before the domain, the site is `http://<SERVER_IP>`            |
-| `SSH_USER`           | Variable | `deploy`                                                                                          |
+| `DOMAIN`             | Variable | `mabeet-lb.com`, without `www`. The site's one address is `https://<DOMAIN>`                      |
+| `SERVER_IP`          | Variable | The droplet's public IPv4 address. Only for SSH: the site never answers on it                     |
+| `SSH_USER`           | Variable | `root` on our droplet (`deploy` if you made that user in step 4)                                  |
 | `SSH_PRIVATE_KEY`    | Secret   | The whole content of `~/.ssh/mabeet-deploy`, from `-----BEGIN` to `-----END ... KEY-----`         |
 | `POSTGRES_PASSWORD`  | Secret   | `openssl rand -hex 32`. Set it once: Postgres keeps the first password it starts with (see below) |
 | `BETTER_AUTH_SECRET` | Secret   | `openssl rand -hex 32`. Changing it later signs everyone out                                      |
@@ -187,7 +187,6 @@ each):
 
 | Name                                         | Kind     | Notes                                                                                   |
 | -------------------------------------------- | -------- | --------------------------------------------------------------------------------------- |
-| `DOMAIN`                                     | Variable | Empty until the certificate exists. See "Adding the domain"                             |
 | `RESEND_API_KEY`                             | Secret   | Without it, emails are only written to the worker's log                                 |
 | `EMAIL_FROM`                                 | Variable | `Mabeet <hello@our-domain>`, once the domain is verified on Resend                      |
 | `R2_ACCOUNT_ID`, `R2_PUBLIC_BUCKET`          | Variable | The photo bucket. Without R2, photos are kept in Postgres                               |
@@ -204,8 +203,7 @@ each):
 | `DEEPSEEK_API_KEY`                           | Secret   | The AI bonus only                                                                       |
 | `AI_MONTHLY_BUDGET_USD`                      | Variable | Empty means $50                                                                         |
 
-Not in GitHub, because the deploy job works them out: `BETTER_AUTH_URL` (`https://<DOMAIN>`, or
-`http://<SERVER_IP>` before the domain), `DATABASE_URL` and `REDIS_URL` (`docker-compose.prod.yml` points them at
+Not in GitHub, because the deploy job works them out: `BETTER_AUTH_URL` (`https://<DOMAIN>`), `DATABASE_URL` and `REDIS_URL` (`docker-compose.prod.yml` points them at
 its own services), `JOBS_MODE` (`queue`, set in the image), and the image's name and tag.
 
 **What the server pulls with.** The deploy job hands the server its own short-lived `GITHUB_TOKEN` to pull the
@@ -215,13 +213,35 @@ image from GitHub's registry, so there is no extra access token to create or ren
 and `.env.example` as usual, then add its name to the deploy job in `.github/workflows/ci.yml` twice (in the
 `env:` block, and in the `for name in ...` list that writes the `.env`), and its value in GitHub.
 
-### 3. The first deploy
+### 3. The domain (Cloudflare)
+
+Our domain is `mabeet-lb.com`, at Cloudflare.
+
+1. **Point it at the server.** In Cloudflare, DNS → Records: two `A` records, `@` and `www`, both →
+   `<SERVER_IP>`, both **DNS only (grey cloud)**. Leave SSL/TLS as it is: with the grey cloud, Cloudflare only
+   answers DNS, and the server makes its own https.
+2. **Wait until it points there:** `nslookup mabeet-lb.com 8.8.8.8` and `nslookup www.mabeet-lb.com 8.8.8.8` answer
+   with the droplet's address (with the orange cloud they answer with Cloudflare's, `104.21...` or `172.67...`).
+   The first deploy needs both, because it asks Let's Encrypt for one certificate covering the two names.
+
+**Cloudflare's proxy (orange cloud) is not set up.** Behind it, every visitor reaches nginx from a Cloudflare address,
+so the rate limits would count all visitors as one. Turning it on needs nginx to read the visitor's address from
+Cloudflare's `CF-Connecting-IP` header first, then SSL/TLS set to Full (strict), never Flexible (it would loop on
+redirects).
+
+### 4. The first deploy
 
 1. Merge the deployment pull request into `development`, then release `development` into `main` (or, to try it
    first, open the Actions tab → CI → "Run workflow" on `main` once this file is on `main`).
-2. Watch it in the Actions tab. The deploy job's summary shows the site's address.
-3. Open `http://<SERVER_IP>`: the home page should answer.
-4. **Create the platform admins**, on the server (as `deploy`, in `/opt/mabeet`):
+2. Watch it in the Actions tab. This one also gets the certificate: `deploy/remote-deploy.sh` starts nginx with
+   `certificate-check.conf.template` (it answers only Let's Encrypt's check), certbot gets one certificate for
+   `mabeet-lb.com` and `www.mabeet-lb.com`, then nginx switches to `https.conf.template`. Every later deploy finds
+   the certificate and skips this; the `certbot` service renews it twice a day if needed, and nginx reloads every
+   6 hours. If it fails at the certificate, check the DNS (part 3) before running it again: Let's Encrypt refuses a
+   domain for an hour after 5 failures.
+3. Open `https://mabeet-lb.com`: the home page should answer. `http://` and `www` go there too, and
+   `http://<SERVER_IP>` gets nothing.
+4. **Create the platform admins**, on the server (in `/opt/mabeet`):
 
    ```bash
    docker compose run --rm web sh -c 'pnpm admins:create "Omar Antar <omar@example.com>" && cat .admin-credentials'
@@ -230,38 +250,13 @@ and `.env.example` as usual, then add its name to the deploy job in `.github/wor
    It prints each admin's password once. Send each person only their own line, privately. Running it again gives
    new passwords and never makes copies.
 
-## Adding the domain
+5. **Then, the outside services:** verify the domain on Resend (its records in Cloudflare, DNS only) and set
+   `EMAIL_FROM`; give R2 a custom domain (`images.mabeet-lb.com`) and set `R2_PUBLIC_URL` to it; point Stripe's
+   webhook at `https://mabeet-lb.com/api/webhooks/stripe`. Each takes effect at the next deploy.
 
-Our domain is `mabeet-lb.com`, at Cloudflare. Nothing in the code changes:
-
-1. **Point it at the server.** In Cloudflare, DNS → Records: two `A` records, `@` and `www`, both → `<SERVER_IP>`,
-   both **DNS only (grey cloud)**. Leave SSL/TLS as it is: with the grey cloud, Cloudflare only answers DNS, and the
-   server makes its own https. Wait until `nslookup mabeet-lb.com 8.8.8.8` answers with the droplet's address (with
-   the orange cloud it answers with Cloudflare's, `104.21...` or `172.67...`).
-2. **Get the certificate**, on the server, while the site still runs on plain http. One certificate covers
-   `mabeet-lb.com` and `www.mabeet-lb.com`, so both records must point at the server first:
-
-   ```bash
-   cd /opt/mabeet
-   CERTBOT_EMAIL=omar@example.com bash deploy/request-certificate.sh mabeet-lb.com
-   ```
-
-   If it fails, check the DNS before trying again: Let's Encrypt refuses a domain for an hour after 5 failures.
-
-3. **Set the `DOMAIN` variable** in GitHub's `production` environment to `mabeet-lb.com` (without `www`), and run
-   the deploy again (Actions → CI → "Run workflow" on `main`). The deploy switches nginx to https, sends http and
-   `www` to `https://mabeet-lb.com`, and sets `BETTER_AUTH_URL` to it.
-4. **Then, the outside services:** verify the domain on Resend (its records in Cloudflare, DNS only) and set
-   `EMAIL_FROM`; give R2 a custom domain (`images.mabeet-lb.com`) and set `R2_PUBLIC_URL` to it; move Stripe's
-   webhook to `https://mabeet-lb.com/api/webhooks/stripe`.
-
-**Cloudflare's proxy (orange cloud) is not set up.** Behind it, every visitor reaches nginx from a Cloudflare address,
-so the rate limits would count all visitors as one. Turning it on needs nginx to read the visitor's address from
-Cloudflare's `CF-Connecting-IP` header first, then SSL/TLS set to Full (strict), never Flexible (it would loop on
-redirects).
-
-Sign-in cookies are tied to the site's address, so everyone signs in once more after the switch. The certificate
-renews by itself (the `certbot` service checks twice a day; nginx reloads every 6 hours).
+**Changing the domain later** means a new certificate: set `DOMAIN`, point both records at the server, and deploy.
+The deploy finds no certificate for the new name and gets one. Sign-in cookies are tied to the site's address, so
+everyone signs in once more.
 
 ## Day to day
 
@@ -269,7 +264,7 @@ renews by itself (the `certbot` service checks twice a day; nginx reloads every 
 deploys. "Run workflow" on `main` deploys `main` again, for example after changing a secret: settings are only read
 at deploy time.
 
-**Looking at the server** (as `deploy`, from `/opt/mabeet`):
+**Looking at the server** (from `/opt/mabeet`):
 
 | Command                                 | What it shows or does                                      |
 | --------------------------------------- | ---------------------------------------------------------- |
@@ -339,12 +334,11 @@ Postgres and Redis with your `.env`. nginx and certbot do not start: they are on
 
 ## The files
 
-| File                               | What it is                                                                   |
-| ---------------------------------- | ---------------------------------------------------------------------------- |
-| `.github/workflows/ci.yml`         | The checks, and the `deploy` job                                             |
-| `Dockerfile`                       | The one image: website, worker and migrations                                |
-| `docker-compose.prod.yml`          | Every service on the server (and the production shape on your computer)      |
-| `deploy/remote-deploy.sh`          | What each deploy runs on the server: pull, back up, migrate, start, clean up |
-| `deploy/request-certificate.sh`    | The first https certificate, run once by hand                                |
-| `deploy/nginx/http.conf.template`  | nginx before the domain                                                      |
-| `deploy/nginx/https.conf.template` | nginx with the domain (nginx fills in `${DOMAIN}` when it starts)            |
+| File                                           | What it is                                                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `.github/workflows/ci.yml`                     | The checks, and the `deploy` job                                                                             |
+| `Dockerfile`                                   | The one image: website, worker and migrations                                                                |
+| `docker-compose.prod.yml`                      | Every service on the server (and the production shape on your computer)                                      |
+| `deploy/remote-deploy.sh`                      | What each deploy runs on the server: pull, back up, migrate, the certificate (first deploy), start, clean up |
+| `deploy/nginx/https.conf.template`             | nginx: the website on `https://<DOMAIN>` only (nginx fills in `${DOMAIN}` when it starts)                    |
+| `deploy/nginx/certificate-check.conf.template` | nginx on the first deploy, while it gets the certificate                                                     |

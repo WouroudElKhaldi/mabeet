@@ -101,16 +101,11 @@ jobs:
         id: names
         env:
           DOMAIN: ${{ vars.DOMAIN }}
-          SERVER_IP: ${{ vars.SERVER_IP }}
         run: |
           echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
           echo "tag=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
-          # Before the domain, the site answers on the server's IP address over plain HTTP.
-          if [ -n "$DOMAIN" ]; then
-            echo "url=https://$DOMAIN" >> "$GITHUB_OUTPUT"
-          else
-            echo "url=http://$SERVER_IP" >> "$GITHUB_OUTPUT"
-          fi
+          # The site's one address: never the server's IP, never plain http.
+          echo "url=https://$DOMAIN" >> "$GITHUB_OUTPUT"
 
       # Every setting the server needs, checked before anything is built, then written to the .env it will run with.
       # An empty one is left out, so it is unset there and its default applies (an empty WHISH_MODE would be refused).
@@ -119,7 +114,6 @@ jobs:
           IMAGE: ${{ steps.names.outputs.image }}
           IMAGE_TAG: ${{ steps.names.outputs.tag }}
           BETTER_AUTH_URL: ${{ steps.names.outputs.url }}
-          NGINX_SITE: ${{ vars.DOMAIN && 'https' || 'http' }}
           DOMAIN: ${{ vars.DOMAIN }}
           SERVER_IP: ${{ vars.SERVER_IP }}
           SSH_USER: ${{ vars.SSH_USER }}
@@ -150,7 +144,7 @@ jobs:
           R2_PUBLIC_BUCKET: ${{ vars.R2_PUBLIC_BUCKET }}
           R2_PUBLIC_URL: ${{ vars.R2_PUBLIC_URL }}
         run: |
-          for name in SERVER_IP SSH_USER SSH_PRIVATE_KEY POSTGRES_PASSWORD BETTER_AUTH_SECRET CRON_SECRET; do
+          for name in DOMAIN SERVER_IP SSH_USER SSH_PRIVATE_KEY POSTGRES_PASSWORD BETTER_AUTH_SECRET CRON_SECRET; do
             if [ -z "${!name}" ]; then
               echo "::error::$name is not set in the production environment (docs/deployment.md)"
               exit 1
@@ -164,7 +158,7 @@ jobs:
             echo "COMPOSE_FILE=docker-compose.prod.yml"
             echo "COMPOSE_PROFILES=server"
             # Single quotes keep every value exactly as written (no value may contain one).
-            for name in IMAGE IMAGE_TAG NGINX_SITE DOMAIN POSTGRES_PASSWORD BETTER_AUTH_URL BETTER_AUTH_SECRET \
+            for name in IMAGE IMAGE_TAG DOMAIN POSTGRES_PASSWORD BETTER_AUTH_URL BETTER_AUTH_SECRET \
               CRON_SECRET DEEPSEEK_API_KEY AI_MONTHLY_BUDGET_USD RESEND_API_KEY EMAIL_FROM CONTACT_EMAIL \
               CONTACT_WHATSAPP STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_PRICE_PRO STRIPE_PRICE_BUSINESS \
               WHISH_MODE WHISH_CHANNEL WHISH_SECRET WHISH_WEBSITE_URL VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY \
@@ -201,11 +195,12 @@ jobs:
       - name: Copy the files to the server
         run: rsync -az --delete --exclude=/backups/ staging/ "${{ vars.SSH_USER }}@${{ vars.SERVER_IP }}:/opt/mabeet/"
 
-      # The job's own token lets the server pull the image; it goes on standard input and expires with the job.
+      # The job's own token lets the server pull the image; it goes on standard input and expires with the job. The
+      # first deploy also gets the domain's certificate here.
       - name: Start the new version
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | ssh "${{ vars.SSH_USER }}@${{ vars.SERVER_IP }}" \
-            bash /opt/mabeet/deploy/remote-deploy.sh "${{ github.actor }}"
+            bash /opt/mabeet/deploy/remote-deploy.sh "${{ github.actor }}" "${{ vars.DOMAIN }}"
 
       # Retries: the site answers 502 for the few seconds the new website takes to start.
       - name: The site answers

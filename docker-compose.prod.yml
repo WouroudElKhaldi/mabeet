@@ -95,9 +95,9 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
 
-  # The server's front door on ports 80 and 443. NGINX_SITE picks its configuration from deploy/nginx/: "http" (the
-  # server's IP address, before the domain) or "https" (DOMAIN, with its Let's Encrypt certificate). nginx fills
-  # ${DOMAIN} in the file when it starts.
+  # The server's front door on ports 80 and 443: the website on https://DOMAIN only, never on the IP address.
+  # NGINX_SITE picks its configuration from deploy/nginx/: "https", or "certificate-check" for the moment the first
+  # deploy gets the certificate (deploy/remote-deploy.sh chooses). nginx fills ${DOMAIN} in the file when it starts.
   nginx:
     image: nginx:1.30-alpine
     profiles: [server]
@@ -108,7 +108,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-}
     volumes:
-      - ./deploy/nginx/${NGINX_SITE:-http}.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/nginx/${NGINX_SITE:-https}.conf.template:/etc/nginx/templates/default.conf.template:ro
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
     depends_on:
@@ -122,8 +122,8 @@ services:
         "while :; do sleep 6h; nginx -s reload; done & exec /docker-entrypoint.sh nginx -g 'daemon off;'",
       ]
 
-  # Renews the certificate when it is close to expiring. The first one is requested once by hand
-  # (deploy/request-certificate.sh); before that, it has nothing to renew.
+  # Renews the certificate when it is close to expiring. The first deploy gets the first one
+  # (deploy/remote-deploy.sh).
   certbot:
     image: certbot/certbot:v5.9.0
     profiles: [server]
