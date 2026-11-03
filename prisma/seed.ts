@@ -368,10 +368,14 @@ async function main() {
   console.log(
     "Sign in as host@, staff@, guest@ or admin@mabeet.test with the SEED_PASSWORD (demo-password-123 if empty).",
   );
-  await prisma.$disconnect();
 }
 
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exit(1);
-});
+// The demo bookings send their notification jobs, which opens the job queue's own connection; the seed is done once
+// its rows are written, so it ends here rather than waiting on that connection.
+main().then(
+  () => process.exit(0),
+  (error: unknown) => {
+    console.error(error);
+    process.exit(1);
+  },
+);
