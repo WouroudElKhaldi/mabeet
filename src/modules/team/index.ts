@@ -11,3 +11,7 @@ export {
   roleParams,
 } from "./schemas";
 export { AcceptInvitation, InvitationSignUp } from "./components/invitation-forms";
+export { AddMemberForm } from "./components/add-member-form";
+export { CancelInvitation, MemberControls } from "./components/member-controls";
+export { RoleEditor } from "./components/role-editor";
+export { assignableRoles, canManageMember, holdsEveryPermission } from "./team-access";

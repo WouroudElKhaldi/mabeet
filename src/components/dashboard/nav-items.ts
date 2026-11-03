@@ -35,6 +35,7 @@ export const DASHBOARD_PAGES = {
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
   settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
   analytics: { group: "money", path: "analytics", icon: "analytics", anyOf: ["analytics.read"] },
+  team: { group: "team", path: "team", icon: "team", anyOf: ["team.manage", "roles.manage"] },
   keys: { group: "ai", path: "keys", icon: "keys", anyOf: ["ai.use"] },
 } as const satisfies Partial<Record<NavLabel, DashboardPage>>;
 
