@@ -23,6 +23,7 @@ interface DashboardPage {
 
 export const DASHBOARD_PAGES = {
   bookings: { group: "bookings", path: "bookings", icon: "bookings", anyOf: ["bookings.read"], tab: true },
+  keys: { group: "ai", path: "keys", icon: "keys", anyOf: ["ai.use"] },
 } as const satisfies Partial<Record<NavLabel, DashboardPage>>;
 
 type DashboardPageName = keyof typeof DASHBOARD_PAGES;
