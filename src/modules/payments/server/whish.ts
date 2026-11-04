@@ -34,7 +34,11 @@ const envelope = z.object({
 
 const NOT_AVAILABLE = "Whish payments are not available right now. Please try again shortly.";
 
-async function call(path: string, body: unknown): Promise<unknown> {
+/**
+ * Calls Whish and returns its data. A refusal throws, except one of `expected`: codes that are an answer, not a failure
+ * (the payment isn't known yet), which return null.
+ */
+async function call(path: string, body: unknown, expected: readonly string[] = []): Promise<unknown> {
   if (!whishEnabled()) throw unavailable("Whish payments are not set up yet.");
   // A timeout or a network failure is an outage like any other: a calm 503, never an internal error.
   const response = await fetch(`${baseUrl()}${path}`, {
@@ -55,6 +59,7 @@ async function call(path: string, body: unknown): Promise<unknown> {
   const parsed = envelope.safeParse(await response.json().catch(() => null));
   if (!parsed.success) throw unavailable("Whish did not answer as expected. Please try again shortly.");
   if (!parsed.data.status) {
+    if (expected.includes(String(parsed.data.code))) return null;
     console.error("Whish error", path, parsed.data.code);
     throw unavailable(NOT_AVAILABLE);
   }
@@ -100,12 +105,18 @@ export async function createWhishPayment(input: WhishPaymentInput): Promise<stri
 
 const COLLECT_STATUSES = ["pending", "success", "failed", "refunded"] as const;
 
+/** Whish's answer for an externalId it has no payment for. */
+const NOT_KNOWN_YET = "external_id.not_exists";
+
 /**
  * The truth about a payment: pending (still payable), success, failed (expired unpaid), refunded, or unknown.
  * Only success and failed are final. Callbacks are unauthenticated, so this is what decides.
  */
 export async function getWhishStatus(externalId: string, currency: string) {
-  const data = await call("/payment/collect/status", { currency, externalId });
+  // Our payment is saved a moment before Whish opens it, and the booking page may ask in between: Whish doesn't know it
+  // yet, which only means it isn't paid yet.
+  const data = await call("/payment/collect/status", { currency, externalId }, [NOT_KNOWN_YET]);
+  if (data === null) return { status: "unknown" as const, payerPhone: null };
   const parsed = z.object({ collectStatus: z.string(), payerPhoneNumber: z.string().nullish() }).parse(data);
   const known = COLLECT_STATUSES.find((status) => status === parsed.collectStatus);
   return { status: known ?? "unknown", payerPhone: parsed.payerPhoneNumber ?? null };
