@@ -41,6 +41,12 @@ describe("dashboardNav", () => {
       );
       expect(labels).toContain("bookings");
     }
+    for (const permission of DASHBOARD_PAGES.team.anyOf) {
+      const labels = dashboardNav(member([permission])).flatMap(({ items }) =>
+        items.map((item) => item.label),
+      );
+      expect(labels).toContain("team");
+    }
     for (const permission of DASHBOARD_PAGES.overview.anyOf) {
       const labels = dashboardNav(member([permission])).flatMap(({ items }) =>
         items.map((item) => item.label),

@@ -101,49 +101,58 @@ export function AppFrame({ nav, areaLabel, badge, viewSiteHref, userName, childr
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 lg:px-10 lg:py-10 lg:pb-10">
+        <main
+          className={clsx(
+            "mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10",
+            tabs.length > 0 && "pb-24 lg:pb-10",
+          )}
+        >
           <BackLink className="mb-4" />
           {children}
         </main>
       </div>
 
-      <nav
-        aria-label={t("tabs")}
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
-      >
-        <ul className="grid auto-cols-fr grid-flow-col">
-          {tabs.map((item) => {
-            const active = isActiveNav(pathname, item);
-            const Icon = NAV_ICONS[item.icon];
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={clsx(
-                    "flex h-16 flex-col items-center justify-center gap-1 text-[0.6875rem] font-semibold",
-                    active ? "text-accent" : "text-muted",
-                  )}
-                >
-                  <Icon className="size-5" aria-hidden />
-                  <span className="max-w-full truncate px-1">{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-          <li>
-            <button
-              type="button"
-              aria-haspopup="dialog"
-              onClick={() => setMenuOpen(true)}
-              className="flex h-16 w-full flex-col items-center justify-center gap-1 text-[0.6875rem] font-semibold text-muted"
-            >
-              <Menu className="size-5" aria-hidden />
-              {t("more")}
-            </button>
-          </li>
-        </ul>
-      </nav>
+      {/* A menu with no tab pages (all of someone's places) would leave the bar holding "More" alone, which the menu
+          button in the top bar already opens. */}
+      {tabs.length > 0 ? (
+        <nav
+          aria-label={t("tabs")}
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        >
+          <ul className="grid auto-cols-fr grid-flow-col">
+            {tabs.map((item) => {
+              const active = isActiveNav(pathname, item);
+              const Icon = NAV_ICONS[item.icon];
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={clsx(
+                      "flex h-16 flex-col items-center justify-center gap-1 text-[0.6875rem] font-semibold",
+                      active ? "text-accent" : "text-muted",
+                    )}
+                  >
+                    <Icon className="size-5" aria-hidden />
+                    <span className="max-w-full truncate px-1">{item.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+            <li>
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                onClick={() => setMenuOpen(true)}
+                className="flex h-16 w-full flex-col items-center justify-center gap-1 text-[0.6875rem] font-semibold text-muted"
+              >
+                <Menu className="size-5" aria-hidden />
+                {t("more")}
+              </button>
+            </li>
+          </ul>
+        </nav>
+      ) : null}
 
       <SheetDialog
         placement="start"

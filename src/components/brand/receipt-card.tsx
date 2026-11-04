@@ -50,7 +50,7 @@ export function ReceiptCard(props: ReceiptProps) {
       <SceneLayer enter="rise">
         <Receipt {...props} />
       </SceneLayer>
-      <SceneLayer depth={70} enter="stamp" className="absolute -end-1 -top-9 sm:-end-8">
+      <SceneLayer depth={70} enter="stamp" className="absolute end-1 -top-9 sm:-end-8">
         <Postmark spin className="size-20 rotate-12" />
       </SceneLayer>
     </BrandScene>

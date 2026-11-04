@@ -44,6 +44,15 @@ describe("dynamic roles and permissions", () => {
     });
   });
 
+  it("shows the roles to whoever manages the team or the roles, and to nobody else", async () => {
+    const teamManager = await memberWith(place.business.id, ["team.manage"]);
+    const roleManager = await memberWith(place.business.id, ["roles.manage"]);
+    const frontDesk = await memberWith(place.business.id, ["bookings.read"]);
+    await expect(listRoles(teamManager)).resolves.not.toHaveLength(0);
+    await expect(listRoles(roleManager)).resolves.not.toHaveLength(0);
+    expect(() => listRoles(frontDesk)).toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
+  });
+
   it("protects the owner role from changes and deletion", async () => {
     const ownerRole = await prisma.role.findFirstOrThrow({
       where: { businessId: place.business.id, isOwner: true },

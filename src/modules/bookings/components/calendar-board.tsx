@@ -245,9 +245,10 @@ export function CalendarBoard(props: CalendarBoardProps) {
     const monthEnd = shiftDay(monthDays.at(-1) ?? gridStart, 1);
     return (
       <div className="overflow-x-auto">
-        <div style={{ width: 160 + monthDays.length * DAY_WIDTH }}>
+        {/* The room names keep a narrower column on a phone, so the nights get most of the width. */}
+        <div className="w-max">
           <div className="flex border-b border-line">
-            <div className="sticky start-0 z-10 w-40 shrink-0 bg-surface" />
+            <div className="sticky start-0 z-10 w-28 shrink-0 bg-surface sm:w-40" />
             {monthDays.map((day) => (
               <div
                 key={day}
@@ -267,7 +268,7 @@ export function CalendarBoard(props: CalendarBoardProps) {
             .filter((room) => roomId === "all" || room.id === roomId)
             .map((room) => (
               <div key={room.id} className="flex border-b border-line last:border-0">
-                <div className="sticky start-0 z-10 flex w-40 shrink-0 items-center bg-surface px-4 py-3 text-sm font-semibold">
+                <div className="sticky start-0 z-10 flex w-28 shrink-0 items-center bg-surface px-3 py-3 text-sm font-semibold sm:w-40 sm:px-4">
                   <span className="truncate">{room.name}</span>
                 </div>
                 <div className="relative h-14 shrink-0" style={{ width: monthDays.length * DAY_WIDTH }}>

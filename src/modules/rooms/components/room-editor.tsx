@@ -73,7 +73,9 @@ export function RoomEditor({
 
   return (
     <form onSubmit={(event) => void submit(event)} className="grid gap-4">
-      <fieldset disabled={!canEdit || pending} className="grid gap-4">
+      {/* One column that never grows past the card: an input's own width (about 20 characters, two to a row for the
+          sizes) would otherwise hold the form wider than a phone. */}
+      <fieldset disabled={!canEdit || pending} className="grid grid-cols-[minmax(0,1fr)] gap-4">
         <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
           <Field label={t("name")} name="name" required maxLength={80} defaultValue={room?.name} />
           <Field
@@ -134,7 +136,7 @@ export function RoomEditor({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               multiple
-              className="text-sm font-normal file:me-3 file:h-9 file:rounded-lg file:border-0 file:bg-ink file:px-3 file:font-semibold file:text-paper"
+              className="w-full text-sm font-normal contain-inline-size file:me-3 file:h-9 file:rounded-lg file:border-0 file:bg-ink file:px-3 file:font-semibold file:text-paper"
             />
             <span className="text-xs font-normal text-muted">{t("photosHint")}</span>
           </label>

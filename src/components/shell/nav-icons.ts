@@ -10,9 +10,11 @@ import {
   KeyRound,
   LayoutDashboard,
   Link2,
+  Search,
   Settings,
   Sparkles,
   Star,
+  Tag,
   User,
   Users,
   Wallet,
@@ -38,6 +40,8 @@ export const NAV_ICONS = {
   analytics: BarChart3,
   profile: User,
   notifications: Bell,
+  explore: Search,
+  pricing: Tag,
 };
 
 export type NavIconName = keyof typeof NAV_ICONS;

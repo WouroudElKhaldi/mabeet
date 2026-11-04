@@ -3,6 +3,7 @@
 import { animate, useInView, useReducedMotion } from "motion/react";
 import { useLocale } from "next-intl";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { Locale } from "@/config/appearance";
 import { formatMoney } from "@/utils/format";
 
@@ -42,14 +43,24 @@ export function StatTile({ label, value, note, ...stat }: StatTileProps) {
     return () => controls.stop();
   }, [inView, reduced, value]);
 
+  // Tiles sit two to a row on a phone and four beside the side menu, where "$12,345.00" or a sum in pounds is wider
+  // than the tile at text-3xl: the number shrinks to the tile's width (`cqi`) by its final length, so it never moves
+  // while counting up, and short numbers keep their full size.
+  const characters = { "--characters": format(value, stat, locale).length } as CSSProperties;
+
   return (
     <div
       ref={ref}
-      className="relative flex h-full flex-col overflow-hidden rounded-xl bg-surface p-5 ring-1 ring-line"
+      className="@container relative flex h-full flex-col overflow-hidden rounded-xl bg-surface p-5 ring-1 ring-line"
     >
       <span className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-accent to-glow" aria-hidden />
       <p className="text-sm font-semibold text-muted">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">{format(shown, stat, locale)}</p>
+      <p
+        style={characters}
+        className="mt-2 text-[length:max(1rem,min(1.875rem,calc(100cqi/(var(--characters)*0.62))))] leading-tight font-semibold tracking-tight [overflow-wrap:anywhere] tabular-nums"
+      >
+        {format(shown, stat, locale)}
+      </p>
       {note && <p className="mt-auto pt-1 text-sm text-muted">{note}</p>}
     </div>
   );

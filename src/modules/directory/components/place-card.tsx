@@ -7,6 +7,9 @@ import { formatMoney } from "@/utils/format";
 import { stagger } from "@/utils/motion";
 import type { PlaceCard as PlaceCardData } from "../types";
 
+/** The most cards in the grid's first row (six on the widest screens). */
+const FIRST_ROW = 6;
+
 /** A square photo, then three short lines: the name, the town, and the price of the stay or of a night. */
 export async function PlaceCard({
   place,
@@ -32,6 +35,8 @@ export async function PlaceCard({
               src={place.photo.url}
               alt={place.photo.alt ?? place.name}
               fill
+              // The first row is on screen as the page opens (the biggest thing on a phone): it loads at once.
+              loading={index < FIRST_ROW ? "eager" : "lazy"}
               sizes="(min-width: 1536px) 16vw, (min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
               className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
             />
