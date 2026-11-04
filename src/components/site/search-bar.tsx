@@ -77,96 +77,100 @@ export function SearchBar({ search = {} }: { search?: SearchLink }) {
     );
   };
 
+  // The bar lays itself out by its own width, not the screen's: in the home hero's column on a laptop it has a phone's
+  // room, and stacks like on a phone.
   return (
-    <form
-      ref={root}
-      onSubmit={submit}
-      role="search"
-      className={clsx(
-        "relative grid w-full max-w-[52rem] grid-cols-1 rounded-3xl ring-1 ring-line-strong sm:grid-cols-[1.1fr_1.5fr_1fr] sm:rounded-full",
-        panel ? "bg-surface-2" : "bg-surface shadow-lift",
-      )}
-    >
-      <label
+    <div className="@container w-full max-w-[52rem]">
+      <form
+        ref={root}
+        onSubmit={submit}
+        role="search"
         className={clsx(
-          "flex min-w-0 cursor-text flex-col justify-center rounded-full px-6 py-3 transition-colors",
-          panel === "where" ? "bg-surface shadow-lift" : "hover:bg-surface-2",
+          "relative grid w-full grid-cols-1 rounded-3xl ring-1 ring-line-strong @lg:grid-cols-[1.1fr_1.5fr_1fr] @lg:rounded-full",
+          panel ? "bg-surface-2" : "bg-surface shadow-lift",
         )}
       >
-        <span className="text-xs font-bold">{t("where")}</span>
-        <input
-          value={area}
-          onChange={(event) => setArea(event.target.value)}
-          onFocus={() => setPanel("where")}
-          placeholder={t("wherePlaceholder")}
-          maxLength={60}
-          className="w-full truncate bg-transparent text-sm outline-none placeholder:text-muted"
-        />
-      </label>
-
-      <div className="border-line max-sm:border-y sm:border-x">
-        <DateRangePicker value={dates} onChange={setDates} maxNights={MAX_STAY_NIGHTS} look="bare" />
-      </div>
-
-      <div
-        className={clsx(
-          "flex items-center gap-2 rounded-full pe-2",
-          panel === "who" ? "bg-surface shadow-lift" : "hover:bg-surface-2",
-        )}
-      >
-        <button
-          type="button"
-          aria-expanded={panel === "who"}
-          onClick={() => setPanel(panel === "who" ? null : "who")}
-          className="flex min-w-0 flex-1 flex-col justify-center rounded-full px-6 py-3 text-start"
+        <label
+          className={clsx(
+            "flex min-w-0 cursor-text flex-col justify-center rounded-full px-6 py-3 transition-colors",
+            panel === "where" ? "bg-surface shadow-lift" : "hover:bg-surface-2",
+          )}
         >
-          <span className="text-xs font-bold">{t("who")}</span>
-          <span className="truncate text-sm">{t("guests", { count: guests })}</span>
-        </button>
-        <button
-          type="submit"
-          aria-label={t("submit")}
-          className="grid size-12 shrink-0 place-items-center rounded-full bg-accent text-accent-ink transition-colors hover:bg-accent-strong active:scale-95"
-        >
-          <Search className="size-[1.125rem]" strokeWidth={2.75} aria-hidden />
-        </button>
-      </div>
+          <span className="text-xs font-bold">{t("where")}</span>
+          <input
+            value={area}
+            onChange={(event) => setArea(event.target.value)}
+            onFocus={() => setPanel("where")}
+            placeholder={t("wherePlaceholder")}
+            maxLength={60}
+            className="w-full truncate bg-transparent text-sm outline-none placeholder:text-muted"
+          />
+        </label>
 
-      <AnimatePresence>
-        {panel && (
-          <motion.div
-            key={panel}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.16 }}
-            className="absolute inset-x-0 top-[calc(100%+0.75rem)] z-30 rounded-3xl bg-surface p-6 shadow-lift ring-1 ring-line sm:p-8"
+        <div className="border-line @max-lg:border-y @lg:border-x">
+          <DateRangePicker value={dates} onChange={setDates} maxNights={MAX_STAY_NIGHTS} look="bare" />
+        </div>
+
+        <div
+          className={clsx(
+            "flex items-center gap-2 rounded-full pe-2",
+            panel === "who" ? "bg-surface shadow-lift" : "hover:bg-surface-2",
+          )}
+        >
+          <button
+            type="button"
+            aria-expanded={panel === "who"}
+            onClick={() => setPanel(panel === "who" ? null : "who")}
+            className="flex min-w-0 flex-1 flex-col justify-center rounded-full px-6 py-3 text-start"
           >
-            {panel === "where" ? (
-              <div>
-                <p className="mb-4 text-sm font-semibold">{t("popular")}</p>
-                <div className="flex flex-wrap gap-2">
-                  {POPULAR_AREAS.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => {
-                        setArea(name);
-                        setPanel(null);
-                      }}
-                      className="rounded-full px-4 py-2 text-sm font-medium ring-1 ring-line-strong transition-colors hover:ring-ink"
-                    >
-                      {t(`areas.${name}`)}
-                    </button>
-                  ))}
+            <span className="text-xs font-bold">{t("who")}</span>
+            <span className="truncate text-sm">{t("guests", { count: guests })}</span>
+          </button>
+          <button
+            type="submit"
+            aria-label={t("submit")}
+            className="grid size-12 shrink-0 place-items-center rounded-full bg-accent text-accent-ink transition-colors hover:bg-accent-strong active:scale-95"
+          >
+            <Search className="size-[1.125rem]" strokeWidth={2.75} aria-hidden />
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {panel && (
+            <motion.div
+              key={panel}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.16 }}
+              className="absolute inset-x-0 top-[calc(100%+0.75rem)] z-30 rounded-3xl bg-surface p-6 shadow-lift ring-1 ring-line @lg:p-8"
+            >
+              {panel === "where" ? (
+                <div>
+                  <p className="mb-4 text-sm font-semibold">{t("popular")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {POPULAR_AREAS.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => {
+                          setArea(name);
+                          setPanel(null);
+                        }}
+                        className="rounded-full px-4 py-2 text-sm font-medium ring-1 ring-line-strong transition-colors hover:ring-ink"
+                      >
+                        {t(`areas.${name}`)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <GuestCounter value={guests} onChange={setGuests} max={MAX_GUESTS} hint={t("guestsHint")} />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </form>
+              ) : (
+                <GuestCounter value={guests} onChange={setGuests} max={MAX_GUESTS} hint={t("guestsHint")} />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </form>
+    </div>
   );
 }

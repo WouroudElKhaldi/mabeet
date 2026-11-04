@@ -1,3 +1,4 @@
+import { clsx } from "clsx";
 import { Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -57,8 +58,8 @@ export async function AiAppBand({ found }: { found: FoundPlace[] }) {
 
         {/* What the guest writes, as a postcard; what comes back, as tickets. */}
         <div className="relative text-ink">
-          <div className="relative -rotate-2 rounded-md bg-paper p-6 pe-24 shadow-[0_24px_40px_-18px_rgb(0_0_0/0.5)]">
-            <Postmark className="absolute end-4 top-4 size-16 rotate-12" />
+          <div className="relative -rotate-2 rounded-md bg-paper p-5 pe-18 shadow-[0_24px_40px_-18px_rgb(0_0_0/0.5)] sm:p-6 sm:pe-24">
+            <Postmark className="absolute end-3 top-3 size-12 rotate-12 sm:end-4 sm:top-4 sm:size-16" />
             <p className="text-[0.6875rem] font-bold tracking-[0.16em] text-muted uppercase">
               {t("postcard")}
             </p>
@@ -66,11 +67,11 @@ export async function AiAppBand({ found }: { found: FoundPlace[] }) {
           </div>
 
           {found.length > 0 && (
-            <ul className="relative mt-5 grid gap-3 ps-6 sm:ps-10">
+            <ul className="relative mt-5 grid gap-3 ps-2 sm:ps-10">
               {found.map((place, index) => (
                 <li
                   key={place.slug}
-                  className={index === 0 ? "rotate-1" : "-rotate-1"}
+                  className={clsx("min-w-0", index === 0 ? "rotate-1" : "-rotate-1")}
                   style={{ marginInlineStart: index * 12 }}
                 >
                   <Link

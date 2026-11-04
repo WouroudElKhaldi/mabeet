@@ -16,8 +16,8 @@ export async function SiteFooter() {
   const t = await getTranslations("footer");
   return (
     <footer className="mt-24 border-t border-line bg-surface-2">
-      <div className="mx-auto grid max-w-360 gap-10 px-4 py-14 sm:grid-cols-3 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-10">
-        <div className="max-w-sm sm:col-span-3 md:col-span-1">
+      <div className="mx-auto grid max-w-360 grid-cols-2 gap-x-6 gap-y-10 px-4 py-14 sm:grid-cols-3 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-10">
+        <div className="col-span-2 max-w-sm sm:col-span-3 md:col-span-1">
           <Wordmark />
           <p className="mt-4 text-sm leading-relaxed text-muted">{t("about")}</p>
         </div>

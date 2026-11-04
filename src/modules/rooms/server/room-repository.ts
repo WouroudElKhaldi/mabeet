@@ -1,16 +1,19 @@
 import type { PhotoArea, Prisma, RoomKind } from "@prisma/client";
-import type { Db, Tx } from "@/server/db/client";
+import { type Db, plainRows, type Tx } from "@/server/db/client";
 import { type DateRange, toIsoDate } from "@/utils/dates";
 
 // The calendar link's secret is only for the calendar's own routes, never in a room's ordinary read.
 const roomOmit = { exportToken: true, isDeleted: true } satisfies Prisma.RoomOmit;
 
-export function listRooms(db: Db, businessId: string) {
-  return db.room.findMany({
-    where: { businessId, isDeleted: false },
-    omit: roomOmit,
-    orderBy: { createdAt: "asc" },
-  });
+/** The rooms go to the room editor, a client component: as plain objects (`plainRows`). */
+export async function listRooms(db: Db, businessId: string) {
+  return plainRows(
+    await db.room.findMany({
+      where: { businessId, isDeleted: false },
+      omit: roomOmit,
+      orderBy: { createdAt: "asc" },
+    }),
+  );
 }
 
 export function findRoom(db: Db, businessId: string, roomId: string) {
@@ -128,10 +131,11 @@ const publicPhoto = {
 
 /**
  * A place's units guests can see, of one kind (its rooms, or its whole-place unit), with their photos. Never the
- * calendar export token: it is the room's private link to Airbnb and Booking.com.
+ * calendar export token: it is the room's private link to Airbnb and Booking.com. Plain objects (`plainRows`): the
+ * place page's booking box, a client component, gets them.
  */
-export function listPublicUnits(db: Db, businessId: string, kind: RoomKind) {
-  return db.room.findMany({
+export async function listPublicUnits(db: Db, businessId: string, kind: RoomKind) {
+  const units = await db.room.findMany({
     where: { businessId, kind, active: true, isDeleted: false },
     orderBy: { createdAt: "asc" },
     select: {
@@ -149,6 +153,7 @@ export function listPublicUnits(db: Db, businessId: string, kind: RoomKind) {
       photos: publicPhoto,
     },
   });
+  return plainRows(units);
 }
 
 /** The photos of the place itself (not of a room or an experience), in the host's order. */

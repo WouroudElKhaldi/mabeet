@@ -5,7 +5,8 @@
     "dashboard": "Dashboard",
     "signIn": "Sign in",
     "assistant": "Trip Assistant",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "menu": "Menu"
   },
   "footer": {
     "about": "Guesthouses, B&Bs and mountain cabins across Lebanon, booked straight from the people who run them.",
@@ -23,6 +24,7 @@
     "contact": "Contact us"
   },
   "appearance": {
+    "title": "Display and language",
     "language": "Language",
     "toDark": "Switch to dark mode",
     "toLight": "Switch to light mode",

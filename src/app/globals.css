@@ -298,6 +298,16 @@ body {
   font-family: var(--font-sans);
   font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
+  /* An email, a link or a name typed without spaces wraps instead of pushing a phone's page sideways. */
+  overflow-wrap: break-word;
+}
+
+/* A fieldset is as wide as its widest child by default (a select with a long option), which can push a form past a
+   phone's edge. In the base layer, so a width utility on one fieldset still wins. */
+@layer base {
+  fieldset {
+    min-width: 0;
+  }
 }
 
 ::selection {
@@ -316,7 +326,7 @@ h3,
 .font-display {
   font-family: var(--font-display);
   letter-spacing: -0.022em;
-  text-wrap: balance;
+  text-wrap-style: balance;
 }
 
 /* Brand classes live in the components layer, so Tailwind utilities can still override them. */
@@ -399,8 +409,10 @@ h2 em {
   color: var(--accent);
 }
 
+/* The style longhand, never the `text-wrap` shorthand: the shorthand also sets the wrap mode, and outside a layer it
+   would beat `truncate` on every paragraph and heading, wrapping text meant to stay on one line. */
 p {
-  text-wrap: pretty;
+  text-wrap-style: pretty;
 }
 
 [dir="rtl"] h1,
