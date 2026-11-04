@@ -294,7 +294,8 @@ A reboot needs nothing: Docker starts again by itself, and every service has `re
 
 **Visitors see "Back in a moment".** nginx is up but the website isn't answering (`deploy/nginx/maintenance.html`).
 During a deploy this lasts while the new version starts; the page reopens the site by itself. If it stays, the
-website stopped: look at `docker compose logs web` on the server.
+website stopped: look at `docker compose logs web` on the server. A page already open when the site restarts reloads itself once
+(`src/app/error.tsx`), so its visitor reaches this page too.
 
 **A release broke the live site.** Undo it with a pull request into `main` that reverts the release
 (`docs/team/README.md`, "Undoing a merged change"). Its merge deploys the previous code, rebuilt and checked like any
