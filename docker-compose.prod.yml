@@ -109,6 +109,8 @@ services:
       DOMAIN: ${DOMAIN:-}
     volumes:
       - ./deploy/nginx/${NGINX_SITE:-https}.conf.template:/etc/nginx/templates/default.conf.template:ro
+      # The page nginx shows while the website doesn't answer (https.conf.template's error_page).
+      - ./deploy/nginx/maintenance.html:/usr/share/nginx/html/maintenance.html:ro
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
     depends_on:

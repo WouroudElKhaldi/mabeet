@@ -292,6 +292,10 @@ A reboot needs nothing: Docker starts again by itself, and every service has `re
   server. Most often a setting is wrong: `src/server/env.ts` names the setting it refused. Fix it and run the deploy
   again, or revert the release (next point).
 
+**Visitors see "Back in a moment".** nginx is up but the website isn't answering (`deploy/nginx/maintenance.html`).
+During a deploy this lasts while the new version starts; the page reopens the site by itself. If it stays, the
+website stopped: look at `docker compose logs web` on the server.
+
 **A release broke the live site.** Undo it with a pull request into `main` that reverts the release
 (`docs/team/README.md`, "Undoing a merged change"). Its merge deploys the previous code, rebuilt and checked like any
 release.
@@ -334,11 +338,12 @@ Postgres and Redis with your `.env`. nginx and certbot do not start: they are on
 
 ## The files
 
-| File                                           | What it is                                                                                                   |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `.github/workflows/ci.yml`                     | The checks, and the `deploy` job                                                                             |
-| `Dockerfile`                                   | The one image: website, worker and migrations                                                                |
-| `docker-compose.prod.yml`                      | Every service on the server (and the production shape on your computer)                                      |
-| `deploy/remote-deploy.sh`                      | What each deploy runs on the server: pull, back up, migrate, the certificate (first deploy), start, clean up |
-| `deploy/nginx/https.conf.template`             | nginx: the website on `https://<DOMAIN>` only (nginx fills in `${DOMAIN}` when it starts)                    |
-| `deploy/nginx/certificate-check.conf.template` | nginx on the first deploy, while it gets the certificate                                                     |
+| File                                           | What it is                                                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.github/workflows/ci.yml`                     | The checks, and the `deploy` job                                                                                                                                         |
+| `Dockerfile`                                   | The one image: website, worker and migrations                                                                                                                            |
+| `docker-compose.prod.yml`                      | Every service on the server (and the production shape on your computer)                                                                                                  |
+| `deploy/remote-deploy.sh`                      | What each deploy runs on the server: pull, back up, migrate, the certificate (first deploy), start, clean up                                                             |
+| `deploy/nginx/https.conf.template`             | nginx: the website on `https://<DOMAIN>` only (nginx fills in `${DOMAIN}` when it starts)                                                                                |
+| `deploy/nginx/certificate-check.conf.template` | nginx on the first deploy, while it gets the certificate                                                                                                                 |
+| `deploy/nginx/maintenance.html`                | The Mabeet page nginx shows (as a 503) while the website doesn't answer: during a deploy, or after a crash. It checks every 15 seconds and opens the site when it's back |
