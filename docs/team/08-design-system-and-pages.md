@@ -528,7 +528,7 @@ Experiences and services have no tab yet: they come with their module (F8).
 
 **Built so far** (`src/modules/directory/components/`, the page is `src/app/(site)/p/[slug]/page.tsx` with its `loading.tsx`):
 `PlaceView` puts the page together from a `PublicPlace` (`types.ts`); it is made of `PlaceHeader`,
-`PhotoGallery` (one large and four small photos, the large one alone on a phone, "Show all photos" in a dialog, a drawn
+`PhotoGallery` (one large and four small photos, the large one alone on a phone or with fewer than five photos, "Show all photos" in a dialog, a drawn
 postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the rooms of a place booked whole shown
 without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
 `ThingsToKnow` and `BookingBox`. Not built yet: reviews, the map, "Meet your host", the photo tour, share and

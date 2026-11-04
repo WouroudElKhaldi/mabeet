@@ -35,8 +35,8 @@ function Photo({
 }
 
 /**
- * The place's photos: one large and four small on a wide screen, the large one alone on a phone, and "Show all
- * photos" for the rest. A place without photos gets a drawn postcard, never an empty space.
+ * The place's photos: one large and four small on a wide screen, the large one alone on a phone or with fewer than
+ * five photos, and "Show all photos" for the rest. A place without photos gets a drawn postcard, never an empty space.
  */
 export async function PhotoGallery({ name, photos }: { name: string; photos: readonly PublicPhoto[] }) {
   const t = await getTranslations("placePage");
@@ -48,7 +48,8 @@ export async function PhotoGallery({ name, photos }: { name: string; photos: rea
       </div>
     );
   }
-  const small = rest.slice(0, MOSAIC_PHOTOS - 1);
+  // The mosaic needs all its small photos: with fewer it would have holes, so the large one stands alone.
+  const small = rest.length >= MOSAIC_PHOTOS - 1 ? rest.slice(0, MOSAIC_PHOTOS - 1) : [];
   return (
     <div className="mt-6">
       <div
