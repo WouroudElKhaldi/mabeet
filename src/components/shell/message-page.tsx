@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import type { ReactNode } from "react";
 import { HeroLandscape } from "@/components/site/hero-landscape";
 import { Wordmark } from "@/components/site/wordmark";
@@ -7,12 +8,16 @@ import { stagger } from "@/utils/motion";
  * A whole page that says one thing and offers a way on: page not found, something went wrong, you're offline.
  * Mount Lebanon at dusk fills the screen, the wordmark sits in the corner, and `mark` (the big "404", or an icon)
  * stands above the title in the accent. It has no site header, so it also works when the layout itself failed.
+ *
+ * `framed`: shown inside the site's or the dashboard's frame (a "not found" from one of their pages), which already has
+ * the header, the wordmark and the page's <main>: no second wordmark, no second <main>, and only the height under it.
  */
 export function MessagePage({
   mark,
   title,
   body,
   footnote,
+  framed = false,
   children,
 }: {
   mark?: ReactNode;
@@ -20,17 +25,24 @@ export function MessagePage({
   body: string;
   /** Small print under the actions, such as the reference of an error to quote when writing to us. */
   footnote?: string;
+  framed?: boolean;
   children?: ReactNode;
 }) {
+  const Root = framed ? "section" : "main";
   return (
-    <main
-      id="main"
-      className="relative grid min-h-dvh place-items-center overflow-hidden px-6 py-24 text-center"
+    <Root
+      id={framed ? undefined : "main"}
+      className={clsx(
+        "relative grid place-items-center overflow-hidden px-6 text-center",
+        framed ? "min-h-[70dvh] py-16" : "min-h-dvh py-24",
+      )}
     >
       <HeroLandscape />
-      <div className="absolute start-6 top-6">
-        <Wordmark />
-      </div>
+      {framed ? null : (
+        <div className="absolute start-6 top-6">
+          <Wordmark />
+        </div>
+      )}
       <div className="relative max-w-xl">
         {mark ? (
           <div className="rise-in flex justify-center font-display text-[clamp(5rem,18vw,11rem)] leading-none font-bold tracking-tighter text-accent">
@@ -54,6 +66,6 @@ export function MessagePage({
           </p>
         ) : null}
       </div>
-    </main>
+    </Root>
   );
 }

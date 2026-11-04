@@ -84,6 +84,18 @@ describe("Whish Pay client", () => {
     await expect(getWhishStatus("pay_1", "USD")).rejects.toMatchObject({ code: "UNAVAILABLE" });
   });
 
+  it("reads a payment Whish doesn't know yet as not paid, without an error", async () => {
+    // The booking page checks its pending payment while the guest is still being sent to Whish: the payment is ours
+    // already, but Whish opens it a moment later.
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => envelope(null, false, "external_id.not_exists")),
+    );
+    expect(await getWhishStatus("pay_1", "USD")).toEqual({ status: "unknown", payerPhone: null });
+    expect(logged).not.toHaveBeenCalled();
+  });
+
   it("answers a network failure or a timeout with a calm 503", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubGlobal(
