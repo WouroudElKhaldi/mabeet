@@ -67,8 +67,9 @@ export default async function HomePage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* The window leans with the mouse, its hills slide by depth, and the postmark is stamped in front. */}
-        <BrandScene className="mx-auto hidden w-full max-w-xl pb-16 lg:block">
+        {/* The window leans with the mouse, its hills slide by depth, and the postmark is stamped in front. The pass is
+            taller than the window on a laptop and rises above it: the top padding keeps it clear of the header. */}
+        <BrandScene className="mx-auto hidden w-full max-w-xl pt-44 pb-16 lg:block xl:pt-32">
           <SceneLayer enter="rise">
             <ArchWindow
               photos={places.slice(0, 3).map((place) => place.photo)}
@@ -81,7 +82,11 @@ export default async function HomePage({ searchParams }: PageProps) {
             <Postmark className="size-full rotate-12" spin />
           </SceneLayer>
           {featured ? (
-            <SceneLayer depth={60} enter="drop" className="absolute -start-24 bottom-0 w-64 -rotate-3">
+            <SceneLayer
+              depth={60}
+              enter="drop"
+              className="absolute -start-10 bottom-0 w-64 -rotate-3 2xl:-start-24"
+            >
               <BoardingPass
                 kicker={t("pass.kicker")}
                 title={featured.name}
