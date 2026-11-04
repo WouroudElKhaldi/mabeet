@@ -7,9 +7,11 @@ import {
   Compass,
   CreditCard,
   Home,
+  Info,
   KeyRound,
   LayoutDashboard,
   Link2,
+  MessageCircle,
   Search,
   Settings,
   Sparkles,
@@ -42,6 +44,8 @@ export const NAV_ICONS = {
   notifications: Bell,
   explore: Search,
   pricing: Tag,
+  about: Info,
+  contact: MessageCircle,
 };
 
 export type NavIconName = keyof typeof NAV_ICONS;
