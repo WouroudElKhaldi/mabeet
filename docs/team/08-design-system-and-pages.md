@@ -675,6 +675,10 @@ Not found, the error page and `/offline` are one design, `MessagePage` (`shell/m
 filling the screen, the wordmark in the corner, a big mark in the accent, the title, one line and the actions.
 
 - Not found (`src/app/not-found.tsx`): the mark is "404"; "Back home".
+- A "not found" from a public or dashboard page (a place no longer listed, someone else's booking, a page the member may
+  not open) shows inside that frame: `src/app/(site)/not-found.tsx` and `src/app/dashboard/[businessId]/not-found.tsx`
+  use `MessagePage framed`, which leaves out its own wordmark and `<main>` (the frame has them). The dashboard's goes
+  back to `/dashboard`.
 - Error (`error.tsx`): a floating storm cloud; "Try again" and "Back home"; under them the error's reference (its
   digest), to quote when writing to us.
 - `/offline`: a floating Wi-Fi-off icon; "Try again" is a plain link that reloads the address. The service worker
