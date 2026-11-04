@@ -463,10 +463,10 @@ The header's end side: "Become a host", the appearance menu, then the account av
 works in a place (owner, admin or staff), "Become a host" gives way to **Dashboard** (`/dashboard`, which opens the one
 place or all of them), shown on a phone as its icon alone.
 
-Below `md:` the header has no room for its links: a menu button (`SiteMenu`, `src/components/site/site-menu.tsx`) at
+The header's links are Explore, Trip Assistant, Pricing, About us and Contact us. Below `xl:` (1280px) the header has no room for them: a menu button (`SiteMenu`, `src/components/site/site-menu.tsx`) at
 the end opens a drawer from the start side (`SheetDialog placement="start"` with `NavLinks`, as the dashboard's phone
 menu), with the pages grouped like the footer (Guests: Explore, Trip Assistant; Hosts: Become a host or Dashboard,
-Pricing) and light/dark and the language, which leave the header on a phone to make room for the button.
+Pricing; Mabeet: About us, Contact us) and light/dark and the language, which leave the header on a phone to make room for the button.
 
 #### `/` Home (F1)
 

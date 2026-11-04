@@ -868,7 +868,11 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   once. Housekeeping re-checks pending Whish plan payments from the last day whose callback never came, and puts a
   business whose Whish month ran out back on Free.
 - **Simulator:** with `WHISH_MODE=simulator` the Whish client talks to `/api/whish-simulator/*` inside the app
-  (Whish v1.4.4). Phone 96170123456 and code 111111 pay; any other code is a failed attempt.
+  (Whish v1.4.4). Phone 96170123456 and code 111111 pay; any other code is a failed attempt. Its API (create,
+  status, refund) answers only this server's own client: the `secret` header must be `simulatorSecret()`, made from
+  `BETTER_AUTH_SECRET`, so nobody outside can create, read or refund simulated payments. The payment page stays public.
+  Anyone can still "pay" with the test code, so the simulator, like Stripe's test mode, must give way to the real keys
+  before the site takes real bookings.
 
 ### B. Bookings: the statuses
 

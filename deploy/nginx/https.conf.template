@@ -77,6 +77,17 @@ server {
     ssl_session_timeout 1d;
     ssl_session_tickets off;
 
+    # The website not answering (a deploy starting the new version, or a crash): nginx's own Mabeet page, which checks
+    # by itself when the site is back, instead of a bare "502 Bad Gateway". 503 with Retry-After tells search engines
+    # and apps it's temporary.
+    error_page 502 503 504 =503 /maintenance.html;
+    location = /maintenance.html {
+        root /usr/share/nginx/html;
+        internal;
+        add_header Cache-Control "no-store" always;
+        add_header Retry-After "30" always;
+    }
+
     location / {
         proxy_pass $website;
         proxy_http_version 1.1;

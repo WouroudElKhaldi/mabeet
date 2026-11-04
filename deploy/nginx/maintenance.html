@@ -1,0 +1,234 @@
+<!doctype html>
+<!--
+  Shown by nginx itself when the website doesn't answer (502, 503, 504): during a deploy, while the new version starts,
+  or if it stopped. The website can't draw anything then, so this page needs nothing from it: its styles are inline,
+  in the Cedar palette's values (the site's tokens live in its own CSS, which isn't reachable now), and it checks every
+  15 seconds whether the site is back.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Mabeet · Back in a moment</title>
+    <style>
+      :root {
+        --paper: #fbf8f1;
+        --surface: #ffffff;
+        --ink: #1d2a24;
+        --muted: #5f6b64;
+        --line: #e7e0d2;
+        --accent: #1f5c44;
+        --accent-ink: #ffffff;
+        --glow: #b8893b;
+        --hill: #dfe7e2;
+        --hill-2: #c9d8cf;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #0e1512;
+          --surface: #151e1a;
+          --ink: #f1efe8;
+          --muted: #a8b1ab;
+          --line: #26332d;
+          --accent: #5fbf94;
+          --accent-ink: #07140e;
+          --glow: #d8a856;
+          --hill: #18231e;
+          --hill-2: #1f2d26;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+      body {
+        display: grid;
+        min-height: 100dvh;
+        place-items: center;
+        overflow: hidden;
+        padding: 96px 24px;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          16px/1.6 system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Noto Sans Arabic",
+          Tahoma,
+          sans-serif;
+        text-align: center;
+      }
+      .land {
+        position: fixed;
+        inset: auto 0 0 0;
+        width: 100%;
+        height: 45vh;
+        z-index: 0;
+      }
+      .sun {
+        position: fixed;
+        top: 18vh;
+        inset-inline-end: 12vw;
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        background: var(--glow);
+        opacity: 0.25;
+        animation: breathe 6s ease-in-out infinite;
+      }
+      .logo {
+        position: fixed;
+        top: 24px;
+        inset-inline-start: 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--accent);
+        font-weight: 800;
+        font-size: 22px;
+        letter-spacing: -0.02em;
+        direction: ltr;
+      }
+      main {
+        position: relative;
+        z-index: 1;
+        max-width: 560px;
+      }
+      .arch {
+        width: 84px;
+        height: 104px;
+        margin: 0 auto 28px;
+        color: var(--accent);
+        animation: rise 0.8s cubic-bezier(0.2, 0, 0, 1) both;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 6vw, 40px);
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 12px auto 0;
+        max-width: 440px;
+        color: var(--muted);
+      }
+      .ar {
+        margin-top: 28px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+      }
+      .ar h2 {
+        margin: 0;
+        font-size: 24px;
+      }
+      button {
+        margin-top: 28px;
+        height: 48px;
+        padding: 0 24px;
+        border: 0;
+        border-radius: 16px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+      .status {
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+      }
+      @keyframes breathe {
+        50% {
+          transform: scale(1.06);
+        }
+      }
+      @media (max-width: 600px) {
+        .sun {
+          top: 72px;
+          inset-inline-end: -40px;
+          width: 110px;
+          height: 110px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .arch,
+        .sun {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="logo" aria-label="Mabeet">
+      <svg width="26" height="32" viewBox="0 0 26 32" aria-hidden="true">
+        <path d="M2 32V13a11 11 0 0 1 22 0v19h-5V13a6 6 0 0 0-12 0v19z" fill="currentColor" />
+      </svg>
+      Mabeet
+    </div>
+    <div class="sun" aria-hidden="true"></div>
+    <svg class="land" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 140 C 200 80 360 90 520 130 S 860 190 1200 110 V300 H0z" fill="var(--hill)" />
+      <path d="M0 210 C 240 160 420 180 640 210 S 980 250 1200 200 V300 H0z" fill="var(--hill-2)" />
+    </svg>
+
+    <main>
+      <svg class="arch" viewBox="0 0 84 104" aria-hidden="true">
+        <path d="M6 104V42a36 36 0 0 1 72 0v62h-14V42a22 22 0 0 0-44 0v62z" fill="currentColor" />
+        <path d="M20 104V70l22-18 22 18v34z" fill="currentColor" opacity="0.35" />
+      </svg>
+      <h1>Back in a moment</h1>
+      <p>
+        We're updating Mabeet. Your bookings and payments are safe. This page checks by itself and opens the
+        site as soon as it's back.
+      </p>
+
+      <div class="ar" lang="ar" dir="rtl">
+        <h2>نعود خلال لحظات</h2>
+        <p>نحدّث مبيت الآن. حجوزاتك ودفعاتك بأمان. تتحقق هذه الصفحة تلقائيًا وتفتح الموقع فور عودته.</p>
+      </div>
+
+      <button type="button" onclick="location.reload()">Try again · حاول مجددًا</button>
+      <p class="status" role="status" id="status">Checking again in 15 seconds…</p>
+    </main>
+
+    <script>
+      // Every 15 seconds, ask the site's home page; as soon as it answers, reload this address.
+      (function () {
+        var status = document.getElementById("status");
+        var seconds = 15;
+        setInterval(function () {
+          seconds -= 1;
+          if (seconds > 0) {
+            status.textContent = "Checking again in " + seconds + " seconds…";
+            return;
+          }
+          seconds = 15;
+          status.textContent = "Checking…";
+          fetch("/", { method: "HEAD", cache: "no-store" })
+            .then(function (response) {
+              if (response.ok) location.reload();
+            })
+            .catch(function () {});
+        }, 1000);
+      })();
+    </script>
+  </body>
+</html>
