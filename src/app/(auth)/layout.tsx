@@ -8,18 +8,25 @@ import { BrandScene, SceneLayer, Sheen } from "@/components/brand/brand-scene";
 import { BackLink } from "@/components/shell/back-link";
 import { Wordmark } from "@/components/site/wordmark";
 import { AppearanceMenu } from "@/components/theme/appearance-menu";
+import { searchPlaces } from "@/modules/directory/server";
 import { stagger } from "@/utils/motion";
 
+/** The arches of the window beside the form. */
+const WINDOW_PANES = 3;
+
 /**
- * Form on one side; on the other, the brand: the triple-arch window and a boarding pass. The window shows generated
- * art until the public pages (the directory) can fill it with real places' photos.
+ * Form on one side; on the other, the brand: the triple-arch window and a boarding pass. The window shows listed
+ * places' photos, and generated art for as long as there are too few of them.
  *
  * On a laptop the page is exactly the window's height and never scrolls: on a short window (`short:`) the spacing
  * tightens, and the back link and the three reasons step aside (the wordmark and the brand panel say the same). Only
  * on a window shorter still does the form's own column scroll.
  */
 export default async function AuthLayout({ children }: { children: ReactNode }) {
-  const t = await getTranslations("auth.panel");
+  const [t, places] = await Promise.all([
+    getTranslations("auth.panel"),
+    searchPlaces({ guests: 1, limit: WINDOW_PANES }),
+  ]);
   const trust = [
     { icon: BadgePercent, text: t("trust1") },
     { icon: HandCoins, text: t("trust2") },
@@ -63,7 +70,11 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
         {/* A small 3D scene: the window at the back, the pass floating in front of it. */}
         <BrandScene className="mt-auto pt-10">
           <SceneLayer enter="rise" className="flex items-end">
-            <ArchWindow photos={[]} seed="auth" className="w-[66%] [&>div]:ring-accent-ink/90" />
+            <ArchWindow
+              photos={places.map((place) => place.photo)}
+              seed="auth"
+              className="w-[66%] [&>div]:ring-accent-ink/90"
+            />
           </SceneLayer>
           <SceneLayer
             depth={90}
