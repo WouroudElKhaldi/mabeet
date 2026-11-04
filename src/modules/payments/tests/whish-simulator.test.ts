@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/server/env", () => ({
-  env: { WHISH_MODE: "simulator", BETTER_AUTH_URL: "https://mabeet.example" },
+  env: {
+    WHISH_MODE: "simulator",
+    BETTER_AUTH_URL: "https://mabeet.example",
+    BETTER_AUTH_SECRET: "a-test-secret-that-is-at-least-32-characters",
+  },
 }));
 const { saved, findByCode } = vi.hoisted(() => ({ saved: vi.fn(), findByCode: vi.fn() }));
 vi.mock("../server/whish-simulator-repository", () => ({
@@ -9,7 +13,9 @@ vi.mock("../server/whish-simulator-repository", () => ({
   findSimulatedPaymentByCode: findByCode,
 }));
 
-const { createSimulatedPayment, getPayPage } = await import("../server/whish-simulator-service");
+const { createSimulatedPayment, fromOurWhishClient, getPayPage } =
+  await import("../server/whish-simulator-service");
+const { simulatorSecret } = await import("../server/whish");
 
 const body = {
   amount: "10.00",
@@ -22,6 +28,15 @@ const body = {
 };
 
 describe("the Whish simulator", () => {
+  it("answers only this server's own Whish client, never someone who copied the headers from the code", () => {
+    const headers = (secret: string) =>
+      new Headers({ channel: "simulator", secret, websiteUrl: "https://x" });
+    expect(fromOurWhishClient(headers(simulatorSecret()))).toBe(true);
+    expect(fromOurWhishClient(headers("simulator"))).toBe(false);
+    expect(fromOurWhishClient(headers(""))).toBe(false);
+    expect(fromOurWhishClient(new Headers())).toBe(false);
+  });
+
   it("only calls back and redirects to this site, so nobody can make our server fetch their address", async () => {
     for (const field of ["successCallbackUrl", "failureCallbackUrl", "successRedirectUrl"] as const) {
       const answer = await createSimulatedPayment({ ...body, [field]: "http://169.254.169.254/latest" });

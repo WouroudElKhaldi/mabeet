@@ -1,9 +1,10 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { z } from "zod";
 import { prisma } from "@/server/db/client";
 import { env } from "@/server/env";
 import { notFound } from "@/server/errors";
 import type { whishCreateBody } from "../schemas";
+import { simulatorSecret } from "./whish";
 import * as simulator from "./whish-simulator-repository";
 
 // A stand-in for Whish Pay while Mabeet has no Whish keys (WHISH_MODE=simulator). It speaks the same API as
@@ -49,9 +50,18 @@ function assertOn(): void {
   if (env.WHISH_MODE !== "simulator") throw notFound("Page");
 }
 
-/** Whish rejects requests without its headers; the simulator does too. */
-export function hasWhishHeaders(headers: Headers): boolean {
-  return Boolean(headers.get("channel") && headers.get("secret") && headers.get("websiteUrl"));
+/**
+ * Whish rejects requests without its headers and the merchant's secret; the simulator only answers this server's own
+ * client, which sends the secret only this server can make (`simulatorSecret`). Compared in constant time.
+ */
+export function fromOurWhishClient(headers: Headers): boolean {
+  const presented = Buffer.from(headers.get("secret") ?? "");
+  const expected = Buffer.from(simulatorSecret());
+  return (
+    Boolean(headers.get("channel") && headers.get("websiteUrl")) &&
+    presented.length === expected.length &&
+    timingSafeEqual(presented, expected)
+  );
 }
 
 const payPageUrl = (code: string) => new URL(`/whish-simulator/pay/${code}`, env.BETTER_AUTH_URL).toString();

@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { z } from "zod";
 import { env } from "@/server/env";
 import { unavailable } from "@/server/errors";
@@ -17,6 +18,15 @@ const TIMEOUT_MS = 20_000;
 function baseUrl(): string {
   if (env.WHISH_MODE === "simulator") return new URL("/api/whish-simulator", env.BETTER_AUTH_URL).toString();
   return BASE_URLS[env.WHISH_MODE];
+}
+
+/**
+ * In simulator mode this server is both the Whish client and the Whish it calls. Their shared secret comes from the
+ * server's own secret, so nobody outside can call the simulator's API (the "simulator" default anyone can read in
+ * this code would let them create, read and refund simulated payments).
+ */
+export function simulatorSecret(): string {
+  return createHmac("sha256", env.BETTER_AUTH_SECRET).update("whish-simulator").digest("hex");
 }
 
 export function whishEnabled(): boolean {
@@ -46,7 +56,7 @@ async function call(path: string, body: unknown, expected: readonly string[] = [
     signal: AbortSignal.timeout(TIMEOUT_MS),
     headers: {
       channel: env.WHISH_CHANNEL ?? "simulator",
-      secret: env.WHISH_SECRET ?? "simulator",
+      secret: env.WHISH_MODE === "simulator" ? simulatorSecret() : (env.WHISH_SECRET ?? ""),
       websiteUrl: env.WHISH_WEBSITE_URL ?? env.BETTER_AUTH_URL,
       "User-Agent": `Mabeet/1.0 (${env.BETTER_AUTH_URL}; ${env.VAPID_SUBJECT.replace("mailto:", "")})`,
       "content-type": "application/json",

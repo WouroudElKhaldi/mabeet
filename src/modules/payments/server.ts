@@ -23,7 +23,7 @@ export {
 export {
   createSimulatedPayment,
   getPayPage,
-  hasWhishHeaders,
+  fromOurWhishClient,
   paySimulatedPayment,
   readSimulatedStatus,
   refundSimulatedPayment,
