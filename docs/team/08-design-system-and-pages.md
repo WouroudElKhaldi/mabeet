@@ -489,8 +489,9 @@ grid, with `variant` "home" (a short row and "See all") or "search" (its own sea
 `CategoryBar` (icons from `src/config/category-icons.ts`, in a `ScrollRail` from `components/ui`), `FiltersDialog`,
 `PlaceCard` (photo, first category, town, the stay's total with dates or the night's price without) and
 `ResultsGrid`. `SearchBar` (`components/site`) is the pill: where (popular towns under it), when (the
-`DateRangePicker` in its `bare` look) and guests (a `GuestCounter` under it), then the round search button; on a
-phone its parts stack in one card. Every link is built by `searchHref` (`src/lib/search-url.ts`) and read back by
+`DateRangePicker` in its `bare` look) and guests (a `GuestCounter` under it), then the round search button; when the
+bar itself is narrower than 32rem (a phone, or the home hero's column on a small laptop: a container query) its parts
+stack in one card. Every link is built by `searchHref` (`src/lib/search-url.ts`) and read back by
 `searchParams` (`directory/schemas.ts`). The home page's bands are `DirectReceipts` and `AiAppBand`
 (`components/brand`: the sample postcard, the places a real search for it finds, and a button to `/assistant`).
 Experiences and services have no tab yet: they come with their module (F8).
