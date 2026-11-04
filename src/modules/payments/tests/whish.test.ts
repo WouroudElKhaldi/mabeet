@@ -6,11 +6,13 @@ const env = vi.hoisted(() => ({
   WHISH_SECRET: "secret-1" as string | undefined,
   WHISH_WEBSITE_URL: "https://mabeet.example" as string | undefined,
   BETTER_AUTH_URL: "https://mabeet.example",
+  BETTER_AUTH_SECRET: "a-test-secret-that-is-at-least-32-characters",
   VAPID_SUBJECT: "mailto:hello@mabeet.example",
 }));
 vi.mock("@/server/env", () => ({ env }));
 
-const { createWhishPayment, getWhishStatus, whishAmount, whishEnabled } = await import("../server/whish");
+const { createWhishPayment, getWhishStatus, simulatorSecret, whishAmount, whishEnabled } =
+  await import("../server/whish");
 
 const envelope = (data: unknown, status = true, code: string | null = null) =>
   new Response(JSON.stringify({ status, code, dialog: null, actions: null, extra: null, data }), {
@@ -113,7 +115,11 @@ describe("Whish Pay client", () => {
     vi.stubGlobal("fetch", fetchMock);
     expect(whishEnabled()).toBe(true);
     await createWhishPayment(payment);
-    expect(fetchMock.mock.calls[0]![0]).toBe("https://mabeet.example/api/whish-simulator/payment/whish");
+    const [called, init] = fetchMock.mock.calls[0]!;
+    expect(called).toBe("https://mabeet.example/api/whish-simulator/payment/whish");
+    // The secret only this server can make, never the "simulator" anyone can read in the code.
+    expect(init.headers).toMatchObject({ secret: simulatorSecret() });
+    expect(simulatorSecret()).not.toBe("simulator");
   });
 
   it("is off, and refuses to call anything, in sandbox mode without the keys", async () => {

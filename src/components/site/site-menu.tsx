@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { SheetDialog } from "@/components/ui/sheet-dialog";
 
 /**
- * The site header's pages on a phone, where the header has no room for them: a menu button opening a drawer from the
- * start side with the same pages, and light/dark and the language, which leave the header to make that room.
+ * The site header's pages on a phone, a tablet or a small laptop (below xl), where the header has no room for them: a
+ * menu button opening a drawer from the start side with the same pages, and light/dark and the language, which leave
+ * the header to make that room.
  */
 export function SiteMenu({ nav, title }: { nav: NavGroup[]; title: string }) {
   const t = useTranslations("shell");
@@ -22,7 +23,7 @@ export function SiteMenu({ nav, title }: { nav: NavGroup[]; title: string }) {
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden"
+        className="xl:hidden"
         aria-label={t("menu")}
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
