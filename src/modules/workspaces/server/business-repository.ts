@@ -240,7 +240,12 @@ export function listPlatformBusinesses(db: Db, take: number) {
       plan: true,
       createdAt: true,
       memberships: {
-        where: { status: "ACTIVE", role: { isOwner: true } },
+        where: {
+          status: "ACTIVE",
+          isDeleted: false,
+          role: { isOwner: true, isDeleted: false },
+          user: { isDeleted: false },
+        },
         select: { user: { select: { id: true, name: true, email: true, phone: true } } },
       },
       _count: { select: { rooms: { where: { isDeleted: false } }, bookings: true } },
