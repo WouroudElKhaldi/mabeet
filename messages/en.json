@@ -1009,6 +1009,13 @@
         "REQUESTED": "Requested",
         "PAID": "Sent",
         "REJECTED": "Refused"
+      },
+      "errors": {
+        "amount": "Enter an amount up to what is available.",
+        "accountName": "Enter the account holder's full name.",
+        "whishPhone": "Enter the Whish number with its country code, like +96170123456.",
+        "bankName": "Enter the bank's name.",
+        "iban": "Check the IBAN: it starts with two letters, like LB62."
       }
     },
     "navGroups": {

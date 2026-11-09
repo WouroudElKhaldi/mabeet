@@ -1258,6 +1258,10 @@ Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `send
 - **Platform admins** reach `/api/admin/**` through `adminRoute(paramsSchema, handler)` (`src/server/http/route.ts`),
   which reads the person's role from the database and answers 404 to anyone else. Services take a `PlatformActor`
   and call `requirePlatformAdmin`; what they do is logged with `recordPlatformAction`, under the admin's name.
+- **The screen** is `/dashboard/{id}/payouts`: the balances per currency, `PayoutRequestForm` (from `payments`, filled
+  with the details used last time) and the payouts and online payments. Its menu line is `ownerOnly` in
+  `src/components/dashboard/nav-items.ts`, so a member whose role holds every permission still never sees it, and the
+  page answers 404 to anyone but an owner.
 
 ### N. Near your stay (things to do nearby)
 

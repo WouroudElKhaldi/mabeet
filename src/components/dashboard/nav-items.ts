@@ -19,6 +19,8 @@ interface DashboardPage {
   anyOf: readonly Permission[];
   /** Also in the bar at the bottom of a phone. */
   tab?: boolean;
+  /** Money that belongs to the business: owners only, whatever their role says. The page checks `ctx.isOwner`. */
+  ownerOnly?: boolean;
 }
 
 export const DASHBOARD_PAGES = {
@@ -36,6 +38,7 @@ export const DASHBOARD_PAGES = {
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
   settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
   analytics: { group: "money", path: "analytics", icon: "analytics", anyOf: ["analytics.read"] },
+  payouts: { group: "money", path: "payouts", icon: "payouts", anyOf: [], ownerOnly: true },
   team: { group: "team", path: "team", icon: "team", anyOf: ["team.manage", "roles.manage"] },
   keys: { group: "ai", path: "keys", icon: "keys", anyOf: ["ai.use"] },
 } as const satisfies Partial<Record<NavLabel, DashboardPage>>;
@@ -64,7 +67,11 @@ export function dashboardNav(ctx: TenantContext): DashboardNavGroup[] {
     group,
     items: names
       .map((name) => ({ name, page: DASHBOARD_PAGES[name] as DashboardPage }))
-      .filter(({ page }) => page.group === group && page.anyOf.some((permission) => can(ctx, permission)))
+      .filter(
+        ({ page }) =>
+          page.group === group &&
+          (page.ownerOnly ? ctx.isOwner : page.anyOf.some((permission) => can(ctx, permission))),
+      )
       .map(({ name, page }) => ({
         href: page.path ? `/dashboard/${ctx.businessId}/${page.path}` : `/dashboard/${ctx.businessId}`,
         label: name,
