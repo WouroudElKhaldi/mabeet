@@ -1,3 +1,4 @@
+import type { HostContact } from "@prisma/client";
 import type { Db } from "@/server/db/client";
 
 /**
@@ -93,5 +94,40 @@ export function findHostForAdmin(db: Db, userId: string) {
         },
       },
     },
+  });
+}
+
+const OWN_PROFILE = {
+  displayName: true,
+  bio: true,
+  city: true,
+  languages: true,
+  hostingSince: true,
+  showOnListings: true,
+  contactBy: true,
+} as const;
+
+/** The person's own host profile, to edit. Null when they never saved one. */
+export function findOwnHostProfile(db: Db, userId: string) {
+  return db.hostProfile.findFirst({ where: { userId, isDeleted: false }, select: OWN_PROFILE });
+}
+
+export interface HostProfileFields {
+  displayName: string | null;
+  bio: string | null;
+  city: string | null;
+  languages: string[];
+  hostingSince: number | null;
+  showOnListings: boolean;
+  contactBy: HostContact;
+}
+
+/** Saves the profile on its key, the person: a first save creates it, and a deleted one comes back. */
+export function saveHostProfile(db: Db, userId: string, fields: HostProfileFields) {
+  return db.hostProfile.upsert({
+    where: { userId },
+    create: { userId, ...fields },
+    update: { ...fields, isDeleted: false },
+    select: OWN_PROFILE,
   });
 }

@@ -30,7 +30,7 @@ export const ACCESSIBILITY = [
  * Languages a host says they speak, on their profile and on their places' pages. Keys, like every list here; the
  * names are in `listing.languages` in the message files.
  */
-const LANGUAGES = ["ar", "en", "fr"] as const;
+export const LANGUAGES = ["ar", "en", "fr"] as const;
 
 export type Language = (typeof LANGUAGES)[number];
 
