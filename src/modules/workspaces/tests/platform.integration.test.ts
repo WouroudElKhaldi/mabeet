@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveContext } from "@/server/auth/resolve-context";
 import { createPlace, createPlatformAdmin, prisma } from "@tests/integration/helpers";
-import { getPublicPlace, listPlatformBusinesses, setBusinessStatus } from "../server";
+import { getPlatformHost, getPublicPlace, listPlatformBusinesses, setBusinessStatus } from "../server";
 
 // A platform admin suspends a business: it disappears for guests and its team at once, comes back when reactivated,
 // and both are logged under the admin's name. Nobody else can do it.
@@ -37,5 +37,19 @@ describe("suspending a business", () => {
     await expect(setBusinessStatus(admin, "missing", "SUSPENDED")).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
+  });
+});
+
+describe("one host for the admin", () => {
+  it("shows their businesses and their profile even when it is private, and 404 for someone who owns nothing", async () => {
+    const place = await createPlace();
+    await prisma.hostProfile.create({
+      data: { userId: place.owner.id, city: "Batroun", languages: ["ar", "fr"], showOnListings: false },
+    });
+    const admin = await createPlatformAdmin();
+    const host = await getPlatformHost(admin, place.owner.id);
+    expect(host.profile).toMatchObject({ city: "Batroun", showOnListings: false });
+    expect(host.businesses).toEqual([expect.objectContaining({ id: place.business.id, teamCount: 1 })]);
+    await expect(getPlatformHost(admin, admin.userId)).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
