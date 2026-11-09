@@ -10,16 +10,18 @@ import { notifyHostMessage } from "./directory-notifications";
 // who can decide the place's bookings, and they reply straight to the guest.
 
 /**
- * Sends a guest's question to the place's hosts. Refused when the host takes questions on WhatsApp only. The email
- * is a job: a mail outage does not fail the guest's request, and the worker retries it.
+ * Sends a guest's question to the place's hosts. Refused when the host takes questions on WhatsApp only and the
+ * place has a number for it. The email is a job: a mail outage does not fail the guest's request, and the worker
+ * retries it.
  */
 export async function sendHostMessage(slug: string, input: HostMessage, locale: Locale): Promise<void> {
   const place = await getPublicPlace(slug);
   if (!place) throw notFound("Place");
   const host = await getHostSection(place.id);
-  if (!acceptsMessages(host.contactBy)) throw forbidden("This host answers on WhatsApp only");
+  if (!acceptsMessages(host.contactBy, place.whatsapp)) throw forbidden("This host answers on WhatsApp only");
   notifyHostMessage({
     businessId: place.id,
+    slug: place.slug,
     placeName: place.name,
     ...input,
     locale,

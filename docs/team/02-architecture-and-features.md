@@ -1067,15 +1067,17 @@ sign-in: many guests ask before they have an account). `hostMessage` in `src/mod
 after check-in, or not at all). The route allows five questions an hour per address, counted across all places, so
 nobody can flood the hosts' inboxes. `sendHostMessage` (`directory/server/contact-host-service.ts`) refuses with 404
 for a place that is unknown, paused or deleted, and with 403 when the host takes questions on WhatsApp only
-(`HostProfile.contactBy`); otherwise it queues `notify.host-message`. Nothing is stored: there is no inbox in the
+(`HostProfile.contactBy`) and the place has a WhatsApp number; otherwise it queues `notify.host-message`. The choice
+covers all the host's places while the number is each place's own (and optional), so `acceptsMessages` keeps
+Contact host open on a place with no number: a guest always has one way to reach the host. Nothing is stored: there is no inbox in the
 app to read, and a question nobody answers must not look answered.
 
 `notify.host-message` (`directory/server/directory-notifications.ts`) writes to the people who can decide the
 place's bookings (`listPeopleWhoDecideBookings`, the same readers as a new request), one email per language with the
 **guest as the reply address**, so answering the email reaches the guest; then a push to each of their devices, after
 the emails, so a retried email never pushes twice. The job carries the question itself (plain values: there is no
-row to load) and reads the host's choice again when it runs, so a host who switches to WhatsApp only meanwhile is
-not written to. Each question has its own reference, so a retried delivery is never sent twice.
+row to load) and reads the host's choice and the place's number again when it runs, so a host who switches to
+WhatsApp only meanwhile is not written to. Each question has its own reference, so a retried delivery is never sent twice.
 
 Tests: `src/modules/directory/tests/contact-host.integration.test.ts`.
 

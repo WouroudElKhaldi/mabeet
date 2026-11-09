@@ -5,9 +5,15 @@ import { acceptsMessages, offersWhatsapp, responseSpeed, yearsHosting } from "..
 
 describe("reaching the host", () => {
   it("follows the host's choice", () => {
-    expect([acceptsMessages("BOTH"), offersWhatsapp("BOTH")]).toEqual([true, true]);
-    expect([acceptsMessages("WHATSAPP"), offersWhatsapp("WHATSAPP")]).toEqual([false, true]);
-    expect([acceptsMessages("MESSAGE"), offersWhatsapp("MESSAGE")]).toEqual([true, false]);
+    const number = "+96171123456";
+    expect([acceptsMessages("BOTH", number), offersWhatsapp("BOTH")]).toEqual([true, true]);
+    expect([acceptsMessages("WHATSAPP", number), offersWhatsapp("WHATSAPP")]).toEqual([false, true]);
+    expect([acceptsMessages("MESSAGE", number), offersWhatsapp("MESSAGE")]).toEqual([true, false]);
+  });
+
+  it("keeps Contact host open for WhatsApp only when the place has no number", () => {
+    expect(acceptsMessages("WHATSAPP", null)).toBe(true);
+    expect(acceptsMessages("WHATSAPP", "")).toBe(true);
   });
 });
 

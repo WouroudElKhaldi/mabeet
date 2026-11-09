@@ -2169,7 +2169,6 @@
     "sentBody": "{name} will reply to your email. Keep an eye on your inbox, and your spam folder just in case.",
     "another": "Ask something else",
     "orWhatsapp": "Or message them on WhatsApp",
-    "unavailable": "This host is not taking questions here right now. Pick your dates to book, or try again later.",
     "errors": {
       "name": "Please give your name, 2 characters or more.",
       "email": "Please check your email address; the host replies to it.",

@@ -54,7 +54,7 @@ export default async function ContactHostPage({ params, searchParams }: PageProp
       ? formatStayDates(parseIsoDate(stay.checkIn), parseIsoDate(stay.checkOut), locale as Locale)
       : null;
   const whatsapp = offersWhatsapp(host.contactBy) ? place.whatsapp : null;
-  const takesMessages = acceptsMessages(host.contactBy);
+  const takesMessages = acceptsMessages(host.contactBy, place.whatsapp);
 
   const answers = [
     place.area ? { label: t("gettingThere"), body: t("location", { area: place.area }) } : null,
@@ -92,29 +92,26 @@ export default async function ContactHostPage({ params, searchParams }: PageProp
           intro={takesMessages ? t("stillQuestionsBody", { name: hostName }) : undefined}
           stub={nights ? <p className="text-sm font-semibold">{`${t("yourStay")}: ${nights}`}</p> : undefined}
         >
-          {takesMessages || whatsapp ? (
-            <div className="grid gap-6">
-              {takesMessages ? (
-                <ContactHostForm
-                  slug={place.slug}
-                  hostName={hostName}
-                  stay={
-                    stay.checkIn && stay.checkOut
-                      ? { checkIn: stay.checkIn, checkOut: stay.checkOut, guests: stay.guests }
-                      : undefined
-                  }
-                />
-              ) : null}
-              {whatsapp ? (
-                <div className="grid gap-3">
-                  {takesMessages ? <p className="text-sm font-semibold">{t("orWhatsapp")}</p> : null}
-                  <WhatsAppLink phone={whatsapp} label={meet("whatsapp")} />
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-muted">{t("unavailable")}</p>
-          )}
+          {/* acceptsMessages keeps the form open whenever there is no WhatsApp number, so one of them always shows. */}
+          <div className="grid gap-6">
+            {takesMessages ? (
+              <ContactHostForm
+                slug={place.slug}
+                hostName={hostName}
+                stay={
+                  stay.checkIn && stay.checkOut
+                    ? { checkIn: stay.checkIn, checkOut: stay.checkOut, guests: stay.guests }
+                    : undefined
+                }
+              />
+            ) : null}
+            {whatsapp ? (
+              <div className="grid gap-3">
+                {takesMessages ? <p className="text-sm font-semibold">{t("orWhatsapp")}</p> : null}
+                <WhatsAppLink phone={whatsapp} label={meet("whatsapp")} />
+              </div>
+            ) : null}
+          </div>
         </TicketCard>
       </div>
     </div>

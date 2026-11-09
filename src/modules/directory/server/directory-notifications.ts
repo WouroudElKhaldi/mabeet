@@ -1,7 +1,7 @@
 import type { Locale } from "@/config/appearance";
 import { noticeAsPush, pushToPeople } from "@/modules/notifications/server";
 import { listPeopleWhoDecideBookings } from "@/modules/team/server";
-import { getHostSection } from "@/modules/workspaces/server";
+import { getHostSection, getPublicPlace } from "@/modules/workspaces/server";
 import { type NoticeLanguage, noticeLanguage, queueNotice } from "@/server/email/notices";
 import { sendEmail } from "@/server/email/send";
 import { type Message, render } from "@/server/email/templates";
@@ -17,6 +17,8 @@ import { acceptsMessages } from "../host";
 
 interface HostMessageData {
   businessId: string;
+  /** To read the place's WhatsApp number again when the job runs. */
+  slug: string;
   placeName: string;
   name: string;
   email: string;
@@ -89,8 +91,10 @@ export function notifyHostMessage(data: HostMessageData): void {
 }
 
 const hostMessageEmail = defineJob("notify", "notify.host-message", async (data: HostMessageData) => {
-  // The host switched to WhatsApp only after the question was accepted: they asked not to get these.
-  if (!acceptsMessages((await getHostSection(data.businessId)).contactBy)) return;
+  // The host switched to WhatsApp only after the question was accepted, and the place has a number for it: they
+  // asked not to get these.
+  const [host, place] = await Promise.all([getHostSection(data.businessId), getPublicPlace(data.slug)]);
+  if (!acceptsMessages(host.contactBy, place?.whatsapp ?? null)) return;
   const hosts = await listPeopleWhoDecideBookings(data.businessId);
   const languages = [...new Set(hosts.map((host) => noticeLanguage(host.locale)))];
   await Promise.all(

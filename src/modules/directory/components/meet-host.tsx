@@ -21,6 +21,7 @@ export async function MeetHost({
   const years = yearsHosting(profile?.hostingSince ?? null);
   const spokenLanguages = (profile?.languages ?? []).filter(isLanguage);
   const whatsapp = offersWhatsapp(contactBy) ? place.whatsapp : null;
+  const takesMessages = acceptsMessages(contactBy, place.whatsapp);
 
   // The two figures guests weigh a host by. How quickly they answer is a sentence of its own under them: it reads
   // as what it is ("Responds within an hour") and needs no label.
@@ -71,20 +72,19 @@ export async function MeetHost({
 
       {profile?.bio ? <p className="leading-relaxed whitespace-pre-line">{profile.bio}</p> : null}
 
-      {acceptsMessages(contactBy) || whatsapp ? (
-        <div className="grid gap-3 sm:flex sm:flex-wrap">
-          {acceptsMessages(contactBy) ? (
-            <ButtonLink href={`/p/${place.slug}/contact`} variant="secondary" size="lg">
-              {t("contact")}
-            </ButtonLink>
-          ) : null}
-          {whatsapp ? (
-            <span className="sm:w-auto">
-              <WhatsAppLink phone={whatsapp} label={t("whatsapp")} />
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      {/* acceptsMessages keeps Contact host whenever there is no WhatsApp number, so one of them always shows. */}
+      <div className="grid gap-3 sm:flex sm:flex-wrap">
+        {takesMessages ? (
+          <ButtonLink href={`/p/${place.slug}/contact`} variant="secondary" size="lg">
+            {t("contact")}
+          </ButtonLink>
+        ) : null}
+        {whatsapp ? (
+          <span className="sm:w-auto">
+            <WhatsAppLink phone={whatsapp} label={t("whatsapp")} />
+          </span>
+        ) : null}
+      </div>
 
       <p className="text-sm text-muted">{t("protect")}</p>
     </div>
