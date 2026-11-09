@@ -10,5 +10,6 @@ export {
   whishReferenceBody,
 } from "./schemas";
 export { PayOnline } from "./components/pay-online";
+export { PayoutDecision } from "./components/payout-decision";
 export { PayoutRequestForm } from "./components/payout-request-form";
 export { WhishSimulatorForm } from "./components/whish-simulator-form";

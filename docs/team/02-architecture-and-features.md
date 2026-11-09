@@ -595,6 +595,12 @@ site's colour palette. Code: `src/app/admin/**`.
   page, the listing and the team's access go at once, and come back with `ACTIVE`.
 - A category's slug is its key: creating a deleted slug brings the row back. A category still used is never
   deleted.
+- **The screens.** `src/app/admin/layout.tsx` checks `requirePageAdmin()` (`src/server/http/session.ts`) once and
+  answers 404 to anyone else; each page calls it again for the `PlatformActor` its services need. The menu is
+  `src/components/admin/nav-items.ts`. Pages: the overview, hosts (each owner once, with their businesses,
+  `BusinessStatusToggle` and "Open dashboard"), people, money (`PayoutDecision`, what each host is owed,
+  `RefundSent`, plan revenue by month), categories (`CategoryManager`) and appearance (`SitePalettePicker`). Each
+  component lives in the module whose route it calls.
 
 ### A. AI: how it is built
 

@@ -453,3 +453,12 @@ export async function findImportClashForNotice(db: Db, occupancyId: string) {
   });
   return { ...imported, clashes };
 }
+
+/** Booking requests on the whole platform, all time and since `since`, for the platform admin. */
+export async function countPlatformBookings(db: Db, since: Date) {
+  const [total, recent] = await Promise.all([
+    db.booking.count({ where: { isDeleted: false } }),
+    db.booking.count({ where: { isDeleted: false, createdAt: { gte: since } } }),
+  ]);
+  return { total, recent };
+}

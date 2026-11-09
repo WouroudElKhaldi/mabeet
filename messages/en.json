@@ -1282,7 +1282,8 @@
       "new": "New category",
       "delete": "Delete category",
       "deleteTitle": "Delete “{name}”?",
-      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first"
+      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first",
+      "slug": "Slug"
     },
     "ai": {
       "title": "AI this month",

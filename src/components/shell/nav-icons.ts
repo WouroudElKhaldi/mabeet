@@ -1,7 +1,9 @@
 import {
+  Activity,
   BarChart3,
   BedDouble,
   Bell,
+  Building2,
   CalendarCheck,
   CalendarDays,
   Compass,
@@ -9,15 +11,19 @@ import {
   Home,
   Info,
   KeyRound,
+  Landmark,
   LayoutDashboard,
   Link2,
   MessageCircle,
+  Palette,
   Search,
   Settings,
   Sparkles,
   Star,
   Tag,
+  Tags,
   User,
+  UserRound,
   Users,
   Wallet,
 } from "lucide-react";
@@ -46,6 +52,12 @@ export const NAV_ICONS = {
   pricing: Tag,
   about: Info,
   contact: MessageCircle,
+  hosts: Building2,
+  people: UserRound,
+  money: Landmark,
+  categories: Tags,
+  appearance: Palette,
+  health: Activity,
 };
 
 export type NavIconName = keyof typeof NAV_ICONS;

@@ -9,3 +9,4 @@ export {
 } from "./server/account-service";
 export { createVerifiedAccount } from "./server/invited-account";
 export { ensurePlatformAdmin } from "./server/platform-admin";
+export { listPlatformPeople } from "./server/platform-people";

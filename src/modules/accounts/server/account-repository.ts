@@ -170,3 +170,26 @@ export function findUserById(db: Db, userId: string) {
 export function setLocale(db: Db, userId: string, locale: string) {
   return db.user.update({ where: { id: userId }, data: { locale }, select: { id: true } });
 }
+
+/** The newest accounts for the platform admin, with how many places each works in and how many trips they booked. */
+export function listNewestPeople(db: Db, take: number) {
+  return db.user.findMany({
+    where: { isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      platformRole: true,
+      createdAt: true,
+      _count: {
+        select: { memberships: { where: { status: "ACTIVE" } }, bookings: { where: { isDeleted: false } } },
+      },
+    },
+  });
+}
+
+export function countPeople(db: Db) {
+  return db.user.count({ where: { isDeleted: false } });
+}
