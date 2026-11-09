@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addRoom, createPlace, createUser, prisma, stay } from "@tests/integration/helpers";
+import { addRoom, createPlace, createUser, prisma } from "@tests/integration/helpers";
 import { addDays, todayUtc } from "@/utils/dates";
 import { getPlaceRating, listPlaceReviews, writeReview } from "../server";
 
@@ -7,7 +7,11 @@ import { getPlaceRating, listPlaceReviews, writeReview } from "../server";
 
 const NOW = new Date("2026-11-20T12:00:00Z");
 
-/** A booking written straight to the database, in whatever state the rule under test needs. */
+/**
+ * A booking written straight to the database, in whatever state the rule under test needs. A negative
+ * `endedDaysAgo` puts the check-out ahead of today, for a stay the guest has not had yet. The reference is random
+ * because it is unique across the whole database, which keeps its rows between runs.
+ */
 async function stayOf(
   place: Awaited<ReturnType<typeof createPlace>>,
   roomId: string,
@@ -77,25 +81,8 @@ describe("writing a review", () => {
     const place = await createPlace();
     const room = await addRoom(place.business.id);
     const guest = await createUser("Maya");
-    const range = stay(5, 2, NOW);
-    const booking = await prisma.booking.create({
-      data: {
-        reference: "MB-FUTURE",
-        publicToken: crypto.randomUUID(),
-        businessId: place.business.id,
-        roomId: room.id,
-        guestUserId: guest.id,
-        guestName: "Maya",
-        guestPhone: "+96171123456",
-        guestCount: 2,
-        checkIn: range.checkIn,
-        checkOut: range.checkOut,
-        totalCents: 18_000,
-        currency: "USD",
-        bookingMode: "OFFLINE",
-        status: "CONFIRMED",
-      },
-    });
+    // Checking out in five days: confirmed, but there is no stay to speak of yet.
+    const booking = await stayOf(place, room.id, guest.id, { endedDaysAgo: -5 });
     await expect(writeReview(guest.id, booking.publicToken, review, NOW)).rejects.toMatchObject({
       status: 403,
     });
