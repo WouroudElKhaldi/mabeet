@@ -2,8 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   dayName,
   expectNoSidewaysScroll,
-  freshStay,
-  pickStay,
+  pickFreeStay,
   placeDashboard,
   PLACES,
   signedIn,
@@ -17,29 +16,29 @@ import {
 const place = PLACES.offline;
 
 /** The guest asks for `stay` at the place, from its own page, and lands on the booking's page. */
-async function requestStay(page: Page, stay: { checkIn: string; checkOut: string }, guestName: string) {
+async function requestStay(page: Page, guestName: string) {
   await page.goto(`/p/${place.slug}`);
   await page
     .getByRole("button", { name: /Check-in/ })
     .first()
     .click();
-  await pickStay(page, stay);
+  const stay = await pickFreeStay(page);
   await page.getByRole("link", { name: "Request to book" }).click();
 
   await expect(page.getByRole("heading", { name: "Book your stay" })).toBeVisible();
   await page.getByLabel("Full name").fill(guestName);
   await page.getByLabel("Mobile number").fill("+96171123456");
   await page.getByRole("button", { name: "Send request" }).click();
+  return stay;
 }
 
 test("a guest requests a stay and the owner confirms it", async ({ browser }) => {
-  const stay = freshStay();
   const guestName = `Rima Haddad ${Date.now() % 100_000}`;
 
   const guest = await browser.newContext({ storageState: signedIn("guest") });
   const guestPage = await guest.newPage();
   const guestProblems = watchForErrors(guestPage);
-  await requestStay(guestPage, stay, guestName);
+  await requestStay(guestPage, guestName);
   await expect(guestPage).toHaveURL(/\/b\//);
   await expect(guestPage.getByRole("heading", { name: `Your room at ${place.name} is held` })).toBeVisible();
   await expectNoSidewaysScroll(guestPage);
@@ -69,10 +68,9 @@ test("a guest requests a stay and the owner confirms it", async ({ browser }) =>
 });
 
 test("a night already taken cannot be picked", async ({ browser }) => {
-  const stay = freshStay();
   const first = await browser.newContext({ storageState: signedIn("guest") });
   const page = await first.newPage();
-  await requestStay(page, stay, "Karim Saad");
+  const stay = await requestStay(page, "Karim Saad");
   await expect(page).toHaveURL(/\/b\//);
 
   // The same nights again, from the place's calendar: the first night now reads as not available.

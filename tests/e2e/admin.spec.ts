@@ -77,9 +77,11 @@ test("hosts: a host's page, opening a business, and suspending then reactivating
     await business.getByRole("button", { name: "Suspend" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Suspend" }).click();
     await expect(reactivate).toBeVisible();
-    // While suspended, guests find no page for it.
-    await guestPage.goto(`/p/${PLACES.wholePlace.slug}`);
+    // While suspended, guests find no page for it, and search engines and shared links are told so too.
+    const hidden = await guestPage.goto(`/p/${PLACES.wholePlace.slug}`);
+    expect(hidden?.status()).toBe(404);
     await expect(guestPage.getByRole("heading", { level: 1 })).toBeVisible();
+    expect((await guestPage.request.get(`/p/${PLACES.wholePlace.slug}/book`)).status()).toBe(404);
     await expect(placeTitle).toBeHidden();
   } finally {
     // Back as it was, even when a check above failed, so the other tests find the place listed.
