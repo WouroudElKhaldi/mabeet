@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PageHeader, Panel } from "@/components/shell/page-header";
 import { ButtonLink } from "@/components/ui/button";
@@ -49,6 +50,14 @@ export default async function AdminHostsPage() {
               key={owner.id}
               title={owner.name}
               intro={t("hosts.theirBusinesses", { count: owned.length })}
+              action={
+                <Link
+                  href={`/admin/hosts/${owner.id}`}
+                  className="text-sm font-semibold text-accent hover:underline"
+                >
+                  {t("hosts.profile")}
+                </Link>
+              }
             >
               <p className="mb-3 text-sm text-muted">
                 <bdi dir="ltr">{owner.email}</bdi>

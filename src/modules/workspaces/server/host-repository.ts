@@ -36,3 +36,62 @@ export function findPlaceHost(db: Db, businessId: string) {
     },
   });
 }
+
+/**
+ * One host for the platform admin: their account, their host profile and every business they own, with how big each
+ * is. Null when there is no such person, or they own nothing.
+ */
+export function findHostForAdmin(db: Db, userId: string) {
+  return db.user.findFirst({
+    where: {
+      id: userId,
+      isDeleted: false,
+      memberships: {
+        some: { status: "ACTIVE", isDeleted: false, role: { isOwner: true, isDeleted: false } },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      createdAt: true,
+      hostProfile: {
+        select: {
+          displayName: true,
+          bio: true,
+          city: true,
+          languages: true,
+          hostingSince: true,
+          showOnListings: true,
+          isDeleted: true,
+        },
+      },
+      memberships: {
+        where: { status: "ACTIVE", isDeleted: false, role: { isOwner: true, isDeleted: false } },
+        orderBy: { createdAt: "asc" },
+        select: {
+          business: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              area: true,
+              status: true,
+              isDeleted: true,
+              createdAt: true,
+              _count: {
+                select: {
+                  rooms: { where: { isDeleted: false } },
+                  offerings: { where: { isDeleted: false } },
+                  bookings: { where: { isDeleted: false } },
+                  memberships: { where: { status: "ACTIVE", isDeleted: false } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}

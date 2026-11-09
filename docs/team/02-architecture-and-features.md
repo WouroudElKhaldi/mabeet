@@ -598,7 +598,9 @@ site's colour palette. Code: `src/app/admin/**`.
 - **The screens.** `src/app/admin/layout.tsx` checks `requirePageAdmin()` (`src/server/http/session.ts`) once and
   answers 404 to anyone else; each page calls it again for the `PlatformActor` its services need. The menu is
   `src/components/admin/nav-items.ts`. Pages: the overview, hosts (each owner once, with their businesses,
-  `BusinessStatusToggle` and "Open dashboard"), people, money (`PayoutDecision`, what each host is owed,
+  `BusinessStatusToggle` and "Open dashboard"), one host (`/admin/hosts/{userId}`: their contacts, their host
+  profile even while private, and each business with its size, "Open dashboard", its public page and the toggle;
+  `getPlatformHost` in `workspaces`), people, money (`PayoutDecision`, what each host is owed,
   `RefundSent`, plan revenue by month), categories (`CategoryManager`), appearance (`SitePalettePicker`) and health: the calendar links
   that need a look across the platform (`getSyncHealth` in `calendar-sync`). A link needs a look when its last read
   failed or nothing was read for an hour (`feedNeedsLook`, `src/modules/calendar-sync/feed-health.ts`); the host's

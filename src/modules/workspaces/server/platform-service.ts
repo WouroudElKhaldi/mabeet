@@ -4,6 +4,7 @@ import { type PlatformActor, requirePlatformAdmin } from "@/server/auth/tenant-c
 import { prisma } from "@/server/db/client";
 import { notFound } from "@/server/errors";
 import * as businesses from "./business-repository";
+import { findHostForAdmin } from "./host-repository";
 
 // The platform admin's side of the businesses: every one with its owners, and suspending one.
 
@@ -41,4 +42,29 @@ export async function setBusinessStatus(actor: PlatformActor, businessId: string
     entity: "business",
     entityId: businessId,
   });
+}
+
+/**
+ * One host for the admin: their contacts, their host profile (even a private one: the admin helps them fill it in)
+ * and every live business they own. A person who owns nothing is not a host, so their page answers 404.
+ */
+export async function getPlatformHost(actor: PlatformActor, userId: string) {
+  requirePlatformAdmin(actor);
+  const host = await findHostForAdmin(prisma, userId);
+  if (!host) throw notFound("Host");
+  const { memberships, hostProfile, ...account } = host;
+  return {
+    ...account,
+    profile: hostProfile && !hostProfile.isDeleted ? hostProfile : null,
+    businesses: memberships
+      .map(({ business }) => business)
+      .filter((business) => !business.isDeleted)
+      .map(({ _count, isDeleted: _, ...business }) => ({
+        ...business,
+        roomCount: _count.rooms,
+        offeringCount: _count.offerings,
+        bookingCount: _count.bookings,
+        teamCount: _count.memberships,
+      })),
+  };
 }
