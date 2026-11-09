@@ -92,6 +92,8 @@ export async function getPlace(slug: string, now: Date = new Date()): Promise<Pu
     bookingUnit: place.bookingUnit,
     bookingMode: place.bookingMode,
     whatsapp: place.whatsapp,
+    latitude: place.latitude,
+    longitude: place.longitude,
     host,
     photos: placePhotos.length > 0 ? placePhotos : (rooms ?? units).flatMap((unit) => unit.photos),
     units,

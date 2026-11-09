@@ -84,6 +84,9 @@ export interface PublicPlace {
   bookingMode: BookingMode;
   /** The place's own WhatsApp number, the only one guests are given; never the host's personal number. */
   whatsapp: string | null;
+  /** Where the map is centred, as the host gave it (often only their town), or null when they gave nothing. */
+  latitude: number | null;
+  longitude: number | null;
   host: PublicHost;
   /** The photos of the place as a whole, first one largest. */
   photos: PublicPhoto[];

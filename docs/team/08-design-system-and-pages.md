@@ -531,8 +531,21 @@ Experiences and services have no tab yet: they come with their module (F8).
 `PhotoGallery` (one large and four small photos, the large one alone on a phone or with fewer than five photos, "Show all photos" in a dialog, a drawn
 postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the rooms of a place booked whole shown
 without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
-`ThingsToKnow`, `MeetHost` and `BookingBox`. Not built yet: reviews, the map, the photo tour, share and
-favourite, and "Near your stay".
+`ThingsToKnow`, `MeetHost`, `PlaceMap` and `BookingBox`. Not built yet: reviews, favourite, and "Near your stay".
+
+The title row carries `ShareButton` (`src/components/site/share-button.tsx`, shared with any page that wants it) on
+the end side: it opens the phone's own share sheet where there is one, otherwise it copies the link and says
+"Copied". Both can be refused — the guest closes the sheet, the browser keeps the clipboard shut — and then it
+claims nothing.
+
+`PlaceMap` (the `where` section, "Where you'll be", between the amenities and the host) is the area's name and a
+Google Maps embed centred on the place's coordinates, with no pin on a door: the coordinates are the host's own and
+are often no more than their town, so the page says the area is approximate and the exact address comes with the
+booking. The embed needs no key, and `frame-src` in `next.config.ts` already allows `maps.google.com` and nothing
+else. A place whose host gave no coordinates shows no section at all, not an empty map.
+
+The gallery's "Show all 11 photos" is a link to the photo tour (it was a dialog of the place's own photos; the tour
+shows the rooms' photos too, grouped, which is what the guest wanted).
 
 `MeetHost` (the `host` section, between the amenities and the things to know) is who hosts this place: the arch
 avatar with their first letter and their name (the place's name while their profile is hidden, so no line is empty),
@@ -555,6 +568,14 @@ On a phone a bar held at the bottom shows the "from" price and leads to the box 
 #### `/p/[slug]/photos` Photo tour (F2)
 
 Photos grouped by area and room, with a Back button to the place.
+
+**Built so far** (`src/app/(site)/p/[slug]/photos/`, with its `loading.tsx`): under the layout's own back link, the
+place's name and "Photo tour", then `PhotoTour` (`src/modules/directory/components/`). `groupPhotos`
+(`photo-groups.ts`, a pure function) puts the place's own photos first, under the part of the house they show, in
+the order of `PHOTO_AREAS`, with the ones the host never placed last under "Additional photos" (`OTHER`); then each
+room that has photos, under its name. A group is never empty and a photo is never in two groups, so the count in
+the gallery's link is exactly what the page holds. A place with no photos at all gets the drawn postcard and "No
+photos yet."
 
 #### `/p/[slug]/book` Book (F4)
 

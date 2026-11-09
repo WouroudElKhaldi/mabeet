@@ -7,7 +7,9 @@ import { lowestRateCents } from "../summary";
 import type { PublicPlace } from "../types";
 import { AmenityList } from "./amenity-list";
 import { BookingBox } from "./booking-box";
+import { countPhotos, groupPhotos } from "../photo-groups";
 import { MeetHost } from "./meet-host";
+import { PlaceMap } from "./place-map";
 import { PhotoGallery } from "./photo-gallery";
 import { PlaceHeader } from "./place-header";
 import { PlaceSummary } from "./place-summary";
@@ -37,11 +39,12 @@ export async function PlaceView({
   const whole = place.bookingUnit === "WHOLE_PLACE";
   const fromRate = lowestRateCents(place.units);
   const allUnits = whole ? [...place.units, ...place.rooms] : place.units;
+  const photoGroups = groupPhotos(place.photos, allUnits);
 
   return (
     <div className="mx-auto max-w-280 px-4 pt-6 sm:px-6 lg:px-10 lg:pb-16">
       <PlaceHeader place={place} />
-      <PhotoGallery name={place.name} photos={place.photos} />
+      <PhotoGallery place={place} photoCount={countPhotos(photoGroups)} />
       <div className="mt-8 grid gap-12 lg:grid-cols-[1fr_380px] lg:gap-20">
         <div className="flex min-w-0 flex-col gap-10">
           <div className="flex flex-col gap-4">
@@ -62,6 +65,11 @@ export async function PlaceView({
           <Section id="amenities" title={t("amenities")}>
             <AmenityList units={allUnits} />
           </Section>
+          {place.latitude !== null && place.longitude !== null ? (
+            <Section id="where" title={t("whereYoullBe")}>
+              <PlaceMap place={place} />
+            </Section>
+          ) : null}
           <Section id="host" title={host("title")}>
             <MeetHost place={place} />
           </Section>
