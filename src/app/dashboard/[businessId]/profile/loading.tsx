@@ -1,12 +1,14 @@
 import { PageHeaderSkeleton, PanelSkeleton } from "@/components/shell/skeletons";
 
-/** The host profile while it loads: its form. */
-export default function HostProfileLoading() {
+/** The profile while it loads: the details, the host profile and the password. */
+export default function ProfileLoading() {
   return (
     <>
       <PageHeaderSkeleton />
-      <div className="max-w-3xl">
+      <div className="grid max-w-3xl gap-6">
+        <PanelSkeleton rows={2} />
         <PanelSkeleton rows={6} />
+        <PanelSkeleton rows={2} />
       </div>
     </>
   );

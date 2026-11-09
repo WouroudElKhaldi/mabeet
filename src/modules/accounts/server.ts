@@ -5,6 +5,7 @@ export {
   exportMyData,
   findAccountByEmail,
   findAccountEmail,
+  getMyProfile,
   setMyLocale,
   updateMyProfile,
 } from "./server/account-service";

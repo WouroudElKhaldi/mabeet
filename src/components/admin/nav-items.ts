@@ -24,11 +24,12 @@ const ADMIN_PAGES = {
   categories: { group: "content", path: "categories", icon: "categories" },
   appearance: { group: "content", path: "appearance", icon: "appearance" },
   health: { group: "operations", path: "health", icon: "health", tab: true },
+  profile: { group: "account", path: "profile", icon: "profile" },
 } as const satisfies Partial<Record<AdminNavLabel, AdminPage>>;
 
 type AdminPageName = keyof typeof ADMIN_PAGES;
 
-const GROUP_ORDER: readonly AdminNavGroupName[] = ["platform", "money", "content", "operations"];
+const GROUP_ORDER: readonly AdminNavGroupName[] = ["platform", "money", "content", "operations", "account"];
 
 export interface AdminNavGroup {
   group: AdminNavGroupName;

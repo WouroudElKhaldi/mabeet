@@ -587,7 +587,7 @@
       "payouts": "Payouts",
       "place": "Your place",
       "analytics": "Analytics",
-      "profile": "Host profile"
+      "profile": "My profile"
     },
     "overview": {
       "title": "Today",
@@ -1355,9 +1355,11 @@
         "platform": "Platform",
         "money": "Money",
         "content": "Content",
-        "operations": "Operations"
+        "operations": "Operations",
+        "account": "Account"
       },
-      "hosts": "Hosts"
+      "hosts": "Hosts",
+      "profile": "My profile"
     },
     "overviewIntro": "The platform at a glance, and what needs you today.",
     "businessesIntro": "Every business on Mabeet. Suspending one hides it everywhere at once.",
@@ -1977,7 +1979,11 @@
     "passwordRules": "At least 8 characters.",
     "passwordWrong": "Your current password isn't right.",
     "changePassword": "Change password",
-    "passwordChanged": "Password changed. Other devices were signed out."
+    "passwordChanged": "Password changed. Other devices were signed out.",
+    "errors": {
+      "name": "Write your name, 2 to 80 letters.",
+      "phone": "Write the number in international format, e.g. +96171123456."
+    }
   },
   "notifications": {
     "title": "Notifications",

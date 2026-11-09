@@ -6,3 +6,4 @@ export { ForgotPasswordForm, ResetPasswordForm } from "./components/password-for
 export { SignOutButton } from "./components/sign-out-button";
 export { AccountHeader } from "./components/account-header";
 export { PrivacyControls } from "./components/privacy-controls";
+export { PasswordForm, ProfileForm } from "./components/profile-forms";
