@@ -2,6 +2,13 @@
 // private to the module.
 export { lockBusinessMoney } from "./server/money-service";
 export {
+  createPayoutRequest,
+  decidePayout,
+  getPayoutQueue,
+  listBusinessPayouts,
+  sumPayouts,
+} from "./server/payout-service";
+export {
   createBillingPortalSession,
   createPaymentCheckout,
   createStripeRefund,

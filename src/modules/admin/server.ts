@@ -1,4 +1,10 @@
 // The only door into this module for server code (routes, the worker, other modules). Anything not exported here is
 // private to the module.
-export { listCategories } from "./server/categories";
-export { getSitePalette } from "./server/site-settings";
+export {
+  createCategory,
+  deleteCategory,
+  listCategories,
+  listCategoriesForAdmin,
+  updateCategory,
+} from "./server/categories";
+export { getSitePalette, setSitePalette } from "./server/site-settings";

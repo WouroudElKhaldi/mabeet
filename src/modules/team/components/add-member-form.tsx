@@ -16,7 +16,7 @@ import type { RoleChoice } from "./member-controls";
  */
 export function AddMemberForm({ businessId, roles }: { businessId: string; roles: RoleChoice[] }) {
   const t = useTranslations("dashboard.team");
-  const { run, pending, error, fieldErrors } = useAction();
+  const { run, pending, error, fieldErrors } = useAction(["name", "email", "phone"]);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   if (roles.length === 0) return <p className="text-sm text-muted">{t("noRoleToGive")}</p>;

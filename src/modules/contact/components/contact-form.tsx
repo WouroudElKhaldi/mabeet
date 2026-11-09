@@ -18,7 +18,7 @@ import { api } from "@/lib/api-client";
  */
 export function ContactForm() {
   const t = useTranslations("contact.form");
-  const { run, pending, error, fieldErrors } = useAction();
+  const { run, pending, error, fieldErrors } = useAction(["name", "email", "message"]);
   const [topic, setTopic] = useState<ContactTopic>("booking");
   const [sentTo, setSentTo] = useState<{ name: string; email: string } | null>(null);
 

@@ -198,6 +198,7 @@ export async function settleOnlinePayment(
       action: moved ? "payment.online_confirmed" : "payment.online_late",
       entity: "booking",
       entityId: current.id,
+      note: { guest: current.guestName, reference: current.reference },
     });
     const refunds = moved
       ? []

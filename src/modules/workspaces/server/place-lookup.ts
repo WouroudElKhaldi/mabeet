@@ -18,6 +18,14 @@ export function findBookablePlace(slug: string) {
 }
 
 /**
+ * For calendar sync: the place's name (it titles each room's calendar link) and its time zone (a platform's
+ * date-times are read as dates at the place). Null when the place is deleted.
+ */
+export function findPlaceForCalendar(businessId: string) {
+  return businesses.findPlaceForCalendar(prisma, businessId);
+}
+
+/**
  * For analytics: each place's name, currency, commission rate and how it is booked. A plain read: the caller checks
  * the member may read its numbers.
  */

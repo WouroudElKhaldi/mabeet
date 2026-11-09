@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { BusinessStatus, Prisma } from "@prisma/client";
 import { areasMatching, regionNamed } from "@/config/regions";
 import type { Db, Tx } from "@/server/db/client";
 
@@ -142,6 +142,14 @@ export function findBookableBusinessBySlug(db: Db, slug: string) {
   });
 }
 
+/** For calendar sync: the place's name and time zone, and how it is booked. */
+export function findPlaceForCalendar(db: Db, businessId: string) {
+  return db.business.findFirst({
+    where: { id: businessId, isDeleted: false },
+    select: { id: true, name: true, timezone: true, bookingUnit: true },
+  });
+}
+
 /** For analytics: what the reports need of each place, live ones only. */
 export function findPlacesForReports(db: Db, businessIds: readonly string[]) {
   return db.business.findMany({
@@ -235,4 +243,48 @@ export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number
     orderBy: { createdAt: "asc" },
     take,
   });
+}
+
+/**
+ * Every business on the platform for the admin, the newest first: its status, its owners and how big it is. Deleted
+ * businesses stay out; a suspended one stays in, so it can be brought back.
+ */
+export function listPlatformBusinesses(db: Db, take: number) {
+  return db.business.findMany({
+    where: { isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      area: true,
+      status: true,
+      plan: true,
+      createdAt: true,
+      memberships: {
+        where: {
+          status: "ACTIVE",
+          isDeleted: false,
+          role: { isOwner: true, isDeleted: false },
+          user: { isDeleted: false },
+        },
+        select: { user: { select: { id: true, name: true, email: true, phone: true } } },
+      },
+      _count: { select: { rooms: { where: { isDeleted: false } }, bookings: true } },
+    },
+  });
+}
+
+export function countPlatformBusinesses(db: Db) {
+  return db.business.count({ where: { isDeleted: false } });
+}
+
+/** Suspends or reactivates a business. False when there is no such business. */
+export async function setBusinessStatus(db: Db, businessId: string, status: BusinessStatus) {
+  const { count } = await db.business.updateMany({
+    where: { id: businessId, isDeleted: false },
+    data: { status },
+  });
+  return count > 0;
 }

@@ -442,7 +442,7 @@
       "post": {
         "tags": ["Guests"],
         "summary": "Ask a place's host a question from its Contact host page (rate limited: 5 an hour per address)",
-        "description": "No sign-in. The question is emailed to the people who can decide the place's bookings, with the guest as the reply address; nothing is stored. checkIn and checkOut are optional, but come as a pair with check-out after check-in. 403 when the host takes questions on WhatsApp only.",
+        "description": "No sign-in. The question is emailed to the people who can decide the place's bookings, with the guest as the reply address; nothing is stored. checkIn and checkOut are optional, but come as a pair with check-out after check-in. 403 when the host takes questions on WhatsApp only and the place has a WhatsApp number.",
         "security": [],
         "parameters": [
           {
@@ -542,7 +542,7 @@
             }
           },
           "403": {
-            "description": "The host answers on WhatsApp only"
+            "description": "The host answers on WhatsApp only, and the place has a WhatsApp number for it"
           },
           "404": {
             "description": "No such place, or it is paused"
@@ -1545,7 +1545,7 @@
       "get": {
         "tags": ["Calendar"],
         "summary": "A room's availability as iCal, for Airbnb and Booking.com",
-        "description": "No sign-in.",
+        "description": "No sign-in: the secret in the address is the key. The token may end in .ics. Answers text/calendar: our bookings (holds included) and closed dates from today, each only \"Not available\"; never platform stays or guest details. An unknown link is 404.",
         "security": [],
         "parameters": [
           {
@@ -3116,7 +3116,7 @@
       "get": {
         "tags": ["Calendar"],
         "summary": "Export links and imported calendars per room",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Needs feeds.manage. Answers { rooms: [{ id, name, kind, active, exportUrl, feeds: [{ id, roomId, url, source, lastSyncedAt, lastError, createdAt }] }] }.",
         "security": [
           {
             "session": []
@@ -3181,7 +3181,7 @@
       "post": {
         "tags": ["Calendar"],
         "summary": "Connect an Airbnb, Booking.com or other platform calendar",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Needs feeds.manage. Only public https links; the same link twice on one room is 409. The link is read at once: answers { feed, sync: { ok, clashes, error? } }.",
         "security": [
           {
             "session": []
@@ -3276,7 +3276,7 @@
       "delete": {
         "tags": ["Calendar"],
         "summary": "Disconnect a calendar",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Needs feeds.manage. The nights the link brought are free again.",
         "security": [
           {
             "session": []
@@ -3351,7 +3351,7 @@
       "post": {
         "tags": ["Calendar"],
         "summary": "Sync a calendar now",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Needs feeds.manage. Answers { ok, clashes, error? }: a link that fails is 200 with ok false and its error, which is also saved on the link.",
         "security": [
           {
             "session": []
@@ -6648,7 +6648,7 @@
       "patch": {
         "tags": ["Platform"],
         "summary": "Suspend or reactivate a business",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). SUSPENDED hides the business everywhere at once (its page, its listing, its team's access); ACTIVE brings it back. Its bookings stay as they are. Logged under the admin's name; an unknown business is 404.",
         "security": [
           {
             "session": []
@@ -6733,7 +6733,7 @@
       "patch": {
         "tags": ["Platform"],
         "summary": "Set the website's colour palette",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). Sets the one palette the whole website wears; visitors still choose light or dark. Logged.",
         "security": [
           {
             "session": []
@@ -6809,7 +6809,7 @@
       "get": {
         "tags": ["Platform"],
         "summary": "Categories and their use",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). Every live category with how many places and experiences use it: [{ slug, kind, nameEn, nameAr, icon, position, _count: { businesses, offerings } }].",
         "security": [
           {
             "session": []
@@ -6865,7 +6865,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Add a browse category",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). A slug already in use is 409; a deleted category with the same slug is brought back instead of copied. The icon is one of src/config/category-icons.ts.",
         "security": [
           {
             "session": []
@@ -6892,8 +6892,17 @@
                   },
                   "icon": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 40
+                    "enum": [
+                      "mountain",
+                      "beach",
+                      "countryside",
+                      "old-town",
+                      "guesthouse",
+                      "cabin",
+                      "camping",
+                      "vineyard",
+                      "ski"
+                    ]
                   },
                   "position": {
                     "type": "integer",
@@ -6966,7 +6975,7 @@
       "patch": {
         "tags": ["Platform"],
         "summary": "Rename, re-icon or reorder a category",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). The slug and the kind never change. An unknown slug is 404.",
         "security": [
           {
             "session": []
@@ -7002,8 +7011,17 @@
                   },
                   "icon": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 40
+                    "enum": [
+                      "mountain",
+                      "beach",
+                      "countryside",
+                      "old-town",
+                      "guesthouse",
+                      "cabin",
+                      "camping",
+                      "vineyard",
+                      "ski"
+                    ]
                   },
                   "position": {
                     "type": "integer",
@@ -7064,7 +7082,7 @@
       "delete": {
         "tags": ["Platform"],
         "summary": "Delete an unused category",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). A category places or experiences still use is 409 (move them first). Deleting keeps the row (isDeleted).",
         "security": [
           {
             "session": []
@@ -7522,7 +7540,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Sync calendars that are due",
-        "description": "Bearer CRON_SECRET.",
+        "description": "Bearer CRON_SECRET. Reads up to 60 links not read in 10 minutes; the worker runs it every 5 minutes. Answers { synced, failed }.",
         "security": [
           {
             "cronSecret": []
@@ -7638,7 +7656,7 @@
       "get": {
         "tags": ["Workspaces"],
         "summary": "The signed-in owner's own host profile (owners)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Owners only (staff get 403). The person's own host profile, shared by all their places: { displayName, bio, city, languages, hostingSince, showOnListings, contactBy }, or null before the first save.",
         "security": [
           {
             "session": []
@@ -7703,7 +7721,7 @@
       "put": {
         "tags": ["Workspaces"],
         "summary": "Save the host profile and whether guests see it on the host's listings (owners)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Owners only. Saves the host profile on the person (one row each, whatever place it is saved from). Empty text is saved as null. Guests see it on every place the person owns only while showOnListings is true; contactBy applies either way.",
         "security": [
           {
             "session": []
@@ -7933,7 +7951,7 @@
       "get": {
         "tags": ["Workspaces"],
         "summary": "The bell: the latest five notifications in this business",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace. The latest five notifications this member should see: booking news with bookings.read, money and team news for owners. Answers { items: [{ id, action, actorId, createdAt, actor: { name } | null, business: { id, name } | null, booking: { guest, reference } | null }], seenAt }.",
         "security": [
           {
             "session": []
@@ -7998,7 +8016,7 @@
       "post": {
         "tags": ["Workspaces"],
         "summary": "Mark notifications read (the bell was opened)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Marks everything up to now as read for this person, in every business.",
         "security": [
           {
             "session": []
@@ -8065,7 +8083,7 @@
       "get": {
         "tags": ["Platform"],
         "summary": "The admin bell: the latest five platform notifications",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). The latest five platform notifications: payout requests, late payments and new requests across every business. Answers { items: [{ id, action, actorId, createdAt, actor: { name } | null, business: { id, name } | null, booking: { guest, reference } | null }], seenAt }.",
         "security": [
           {
             "session": []
@@ -8121,7 +8139,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Mark platform notifications read",
-        "description": "Super admin only.",
+        "description": "Platform admins only. Marks everything up to now as read.",
         "security": [
           {
             "session": []
@@ -8493,7 +8511,7 @@
       "get": {
         "tags": ["Payments"],
         "summary": "What Mabeet holds for the business, its online payments and payouts (owners)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Owners only. Answers { balances: [{ currency, earnedCents, upcomingCents, paidOutCents, requestedCents, availableCents }], payouts, payments, lastDetails }. Available is confirmed stays that have started, net of refunds, minus payouts sent or asked for.",
         "security": [
           {
             "session": []
@@ -8558,7 +8576,7 @@
       "post": {
         "tags": ["Payments"],
         "summary": "Ask for a payout to a bank account (IBAN) or a Whish number, up to the available balance (owners)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Owners only. More than is available is 409; the business's money is locked, so two requests at once never spend the same balance. A bank transfer needs bankName and iban; Whish needs whishPhone.",
         "security": [
           {
             "session": []
@@ -8683,7 +8701,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Mark a payout as sent, with its transfer reference, or refuse it",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). The admin sent it by hand from Mabeet's Whish or Stripe account (paid, with the transfer's reference) or refuses it (rejected, with a note). Each payout is decided once: again is 409.",
         "security": [
           {
             "session": []
@@ -8790,7 +8808,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Mark a refund sent by hand (partial Whish refunds, or ones a provider refused)",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). Marks a pending refund sent by hand, once: again is 409.",
         "security": [
           {
             "session": []

@@ -414,7 +414,7 @@ the keyboard focus away.
 | `Panel`                                             | `shell/page-header.tsx` | A titled card on a dashboard page (`panelClass` + `text-xl` title + optional intro and action)                                     |
 | `BackLink`                                          | `shell/back-link.tsx`   | The Back button                                                                                                                    |
 | `Pagination`                                        | `shell/pagination.tsx`  | Page numbers for long lists                                                                                                        |
-| `NotificationBell`, `NotificationList`              | `shell/`                | The bell (latest 5) and the full list                                                                                              |
+| `NotificationBell`, `NotificationList`              | `notifications` module  | The bell (latest 5) and the full list; the layout builds the bell and hands it to `AppShell` (`bell`)                              |
 | `StatTile`                                          | `ui/stat-tile.tsx`      | One number with its label (percent, count or money); a long number shrinks to the tile's width (`cqi`) instead of being cut        |
 | `BarChart`, analytics charts                        | `dashboard/`            | Charts, coloured with tokens and `channel-colors.ts`                                                                               |
 | `SiteHeader`, `SiteFooter`, `SearchBar`, `SiteMenu` | `site/`                 | The public site's header, footer and search, and the header's menu on phones                                                       |
@@ -560,7 +560,8 @@ avatar with their first letter and their name (the place's name while their prof
 the languages they speak, "New on Mabeet" in their first year, then the two figures guests weigh a host by (years
 hosting, response rate) and how quickly they answer as a sentence of its own ("Responds within an hour"). A figure
 nobody can know yet is simply not shown, never a 0 or a dash. Then their bio, "Contact host" and the WhatsApp
-button, each shown only if the host takes questions that way (`HostProfile.contactBy`), and the line asking the
+button, each shown only if the host takes questions that way (`HostProfile.contactBy`; a host who chose WhatsApp
+only keeps "Contact host" on a place with no WhatsApp number, so one of the two always shows), and the line asking the
 guest to book and pay through Mabeet. The WhatsApp number is the place's own, never the host's.
 
 `BookingBox` (a client component) holds the room, the dates and the guests; it asks the quote route when both dates are
@@ -617,8 +618,8 @@ and the house rules; each one is left out when the place has nothing to say for 
 booking box to check dates. Beside it, a `TicketCard` holds `ContactHostForm` (name, the email the host replies to,
 and the question, each checked before sending, with the host named in the placeholder; once sent, a thank-you
 saying where the answer will arrive, and a way to ask something else) and the WhatsApp button, each shown only if
-the host takes questions that way. A host who takes neither gets one calm line instead, pointing the guest to the
-dates. A stay carried in the address (`?checkIn=&checkOut=&guests=`, as the place page's links already pass it)
+the host takes questions that way. One of the two always shows: a host who chose WhatsApp only keeps the form on a
+place with no WhatsApp number. A stay carried in the address (`?checkIn=&checkOut=&guests=`, as the place page's links already pass it)
 shows on the ticket's stub and goes with the question, so the host answers about the right nights.
 
 #### `/b/[token]` The guest's booking page (F4; the pay buttons F4a)
@@ -819,7 +820,7 @@ reviews are built; the AI report is a later bonus.
 | `/offerings`               | F8 (bonus)  | `OfferingEditor`, `PhotoManager`, `SessionScheduler`. No cancellation-hours field                                                                                                                                                                                                                                                                                                                  |
 | `/reviews`                 | F5 (bonus)  | Average rating; each review with `ReviewControls` (reply, hide with a reason)                                                                                                                                                                                                                                                                                                                      |
 | `/payouts`                 | F12a        | `StatTile`s (available, upcoming, paid out); `PayoutRequestForm`; payout history; online payments                                                                                                                                                                                                                                                                                                  |
-| `/billing`                 | F15 (bonus) | Current plan, `PlanCards`, `UpgradeButton`, `WhishPlanButton`                                                                                                                                                                                                                                                                                                                                      |
+| `/billing`                 | F15 (bonus) | Current plan and renewal date, with `ManageBillingButton` for a place paying by card; 3 `StatTile`s (rooms, experiences, team members against the plan's limits); `PlanCards` with `UpgradeButton` and `WhishPlanButton` (owners only)                                                                                                                                                             |
 | `/team`                    | F13         | Members (`MemberControls`: role and Remove, both confirmed; "you" on your own row), the invitation form (`AddMemberForm`, the owner role last), the invitations sent (status, `CancelInvitation`), then the roles as `DisclosurePanel`s (`RoleEditor`; the owner role only described) and "New role". Members and invitations need `team.manage`, the roles `roles.manage`                         |
 | `/assistant`               | F14 (bonus) | `TeamAssistant`: New chat, History, Temporary chat; the chat; `ActionCard`s under replies                                                                                                                                                                                                                                                                                                          |
 | `/keys`                    | F14 (bonus) | `KeyManager` (create, list, revoke keys; how to connect Claude, Cursor or Codex; the apps connected by signing in, with the server address and Disconnect) and the audit list                                                                                                                                                                                                                      |

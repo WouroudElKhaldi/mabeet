@@ -10,6 +10,15 @@ export function findActiveMembership(db: Db, userId: string, businessId: string)
   });
 }
 
+/** Whether this user is a platform admin, read fresh rather than from the sign-in cookie. */
+export async function isPlatformAdmin(db: Db, userId: string) {
+  const user = await db.user.findFirst({
+    where: { id: userId, isDeleted: false },
+    select: { platformRole: true },
+  });
+  return user?.platformRole === "SUPER_ADMIN";
+}
+
 /** Whether this user is a platform admin, and whether the business exists (suspended ones included). */
 export async function findAdminAccess(db: Db, userId: string, businessId: string) {
   const [user, business] = await Promise.all([

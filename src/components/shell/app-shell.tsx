@@ -15,12 +15,15 @@ export async function AppShell({
   nav,
   area = "host",
   adminVisiting = false,
+  bell,
   children,
 }: {
   nav: NavGroup[];
   area?: "host" | "admin";
   /** A platform admin looking at someone else's business: the top bar says so. */
   adminVisiting?: boolean;
+  /** The notification bell, built by the layout for this person. */
+  bell?: ReactNode;
   children: ReactNode;
 }) {
   const [t, user] = await Promise.all([getTranslations("shell"), getCurrentUser()]);
@@ -31,6 +34,7 @@ export async function AppShell({
       badge={adminVisiting ? t("adminBadge") : undefined}
       viewSiteHref="/"
       userName={user?.name ?? t("account")}
+      bell={bell}
     >
       {children}
     </AppFrame>

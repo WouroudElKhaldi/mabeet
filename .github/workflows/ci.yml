@@ -22,6 +22,9 @@ jobs:
       BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
       BETTER_AUTH_URL: http://localhost:3000
       CRON_SECRET: ci-cron-secret-ci-cron-secret
+      # knip loads playwright.config.ts, which refuses to load without the browser tests' own database. Never opened
+      # here: the browser tests run by hand (pnpm test:e2e).
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/unused_e2e
     steps:
       - uses: actions/checkout@v4
       # The pnpm version comes from package.json (packageManager).

@@ -27,7 +27,7 @@ export function ContactHostForm({
   stay?: { checkIn: string; checkOut: string; guests?: number };
 }) {
   const t = useTranslations("contactHost");
-  const { run, pending, error, fieldErrors } = useAction();
+  const { run, pending, error, fieldErrors } = useAction(["name", "email", "message"]);
   const [sentTo, setSentTo] = useState<{ email: string } | null>(null);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {

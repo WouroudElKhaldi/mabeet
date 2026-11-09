@@ -96,6 +96,11 @@ describe("reading input", () => {
       slug: "beit-batroun",
     });
   });
+
+  it("reads a route at a fixed address, which Next.js gives no params, as having none", async () => {
+    await expect(parseParams({}, z.object({}))).resolves.toEqual({});
+    await expect(parseParams({ params: Promise.resolve(undefined) }, z.object({}))).resolves.toEqual({});
+  });
 });
 
 describe("who is calling", () => {

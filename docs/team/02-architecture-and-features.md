@@ -549,7 +549,10 @@ guest who made it.
 
 Guests see their stays (`/account`), save favourites, review a stay after check-out, download all their data
 (`GET /api/me/export`), and delete their account (`POST /api/me/delete`, typing their email to confirm; see "Nothing
-is deleted"). Code: `account-service.ts`, `src/app/(site)/account/**`.
+is deleted"). Anyone with an account changes their own name and phone (`PATCH /api/me/profile`; the email is
+how they sign in, so it stays) and their password (Better Auth's change password, which signs out their other
+devices), on `/dashboard/[businessId]/profile` or `/admin/profile`. Code: `account-service.ts`,
+`src/app/(site)/account/**`.
 
 ### A. Activity log and notification bell
 
@@ -564,7 +567,13 @@ Every important action is recorded, through the `audit` module (`@/modules/audit
   exports a function for it with the first such event.
 
 The bell in the top bar shows the last five events of the business. "View all" opens the full list. Code:
-`audit.ts`, `notification-feed-service.ts`, `notification-bell.tsx`.
+`audit.ts` (the feed reads `listFeed`, `countFeed`, `countFeedSince`), `notification-feed-service.ts` in
+`notifications`, which reads them and when the person last looked (`notificationsSeenAt`, from `accounts`), and the
+bell and list in `src/modules/notifications/components/`.
+
+- The bell never reads the bookings: `notifications` may not call `bookings`, which calls it to send push. So the
+  booking engine writes the guest and the reference on the log line itself (`note: { guest, reference }`, saved in
+  `AuditLog.meta`), and the bell shows them from there.
 
 The bell is read from `AuditLog`, so it shows only the actions listed in `notification-feed-service.ts`. To add a
 new kind of bell entry (all four steps, or it shows a raw key or nothing):
@@ -582,7 +591,30 @@ new kind of bell entry (all four steps, or it shows a raw key or nothing):
 
 `/admin`, for platform admins: businesses (suspend or reactivate), hosts, AI spending against the budget, calendar
 sync health, payouts and refunds to send by hand, categories, and the
-site's colour palette. Code: `admin-service.ts`, `src/app/admin/**`.
+site's colour palette. Code: `src/app/admin/**`.
+
+- Each admin read and change lives in the module that owns its table, never in `admin`: `workspaces` lists the
+  businesses and suspends them (`platform-service.ts`), `billing` adds up the plan revenue (`plan-revenue.ts`),
+  `payments` keeps the payout queue, `bookings` what each host is owed and the refunds to send by hand. `admin` keeps
+  only its own tables: the categories and the site's palette. So `workspaces` can keep calling `admin` with no circle.
+- Every one takes a `PlatformActor`, calls `requirePlatformAdmin` first, and logs its change with
+  `recordPlatformAction` (`business.suspended`, `business.reactivated`, `category.created`, `category.updated`,
+  `category.deleted`, `site.palette_changed`).
+- Suspending writes only `Business.status`: every public read and `resolveContext` already ask for `ACTIVE`, so the
+  page, the listing and the team's access go at once, and come back with `ACTIVE`.
+- A category's slug is its key: creating a deleted slug brings the row back. A category still used is never
+  deleted.
+- **The screens.** `src/app/admin/layout.tsx` checks `requirePageAdmin()` (`src/server/http/session.ts`) once and
+  answers 404 to anyone else; each page calls it again for the `PlatformActor` its services need. The menu is
+  `src/components/admin/nav-items.ts`. Pages: the overview, hosts (each owner once, with their businesses,
+  `BusinessStatusToggle` and "Open dashboard"), one host (`/admin/hosts/{userId}`: their contacts, their host
+  profile even while private, and each business with its size, "Open dashboard", its public page and the toggle;
+  `getPlatformHost` in `workspaces`), people, money (`PayoutDecision`, what each host is owed,
+  `RefundSent`, plan revenue by month), categories (`CategoryManager`), appearance (`SitePalettePicker`) and health: the calendar links
+  that need a look across the platform (`getSyncHealth` in `calendar-sync`). A link needs a look when its last read
+  failed or nothing was read for an hour (`feedNeedsLook`, `src/modules/calendar-sync/feed-health.ts`); the host's
+  Channels page uses the same rule. Each
+  component lives in the module whose route it calls.
 
 ### A. AI: how it is built
 
@@ -804,7 +836,7 @@ Two kinds, by how much they matter:
   - `notify`: every email and push: team invitations today, then every booking, payment, refund and Contact host
     notice. 8 at once. Retried 4 times, waiting longer each time.
   - `cron`: housekeeping every 5 minutes (`SCHEDULES` in `jobs/cron-jobs.ts`), on the worker's own schedule; the
-    calendar sync joins it (every 15 minutes) with F11.
+    calendar sync runs beside it (`cron.calendar-sync`, every 5 minutes, reading links not read in 10).
   - `ai` is added with the AI assistants (last bonus): travel and team assistant answers, reports. 4 at once per
     worker, retried once. `runOrQueue`, `GET /api/jobs/{jobId}` and the progress rows come with it; nothing uses
     them before then.
@@ -927,7 +959,7 @@ handles it:
 ### B. Bookings: the host decides
 
 - `confirmBooking` (modes 2 and 3) first reads the room's Airbnb and Booking.com calendars again
-  (`refreshRoomFeeds`, in `calendar-sync`, once calendar sync is built). Then it confirms, unless a platform stay now
+  (`refreshBeforeConfirming`, in `feed-sync-service.ts`). Then it confirms, unless a platform stay now
   covers those nights or the answer time ran out.
 - `declineBooking` and `cancelBooking` refund everything the guest paid online. `cancelBooking` is refused once the
   stay has started (its money may already be paid out).
@@ -988,7 +1020,8 @@ taken by phone.
 
 ```
 CalendarFeed (room, link, source)
-  │  every 15 minutes (worker) · when the host presses "Sync now" · just before a host confirms
+  │  every 10 minutes (worker) · just before a guest books (unless read in the last 2 minutes)
+  │  · just before a host confirms · when the host presses "Sync now"
   ▼
 download: https only, public addresses only, no redirects, 10-second limit, 2 MB limit   (ical/safe-fetch.ts)
   ▼
@@ -1003,6 +1036,15 @@ in one transaction, with the room locked:
 then email and push the hosts about each NEW clash, and save lastSyncedAt and lastError
 ```
 
+- **Read as late as we can.** The platforms read our link only every few hours, so we read theirs often and just in
+  time: the worker every 10 minutes, a guest's booking first (`refreshBeforeBooking`: unless read in the last 2
+  minutes, 4 seconds at most), and a host's confirmation always (`refreshBeforeConfirming`). At a place that can
+  also be booked whole, every unit's links are read. A stay sold there a moment ago then refuses the request instead
+  of becoming a clash.
+- **Who does what.** `src/modules/calendar-sync` keeps the links (`CalendarFeed`), downloads and reads them, and
+  builds our file; it never calls the booking engine. `src/modules/bookings/server/feed-sync-service.ts` writes the
+  `IMPORTED` rows under the room lock and serves the routes: `GET/POST /api/workspaces/{id}/feeds`,
+  `DELETE .../feeds/{feedId}`, `POST .../feeds/{feedId}/sync` (all `feeds.manage`), `GET /api/ical/{token}`.
 - Imported rows are **not** under the overlap rule (its `WHERE` is `active AND kind <> 'IMPORTED'`), because Airbnb
   and Booking.com can overlap each other, and Airbnb can send a booking over nights we already sold (it refreshes
   only every few hours). So a clashing import is **stored as a normal active row with `conflict = true`**, never in
@@ -1022,12 +1064,15 @@ then email and push the hosts about each NEW clash, and save lastSyncedAt and la
 
 Each room shares `GET /api/ical/{exportToken}`:
 
-- our `DIRECT` and `MANUAL` nights from today,
+- our `DIRECT` and `MANUAL` nights from today, holds waiting for a payment or an answer included, so the platforms
+  stop selling them at their next read; at a place that can also be booked whole, the nights of the units it takes
+  turns with too (the whole place for a room, every room for the whole place),
 - the only text is "Not available" (no guest details),
 - no imported nights (that would create loops),
 - event ids never change (the platforms track events by id).
 
-An unknown link answers 404.
+An unknown link answers 404. The address may end in `.ics` (some platforms ask for it); the channels page shows it
+that way.
 
 ### C. Categories
 
@@ -1042,15 +1087,17 @@ sign-in: many guests ask before they have an account). `hostMessage` in `src/mod
 after check-in, or not at all). The route allows five questions an hour per address, counted across all places, so
 nobody can flood the hosts' inboxes. `sendHostMessage` (`directory/server/contact-host-service.ts`) refuses with 404
 for a place that is unknown, paused or deleted, and with 403 when the host takes questions on WhatsApp only
-(`HostProfile.contactBy`); otherwise it queues `notify.host-message`. Nothing is stored: there is no inbox in the
+(`HostProfile.contactBy`) and the place has a WhatsApp number; otherwise it queues `notify.host-message`. The choice
+covers all the host's places while the number is each place's own (and optional), so `acceptsMessages` keeps
+Contact host open on a place with no number: a guest always has one way to reach the host. Nothing is stored: there is no inbox in the
 app to read, and a question nobody answers must not look answered.
 
 `notify.host-message` (`directory/server/directory-notifications.ts`) writes to the people who can decide the
 place's bookings (`listPeopleWhoDecideBookings`, the same readers as a new request), one email per language with the
 **guest as the reply address**, so answering the email reaches the guest; then a push to each of their devices, after
 the emails, so a retried email never pushes twice. The job carries the question itself (plain values: there is no
-row to load) and reads the host's choice again when it runs, so a host who switches to WhatsApp only meanwhile is
-not written to. Each question has its own reference, so a retried delivery is never sent twice.
+row to load) and reads the host's choice and the place's number again when it runs, so a host who switches to
+WhatsApp only meanwhile is not written to. Each question has its own reference, so a retried delivery is never sent twice.
 
 Tests: `src/modules/directory/tests/contact-host.integration.test.ts`.
 
@@ -1252,6 +1299,24 @@ Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `send
 - An admin sends it by hand from the platform's Whish or Stripe account, and marks it sent with the transfer
   reference.
 - The business row is locked, so two requests cannot spend the same money.
+- **Available** is worked out every time, never stored: online payments for confirmed stays that have started, net of
+  refunds, minus payouts sent or still asked for. Everything else paid online is "upcoming". A refused request is
+  available again.
+- **Who does what.** The payments are the booking engine's, so `src/modules/bookings/server/host-money-service.ts`
+  works out the balance and saves the request under `lockBusinessMoney`; `payments` keeps the `Payout` rows
+  (`payout-service.ts`) and the admin's decision. Routes: `GET/POST /api/workspaces/{id}/payouts` (owners only),
+  `POST /api/admin/payouts/{payoutId}` (`paid` with the transfer's reference, or `rejected` with a note) and
+  `POST /api/admin/refunds/{refundId}` (a refund a provider kept refusing, sent by hand), both platform admins only.
+- **Platform admins** reach `/api/admin/**` through `adminRoute(paramsSchema, handler)` (`src/server/http/route.ts`),
+  which reads the person's role from the database and answers 404 to anyone else. Services take a `PlatformActor`
+  and call `requirePlatformAdmin`; what they do is logged with `recordPlatformAction`, under the admin's name.
+- **Only the business's own owners** ask for its payouts and write its host profile (`requireBusinessOwner`,
+  `isBusinessOwner` in `tenant-context.ts`). A platform admin visiting a business has an owner's rights to help, but
+  is not its owner: those menu lines and pages are hidden from them, and the admin sends payouts from `/admin/money`.
+- **The screen** is `/dashboard/{id}/payouts`: the balances per currency, `PayoutRequestForm` (from `payments`, filled
+  with the details used last time) and the payouts and online payments. Its menu line is `ownerOnly` in
+  `src/components/dashboard/nav-items.ts`, so a member whose role holds every permission still never sees it, and the
+  page answers 404 to anyone but the business's own owners.
 
 ### N. Near your stay (things to do nearby)
 
@@ -1537,16 +1602,21 @@ cannot give, a change to their own access, or an owner's row to someone who is n
 - Show a failure with `errorMessage(caught, fallback)` and `FormError`. It returns the server's own sentence when a
   person can act on it ("Those dates were just taken"), and the translated `fallback` for a crash (`INTERNAL`), a lost
   connection, a timeout or an answer that is not ours. Until `localizeError` exists, a server sentence is in English.
-- For a form, `formFailure(caught, fallback)` also gives `fieldErrors`: the first problem of each wrong field, by field
-  name. Show the text you want under each field, in the visitor's language.
+- For a form, `formFailure(caught, fallback, shownFields)` also gives `fieldErrors`: the first problem of each wrong
+  field the form shows, by field name. Show the text you want under each field, in the visitor's language. A wrong
+  field the form does not show (a value the screen sends on its own) gives the whole form the `fallback`, so a refusal
+  is never silent.
 - `api.run` (slow AI answers) is built with the AI features.
 
 ### Shared hooks
 
-- `useAction()` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } = useAction()`. `run(() =>
-api.post(...))` calls the API, then refreshes the page, and resolves to `true` when it worked. `pending` covers both
-  steps. After a failure, either `error` (for `FormError`) or `fieldErrors` is set, never both. A second `run` while
-  one is going is ignored (a double click can never save, book or pay twice) and resolves to `false`.
+- `useAction(shownFields?)` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } =
+useAction(["name", "phone"])`. `run(() => api.post(...))` calls the API, then refreshes the page, and resolves to
+  `true` when it worked. `pending` covers both steps. A form that shows a message under its fields names them; a
+  button or a form without field messages passes nothing. After a failure, `fieldErrors` holds the named fields the
+  server refused, and `error` (for `FormError`) is set for everything else, so every refusal shows something. A
+  second `run` while one is going is ignored (a double click can never save, book or pay twice) and resolves to
+  `false`.
 - `useLiveQuery<T>(url, query, { delayMs, timeoutMs })` (`src/hooks/use-live-query.ts`): reads from the API and keeps
   the answer in step with what the screen asks as the visitor changes it: the dates, the guests, a search text.
   `const quote = useLiveQuery<Quote>(ready ? url : null, { checkIn, checkOut })` gives `{ data, error, loading,
@@ -1597,7 +1667,7 @@ bottom.
 
 | Job           | Worker schedule | Route (manual run)            | What it does                                                                                          | If it never runs                                                                              |
 | ------------- | --------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Calendar sync | every 15 min    | `POST /api/cron/sync-feeds`   | Reads up to 20 calendar links not read in 15 minutes                                                  | Calendars still update on "Sync now" and before each confirmation                             |
+| Calendar sync | every 5 min     | `POST /api/cron/sync-feeds`   | Reads up to 60 calendar links not read in 10 minutes, 6 at a time                                     | Calendars still update on "Sync now" and before each confirmation                             |
 | Housekeeping  | every 5 min     | `POST /api/cron/expire-holds` | Checks pending online payments, expires unanswered and unpaid bookings, ends unpaid Whish plan months | Each new request expires its room's old holds; a returning guest's payment is checked at once |
 
 The worker runs both on its own schedule (`src/modules/housekeeping/server/housekeeping-jobs.ts`), kept in the database so each run happens

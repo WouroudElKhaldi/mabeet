@@ -166,7 +166,57 @@ export function findUserById(db: Db, userId: string) {
   return db.user.findFirst({ where: { id: userId, isDeleted: false }, select: { email: true } });
 }
 
+/** The person's own details, for their profile page in the dashboard or the admin area. */
+export function findProfile(db: Db, userId: string) {
+  return db.user.findFirst({
+    where: { id: userId, isDeleted: false },
+    select: { name: true, email: true, phone: true },
+  });
+}
+
+export function updateProfile(db: Db, userId: string, data: { name: string; phone: string | null }) {
+  return db.user.update({ where: { id: userId }, data, select: { name: true, email: true, phone: true } });
+}
+
 /** The language a person reads the site and their emails in. */
 export function setLocale(db: Db, userId: string, locale: string) {
   return db.user.update({ where: { id: userId }, data: { locale }, select: { id: true } });
+}
+
+/** The newest accounts for the platform admin, with how many places each works in and how many trips they booked. */
+export function listNewestPeople(db: Db, take: number) {
+  return db.user.findMany({
+    where: { isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      platformRole: true,
+      createdAt: true,
+      _count: {
+        select: { memberships: { where: { status: "ACTIVE" } }, bookings: { where: { isDeleted: false } } },
+      },
+    },
+  });
+}
+
+export function countPeople(db: Db) {
+  return db.user.count({ where: { isDeleted: false } });
+}
+
+export function findNotificationsSeenAt(db: Db, userId: string) {
+  return db.user.findFirst({
+    where: { id: userId, isDeleted: false },
+    select: { notificationsSeenAt: true },
+  });
+}
+
+export function markNotificationsSeen(db: Db, userId: string, seenAt: Date) {
+  return db.user.update({
+    where: { id: userId },
+    data: { notificationsSeenAt: seenAt },
+    select: { id: true },
+  });
 }

@@ -1,6 +1,8 @@
+import type { z } from "zod";
 import type { Locale } from "@/config/appearance";
 import { prisma, runInTransaction } from "@/server/db/client";
 import { conflict, invalid, notFound } from "@/server/errors";
+import type { profileInput } from "../schemas";
 import * as accounts from "./account-repository";
 
 /** "Download my data": everything held about this person, as plain JSON. */
@@ -43,4 +45,14 @@ export async function findAccountEmail(userId: string): Promise<string | null> {
 /** Saves the language a signed-in person picked, so their emails come in it too. */
 export function setMyLocale(userId: string, locale: Locale) {
   return accounts.setLocale(prisma, userId, locale);
+}
+
+/** The signed-in person's own name, email and phone; null once the account is closed. */
+export function getMyProfile(userId: string) {
+  return accounts.findProfile(prisma, userId);
+}
+
+/** Saves the signed-in person's own name and phone. An empty phone is saved as none. */
+export function updateMyProfile(userId: string, input: z.infer<typeof profileInput>) {
+  return accounts.updateProfile(prisma, userId, { name: input.name, phone: input.phone ?? null });
 }

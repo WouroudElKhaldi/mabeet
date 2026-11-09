@@ -1,8 +1,8 @@
 import type { Membership, Role } from "@prisma/client";
 import { ALL_PERMISSIONS, toPermissions } from "@/config/permissions";
 import { prisma } from "@/server/db/client";
-import { findActiveMembership, findAdminAccess } from "./membership-repository";
-import type { Channel, TenantContext } from "./tenant-context";
+import { findActiveMembership, findAdminAccess, isPlatformAdmin } from "./membership-repository";
+import type { Channel, PlatformActor, TenantContext } from "./tenant-context";
 
 type MembershipWithRole = Membership & { role: Role };
 
@@ -37,4 +37,9 @@ export async function resolveContext(userId: string, businessId: string, channel
     channel,
     platformAdmin: true,
   } satisfies TenantContext;
+}
+
+/** A platform admin acting in the admin area, or null for anyone else. Only the website reaches the admin area. */
+export async function resolvePlatformActor(userId: string): Promise<PlatformActor | null> {
+  return (await isPlatformAdmin(prisma, userId)) ? { userId, platformAdmin: true } : null;
 }

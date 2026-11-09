@@ -597,7 +597,8 @@
       "billing": "Billing",
       "payouts": "Payouts",
       "place": "Your place",
-      "analytics": "Analytics"
+      "analytics": "Analytics",
+      "profile": "My profile"
     },
     "overview": {
       "title": "Today",
@@ -779,7 +780,12 @@
         "AIRBNB": "Airbnb",
         "BOOKING": "Booking.com",
         "OTHER": "Other"
-      }
+      },
+      "readHint": "We read each platform's calendar every 10 minutes, again just before a guest books, and again just before you confirm a request. Paste your own link into each platform too, so they close the nights you sell here.",
+      "noRooms": "Add a room first: each room gets its own calendar link.",
+      "noFeeds": "No platform calendar connected to this room yet.",
+      "roomOff": "Switched off: guests can't book it, but its nights stay in step.",
+      "stale": "Not read for over an hour. Press Sync now, or check the link on the platform."
     },
     "team": {
       "title": "Team",
@@ -1015,6 +1021,13 @@
         "REQUESTED": "Requested",
         "PAID": "Sent",
         "REJECTED": "Refused"
+      },
+      "errors": {
+        "amount": "Enter an amount up to what is available.",
+        "accountName": "Enter the account holder's full name.",
+        "whishPhone": "Enter the Whish number with its country code, like +96170123456.",
+        "bankName": "Enter the bank's name.",
+        "iban": "Check the IBAN: it starts with two letters, like LB62."
       }
     },
     "navGroups": {
@@ -1286,7 +1299,8 @@
       "new": "New category",
       "delete": "Delete category",
       "deleteTitle": "Delete “{name}”?",
-      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first"
+      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first",
+      "slug": "Slug"
     },
     "ai": {
       "title": "AI this month",
@@ -1302,7 +1316,7 @@
     "sync": {
       "title": "Calendar sync",
       "summary": "{total, plural, one {# feed} other {# feeds}} connected · {problems, plural, =0 {all healthy} one {# needs attention} other {# need attention}}",
-      "allGood": "Every feed synced in the last two hours.",
+      "allGood": "Every calendar link was read in the last hour.",
       "lastSynced": "Last synced {when}",
       "never": "Never synced"
     },
@@ -1352,14 +1366,16 @@
         "platform": "Platform",
         "money": "Money",
         "content": "Content",
-        "operations": "Operations"
+        "operations": "Operations",
+        "account": "Account"
       },
-      "hosts": "Hosts"
+      "hosts": "Hosts",
+      "profile": "My profile"
     },
     "overviewIntro": "The platform at a glance, and what needs you today.",
     "businessesIntro": "Every business on Mabeet. Suspending one hides it everywhere at once.",
     "usersIntro": "The newest accounts: guests, hosts and staff.",
-    "healthIntro": "What runs on its own: calendar sync with the platforms, and AI spending.",
+    "healthIntro": "What runs on its own: the calendar links each room reads from Airbnb and Booking.com.",
     "newestBusinesses": "Newest businesses",
     "seeAll": "See all",
     "attention": {
@@ -1852,10 +1868,14 @@
     "usage": {
       "rooms": "Rooms",
       "offerings": "Experiences and services",
-      "members": "Team members"
+      "members": "Team members",
+      "title": "What your place uses",
+      "allowed": "Your plan allows {count}"
     },
     "payWhish": "Pay a month with Whish",
-    "whishPending": "We're waiting for Whish to confirm your payment. Refresh in a minute."
+    "whishPending": "We're waiting for Whish to confirm your payment. Refresh in a minute.",
+    "cardOff": "Paying by card isn't set up yet. You can pay a month at a time with Whish.",
+    "whishFailed": "Whish didn't take the payment, so nothing was charged. You can try again."
   },
   "oauth": {
     "kicker": "Connect an AI app",
@@ -1971,10 +1991,14 @@
     "password": "Password",
     "currentPassword": "Current password",
     "newPassword": "New password",
-    "passwordRules": "At least 8 characters.",
+    "passwordRules": "At least 10 characters.",
     "passwordWrong": "Your current password isn't right.",
     "changePassword": "Change password",
-    "passwordChanged": "Password changed. Other devices were signed out."
+    "passwordChanged": "Password changed. Other devices were signed out.",
+    "errors": {
+      "name": "Write your name, 2 to 80 letters.",
+      "phone": "Write the number in international format, e.g. +96171123456."
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -2002,7 +2026,9 @@
       "member_role_changed": "{actor} changed someone's role",
       "member_invited": "{actor} invited someone to the team",
       "member_invitation_accepted": "{actor} accepted the invitation and joined the team",
-      "member_invitation_cancelled": "{actor} cancelled an invitation"
+      "member_invitation_cancelled": "{actor} cancelled an invitation",
+      "payout_sent": "Mabeet sent your payout",
+      "payout_refused": "Mabeet couldn't send your payout; the money is available again"
     },
     "viewAll": "View all notifications",
     "failed": "Couldn't load notifications. Try again.",
@@ -2160,7 +2186,6 @@
     "sentBody": "{name} will reply to your email. Keep an eye on your inbox, and your spam folder just in case.",
     "another": "Ask something else",
     "orWhatsapp": "Or message them on WhatsApp",
-    "unavailable": "This host is not taking questions here right now. Pick your dates to book, or try again later.",
     "errors": {
       "name": "Please give your name, 2 characters or more.",
       "email": "Please check your email address; the host replies to it.",
