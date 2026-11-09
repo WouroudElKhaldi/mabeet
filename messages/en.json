@@ -768,7 +768,12 @@
         "AIRBNB": "Airbnb",
         "BOOKING": "Booking.com",
         "OTHER": "Other"
-      }
+      },
+      "readHint": "We read each platform's calendar every 10 minutes, again just before a guest books, and again just before you confirm a request. Paste your own link into each platform too, so they close the nights you sell here.",
+      "noRooms": "Add a room first: each room gets its own calendar link.",
+      "noFeeds": "No platform calendar connected to this room yet.",
+      "roomOff": "Switched off: guests can't book it, but its nights stay in step.",
+      "stale": "Not read for over an hour. Press Sync now, or check the link on the platform."
     },
     "team": {
       "title": "Team",
