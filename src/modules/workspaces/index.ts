@@ -9,5 +9,6 @@ export {
 } from "./schemas";
 export { BusinessStatusToggle } from "./components/business-status-toggle";
 export { CreateWorkspaceForm } from "./components/create-workspace-form";
+export { HostProfileForm } from "./components/host-profile-form";
 export { PlaceEssentials } from "./components/place-essentials";
 export { SettingsForm } from "./components/settings-form";

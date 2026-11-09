@@ -586,7 +586,8 @@
       "billing": "Billing",
       "payouts": "Payouts",
       "place": "Your place",
-      "analytics": "Analytics"
+      "analytics": "Analytics",
+      "profile": "Host profile"
     },
     "overview": {
       "title": "Today",

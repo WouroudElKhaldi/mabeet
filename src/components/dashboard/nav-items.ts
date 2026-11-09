@@ -1,7 +1,7 @@
 import type { Messages } from "next-intl";
 import type { NavIconName } from "@/components/shell/nav-icons";
 import type { Permission } from "@/config/permissions";
-import { can, type TenantContext } from "@/server/auth/tenant-context";
+import { can, isBusinessOwner, type TenantContext } from "@/server/auth/tenant-context";
 
 // The host dashboard's menu: one line per page, added with the page itself, in the order the side menu shows them.
 // Each page opens with requirePageAccess(businessId, DASHBOARD_PAGES.<page>.anyOf), so the menu and the page read the
@@ -19,7 +19,7 @@ interface DashboardPage {
   anyOf: readonly Permission[];
   /** Also in the bar at the bottom of a phone. */
   tab?: boolean;
-  /** Money that belongs to the business: owners only, whatever their role says. The page checks `ctx.isOwner`. */
+  /** The business's own owners only, whatever a role says, and never a visiting admin; the page checks `isBusinessOwner`. */
   ownerOnly?: boolean;
 }
 
@@ -37,6 +37,7 @@ export const DASHBOARD_PAGES = {
   place: { group: "listings", path: "place", icon: "place", anyOf: ["settings.manage"] },
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
   settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
+  profile: { group: "business", path: "profile", icon: "profile", anyOf: [], ownerOnly: true },
   analytics: { group: "money", path: "analytics", icon: "analytics", anyOf: ["analytics.read"] },
   payouts: { group: "money", path: "payouts", icon: "payouts", anyOf: [], ownerOnly: true },
   team: { group: "team", path: "team", icon: "team", anyOf: ["team.manage", "roles.manage"] },
@@ -70,7 +71,7 @@ export function dashboardNav(ctx: TenantContext): DashboardNavGroup[] {
       .filter(
         ({ page }) =>
           page.group === group &&
-          (page.ownerOnly ? ctx.isOwner : page.anyOf.some((permission) => can(ctx, permission))),
+          (page.ownerOnly ? isBusinessOwner(ctx) : page.anyOf.some((permission) => can(ctx, permission))),
       )
       .map(({ name, page }) => ({
         href: page.path ? `/dashboard/${ctx.businessId}/${page.path}` : `/dashboard/${ctx.businessId}`,

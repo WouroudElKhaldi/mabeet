@@ -46,3 +46,16 @@ export function requirePermission(ctx: TenantContext, permission: Permission): v
 export function requireOwner(ctx: TenantContext, refusal: string): void {
   if (!ctx.isOwner) throw forbidden(refusal);
 }
+
+/**
+ * True for the business's own owners. A platform admin visiting a business acts with an owner's rights to help, but
+ * is not its owner: they never ask for its money or speak as its host.
+ */
+export function isBusinessOwner(ctx: TenantContext): boolean {
+  return ctx.isOwner && ctx.platformAdmin !== true;
+}
+
+/** For what only the business's own owners may do: ask for its payouts, write its host profile. */
+export function requireBusinessOwner(ctx: TenantContext, refusal: string): void {
+  if (!isBusinessOwner(ctx)) throw forbidden(refusal);
+}

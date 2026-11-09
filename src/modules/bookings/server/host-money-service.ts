@@ -8,6 +8,7 @@ import {
 } from "@/modules/payments/server";
 import {
   type PlatformActor,
+  requireBusinessOwner,
   requireOwner,
   requirePlatformAdmin,
   type TenantContext,
@@ -104,7 +105,7 @@ interface PayoutRequest {
  * saved, so two requests sent at once can never add up to more than what is available.
  */
 export async function requestPayout(ctx: TenantContext, input: PayoutRequest, now = new Date()) {
-  requireOwner(ctx, OWNER_ONLY);
+  requireBusinessOwner(ctx, OWNER_ONLY);
   const bank = input.method === "BANK_TRANSFER";
   return runInTransaction(async (tx) => {
     await lockBusinessMoney(tx, ctx.businessId);

@@ -5,6 +5,7 @@ import { Pill } from "@/components/ui/pill";
 import { StatTile } from "@/components/ui/stat-tile";
 import { getPayouts } from "@/modules/bookings/server";
 import { PayoutRequestForm } from "@/modules/payments";
+import { isBusinessOwner } from "@/server/auth/tenant-context";
 import { requirePageTenant } from "@/server/http/session";
 import { toIsoDate } from "@/utils/dates";
 import { formatDate, formatMoney } from "@/utils/format";
@@ -13,12 +14,13 @@ type PageProps = { params: Promise<{ businessId: string }> };
 
 /**
  * What guests paid online, what Mabeet holds for this place, and asking for it. The money belongs to the business,
- * so only its owners see this page, whatever a role allows.
+ * so only its own owners see this page, whatever a role allows; a visiting admin
+ * has the admin's money page.
  */
 export default async function PayoutsPage({ params }: PageProps) {
   const { businessId } = await params;
   const ctx = await requirePageTenant(businessId);
-  if (!ctx.isOwner) notFound();
+  if (!isBusinessOwner(ctx)) notFound();
   const [t, locale, data] = await Promise.all([
     getTranslations("dashboard.payouts"),
     getLocale(),
