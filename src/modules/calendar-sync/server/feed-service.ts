@@ -1,6 +1,8 @@
 import type { FeedSource } from "@prisma/client";
+import { type PlatformActor, requirePlatformAdmin } from "@/server/auth/tenant-context";
 import { type Db, prisma, type Tx } from "@/server/db/client";
 import { conflict } from "@/server/errors";
+import { FEED_STALE_AFTER_MS } from "../feed-health";
 import { buildExportFeed, type ExportEvent } from "./build-feed";
 import * as feeds from "./feed-repository";
 import { type FeedEvent, type ParseWindow, parseFeed } from "./parse-feed";
@@ -65,4 +67,19 @@ export async function readFeed(
 /** The file a room's calendar link serves: its taken nights, each one only "Not available". */
 export function buildRoomCalendarFile(calendarName: string, events: readonly ExportEvent[]): string {
   return buildExportFeed(calendarName, events);
+}
+
+/** How many links the admin's health page lists at most: the newest problems first. */
+const HEALTH_SHOWN = 100;
+
+/** Calendar sync across the platform, for the admin: how many links, how many need a look, and the newest of those. */
+export async function getSyncHealth(actor: PlatformActor, now = new Date()) {
+  requirePlatformAdmin(actor);
+  const staleBefore = new Date(now.getTime() - FEED_STALE_AFTER_MS);
+  const [total, problems, needsLook] = await Promise.all([
+    feeds.countLiveFeeds(prisma),
+    feeds.countFeedsNeedingLook(prisma, staleBefore),
+    feeds.listFeedsNeedingLook(prisma, staleBefore, HEALTH_SHOWN),
+  ]);
+  return { total, problems, needsLook };
 }

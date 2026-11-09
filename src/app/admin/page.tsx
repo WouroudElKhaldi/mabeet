@@ -7,6 +7,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { listPlatformPeople } from "@/modules/accounts/server";
 import { getPlanRevenue } from "@/modules/billing/server";
 import { countPlatformBookings, listRefundsToSend } from "@/modules/bookings/server";
+import { getSyncHealth } from "@/modules/calendar-sync/server";
 import { getPayoutQueue } from "@/modules/payments/server";
 import { listPlatformBusinesses } from "@/modules/workspaces/server";
 import { requirePageAdmin } from "@/server/http/session";
@@ -19,7 +20,7 @@ const NEWEST_SHOWN = 6;
 /** The platform at a glance, and what needs the admin today. */
 export default async function AdminOverviewPage() {
   const actor = await requirePageAdmin();
-  const [t, locale, places, people, bookings, revenue, payouts, refunds] = await Promise.all([
+  const [t, locale, places, people, bookings, revenue, payouts, refunds, sync] = await Promise.all([
     getTranslations("admin"),
     getLocale(),
     listPlatformBusinesses(actor),
@@ -28,6 +29,7 @@ export default async function AdminOverviewPage() {
     getPlanRevenue(actor),
     getPayoutQueue(actor),
     listRefundsToSend(actor),
+    getSyncHealth(actor),
   ]);
   const earned = revenue.thisMonth.find((row) => row.currency === "USD")?.cents ?? 0;
   const attention = [
@@ -40,6 +42,11 @@ export default async function AdminOverviewPage() {
       href: "/admin/money",
       label: t("attention.refunds", { count: refunds.length }),
       urgent: refunds.length > 0,
+    },
+    {
+      href: "/admin/health",
+      label: t("attention.feeds", { count: sync.problems }),
+      urgent: sync.problems > 0,
     },
   ];
 

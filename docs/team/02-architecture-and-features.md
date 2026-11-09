@@ -599,7 +599,10 @@ site's colour palette. Code: `src/app/admin/**`.
   answers 404 to anyone else; each page calls it again for the `PlatformActor` its services need. The menu is
   `src/components/admin/nav-items.ts`. Pages: the overview, hosts (each owner once, with their businesses,
   `BusinessStatusToggle` and "Open dashboard"), people, money (`PayoutDecision`, what each host is owed,
-  `RefundSent`, plan revenue by month), categories (`CategoryManager`) and appearance (`SitePalettePicker`). Each
+  `RefundSent`, plan revenue by month), categories (`CategoryManager`), appearance (`SitePalettePicker`) and health: the calendar links
+  that need a look across the platform (`getSyncHealth` in `calendar-sync`). A link needs a look when its last read
+  failed or nothing was read for an hour (`feedNeedsLook`, `src/modules/calendar-sync/feed-health.ts`); the host's
+  Channels page uses the same rule. Each
   component lives in the module whose route it calls.
 
 ### A. AI: how it is built

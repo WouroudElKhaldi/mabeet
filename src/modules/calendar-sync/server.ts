@@ -4,6 +4,7 @@ export {
   buildRoomCalendarFile,
   deleteFeedLink,
   findFeed,
+  getSyncHealth,
   listFeedsDue,
   listRoomFeeds,
   readFeed,

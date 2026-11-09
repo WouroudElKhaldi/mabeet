@@ -1,4 +1,4 @@
-import type { FeedSource } from "@prisma/client";
+import type { FeedSource, Prisma } from "@prisma/client";
 import type { Db, Tx } from "@/server/db/client";
 
 // The Airbnb, Booking.com and other calendar links a room reads. The nights they bring are IMPORTED night rows, which
@@ -74,4 +74,38 @@ export function recordFeedResult(
   result: { lastSyncedAt: Date; lastError: string | null },
 ) {
   return db.calendarFeed.updateMany({ where: { id: feedId, isDeleted: false }, data: result });
+}
+
+/**
+ * The live links that need a look (the same rule as `feedNeedsLook`): the last read failed, or nothing was read
+ * since `staleBefore`, counting from when the link was added.
+ */
+function needsLookWhere(staleBefore: Date) {
+  return {
+    isDeleted: false,
+    room: { isDeleted: false },
+    OR: [
+      { lastError: { not: null } },
+      { lastSyncedAt: { lt: staleBefore } },
+      { lastSyncedAt: null, createdAt: { lt: staleBefore } },
+    ],
+  } satisfies Prisma.CalendarFeedWhereInput;
+}
+
+/** For the admin's sync health: the links that need a look, the newest first, with their place and room. */
+export function listFeedsNeedingLook(db: Db, staleBefore: Date, take: number) {
+  return db.calendarFeed.findMany({
+    where: needsLookWhere(staleBefore),
+    orderBy: { createdAt: "desc" },
+    take,
+    select: { ...feedFields, room: { select: { name: true } }, business: { select: { name: true } } },
+  });
+}
+
+export function countFeedsNeedingLook(db: Db, staleBefore: Date) {
+  return db.calendarFeed.count({ where: needsLookWhere(staleBefore) });
+}
+
+export function countLiveFeeds(db: Db) {
+  return db.calendarFeed.count({ where: { isDeleted: false, room: { isDeleted: false } } });
 }

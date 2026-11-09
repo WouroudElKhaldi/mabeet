@@ -23,6 +23,7 @@ const ADMIN_PAGES = {
   money: { group: "money", path: "money", icon: "money", tab: true },
   categories: { group: "content", path: "categories", icon: "categories" },
   appearance: { group: "content", path: "appearance", icon: "appearance" },
+  health: { group: "operations", path: "health", icon: "health", tab: true },
 } as const satisfies Partial<Record<AdminNavLabel, AdminPage>>;
 
 type AdminPageName = keyof typeof ADMIN_PAGES;

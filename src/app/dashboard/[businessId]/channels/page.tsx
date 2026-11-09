@@ -4,13 +4,10 @@ import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
 import { PageHeader, Panel } from "@/components/shell/page-header";
 import { CopyField } from "@/components/ui/copy-field";
 import { getCalendarLinks } from "@/modules/bookings/server";
-import { AddFeedForm, FeedButtons } from "@/modules/calendar-sync";
+import { AddFeedForm, FeedButtons, feedNeedsLook } from "@/modules/calendar-sync";
 import { requirePageAccess } from "@/server/http/session";
 
 type PageProps = { params: Promise<{ businessId: string }> };
-
-/** A link the worker reads every ten minutes that has not been read for an hour is worth a look. */
-const STALE_AFTER_MS = 60 * 60_000;
 
 /**
  * The calendar links: each room's own link to paste into Airbnb and Booking.com, and the links it reads back, with
@@ -25,7 +22,6 @@ export default async function ChannelsPage({ params }: PageProps) {
     getCalendarLinks(ctx),
   ]);
   const when = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
-  const staleBefore = Date.now() - STALE_AFTER_MS;
 
   return (
     <>
@@ -55,13 +51,13 @@ export default async function ChannelsPage({ params }: PageProps) {
                   ) : (
                     <ul className="grid gap-2">
                       {room.feeds.map((feed) => {
-                        const stale = !feed.lastSyncedAt || feed.lastSyncedAt.getTime() < staleBefore;
+                        const needsLook = feedNeedsLook(feed);
                         return (
                           <li
                             key={feed.id}
                             className="flex flex-wrap items-center gap-3 rounded-md bg-surface-2 px-4 py-3"
                           >
-                            {feed.lastError || stale ? (
+                            {needsLook ? (
                               <AlertTriangle className="size-4 shrink-0 text-danger" aria-hidden />
                             ) : (
                               <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
@@ -78,7 +74,7 @@ export default async function ChannelsPage({ params }: PageProps) {
                               </p>
                               {feed.lastError ? (
                                 <p className="text-xs font-semibold text-danger">{feed.lastError}</p>
-                              ) : stale ? (
+                              ) : needsLook ? (
                                 <p className="text-xs font-semibold text-danger">{t("stale")}</p>
                               ) : null}
                             </div>
