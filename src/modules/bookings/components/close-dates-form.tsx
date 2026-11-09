@@ -57,7 +57,7 @@ export function CloseDatesForm({
   };
 
   return (
-    <div className="grid gap-3 rounded-xl bg-surface p-5 ring-1 ring-accent sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end">
+    <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl bg-surface p-5 ring-1 ring-accent sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end">
       <p className="flex items-center gap-2 font-semibold sm:col-span-2 lg:col-span-5">
         <Lock className="size-4 text-accent" aria-hidden />
         {draft.end === null
