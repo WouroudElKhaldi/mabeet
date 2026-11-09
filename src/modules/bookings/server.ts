@@ -22,6 +22,7 @@ export {
   startBookingCheckout,
 } from "./server/booking-payments";
 export { findFreeRooms, getTakenNights } from "./server/availability-service";
+export { getPayouts, markRefundSent, requestPayout } from "./server/host-money-service";
 export {
   type ChannelNights,
   getLifetimeDirectRevenue,

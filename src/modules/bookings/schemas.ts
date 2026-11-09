@@ -70,3 +70,7 @@ export const blockInput = z
     range: toDateRange({ checkIn, checkOut }),
     note: note ?? null,
   }));
+
+/** A refund the admin sent by hand. */
+export const refundParams = z.object({ refundId: id });
+export const refundSentInput = z.object({ reference: z.string().trim().max(120).nullish() });

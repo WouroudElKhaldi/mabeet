@@ -1,4 +1,4 @@
-import type { Db, Tx } from "@/server/db/client";
+import { type Db, moneyNumber, type Tx } from "@/server/db/client";
 
 // A booking's online payments and their refunds. Every payment is online (Whish or Stripe) and for the full total;
 // what a guest pays the owner directly is between them and is never recorded here.
@@ -185,4 +185,66 @@ export function listRefundsToSend(db: Db, window: { from: Date; to: Date }, take
       payment: { select: { id: true, method: true, currency: true, providerPaymentId: true } },
     },
   });
+}
+
+// ---------- What Mabeet holds for hosts ----------
+
+/**
+ * What guests paid online, net of refunds, per business and currency: `earned` for confirmed stays that have
+ * started (the only money a payout may release, so a refund never gives back money already paid out), `upcoming`
+ * for the rest. `businessId` null reads every business.
+ */
+export async function sumHeldMoney(db: Db, businessId: string | null, today: Date) {
+  const rows = await db.$queryRaw<
+    Array<{ businessId: string; currency: string; earned: bigint; upcoming: bigint }>
+  >`
+    SELECT p."businessId", p.currency,
+           COALESCE(SUM(p."amountCents" - p."refundedCents")
+             FILTER (WHERE b.status = 'CONFIRMED' AND b."checkIn" <= ${today}::date), 0)::bigint AS earned,
+           COALESCE(SUM(p."amountCents" - p."refundedCents")
+             FILTER (WHERE NOT (b.status = 'CONFIRMED' AND b."checkIn" <= ${today}::date)), 0)::bigint AS upcoming
+    FROM "Payment" p
+    JOIN "Booking" b ON b.id = p."bookingId"
+    WHERE NOT p."isDeleted" AND p.status IN ('PAID', 'REFUNDED')
+      AND (${businessId}::text IS NULL OR p."businessId" = ${businessId})
+    GROUP BY 1, 2`;
+  return rows.map((row) => ({
+    businessId: row.businessId,
+    currency: row.currency,
+    earnedCents: moneyNumber(row.earned),
+    upcomingCents: moneyNumber(row.upcoming),
+  }));
+}
+
+/** A business's online payments, the latest first, with the booking each paid for. */
+export function listBusinessPayments(db: Db, businessId: string, take: number) {
+  return db.payment.findMany({
+    where: { businessId, isDeleted: false, status: { in: ["PAID", "REFUNDED"] }, bookingId: { not: null } },
+    orderBy: { paidAt: "desc" },
+    take,
+    select: {
+      id: true,
+      amountCents: true,
+      refundedCents: true,
+      currency: true,
+      method: true,
+      status: true,
+      paidAt: true,
+      booking: { select: { reference: true, guestName: true, checkIn: true } },
+    },
+  });
+}
+
+/** The admin sent a refund by hand. Only a pending one changes, so it is marked once. */
+export async function markRefundSentByHand(
+  db: Db,
+  refundId: string,
+  sent: { doneById: string; providerRef: string | null; doneAt: Date },
+) {
+  const [refund] = await db.refund.updateManyAndReturn({
+    where: { id: refundId, status: "PENDING", isDeleted: false },
+    data: { status: "DONE", ...sent },
+    select: { id: true, businessId: true },
+  });
+  return refund ?? null;
 }

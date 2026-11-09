@@ -1247,6 +1247,17 @@ Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `send
 - An admin sends it by hand from the platform's Whish or Stripe account, and marks it sent with the transfer
   reference.
 - The business row is locked, so two requests cannot spend the same money.
+- **Available** is worked out every time, never stored: online payments for confirmed stays that have started, net of
+  refunds, minus payouts sent or still asked for. Everything else paid online is "upcoming". A refused request is
+  available again.
+- **Who does what.** The payments are the booking engine's, so `src/modules/bookings/server/host-money-service.ts`
+  works out the balance and saves the request under `lockBusinessMoney`; `payments` keeps the `Payout` rows
+  (`payout-service.ts`) and the admin's decision. Routes: `GET/POST /api/workspaces/{id}/payouts` (owners only),
+  `POST /api/admin/payouts/{payoutId}` (`paid` with the transfer's reference, or `rejected` with a note) and
+  `POST /api/admin/refunds/{refundId}` (a refund a provider kept refusing, sent by hand), both platform admins only.
+- **Platform admins** reach `/api/admin/**` through `adminRoute(paramsSchema, handler)` (`src/server/http/route.ts`),
+  which reads the person's role from the database and answers 404 to anyone else. Services take a `PlatformActor`
+  and call `requirePlatformAdmin`; what they do is logged with `recordPlatformAction`, under the admin's name.
 
 ### N. Near your stay (things to do nearby)
 
