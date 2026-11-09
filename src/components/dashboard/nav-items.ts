@@ -21,6 +21,8 @@ interface DashboardPage {
   tab?: boolean;
   /** The business's own owners only, whatever a role says, and never a visiting admin; the page checks `isBusinessOwner`. */
   ownerOnly?: boolean;
+  /** Everyone on the team, whatever their role: the page is about the person, not the business. */
+  everyone?: boolean;
 }
 
 export const DASHBOARD_PAGES = {
@@ -37,7 +39,7 @@ export const DASHBOARD_PAGES = {
   place: { group: "listings", path: "place", icon: "place", anyOf: ["settings.manage"] },
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
   settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
-  profile: { group: "business", path: "profile", icon: "profile", anyOf: [], ownerOnly: true },
+  profile: { group: "business", path: "profile", icon: "profile", anyOf: [], everyone: true },
   analytics: { group: "money", path: "analytics", icon: "analytics", anyOf: ["analytics.read"] },
   payouts: { group: "money", path: "payouts", icon: "payouts", anyOf: [], ownerOnly: true },
   team: { group: "team", path: "team", icon: "team", anyOf: ["team.manage", "roles.manage"] },
@@ -71,7 +73,8 @@ export function dashboardNav(ctx: TenantContext): DashboardNavGroup[] {
       .filter(
         ({ page }) =>
           page.group === group &&
-          (page.ownerOnly ? isBusinessOwner(ctx) : page.anyOf.some((permission) => can(ctx, permission))),
+          (page.everyone ||
+            (page.ownerOnly ? isBusinessOwner(ctx) : page.anyOf.some((permission) => can(ctx, permission)))),
       )
       .map(({ name, page }) => ({
         href: page.path ? `/dashboard/${ctx.businessId}/${page.path}` : `/dashboard/${ctx.businessId}`,
