@@ -2,8 +2,8 @@ import clsx from "clsx";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { PlaceArt } from "@/components/brand/place-art";
-import { ShowAllDialog } from "@/components/ui/show-all-dialog";
-import type { PublicPhoto } from "../types";
+import { ArrowLink } from "@/components/ui/arrow-link";
+import type { PublicPhoto, PublicPlace } from "../types";
 
 const MOSAIC_PHOTOS = 5;
 
@@ -36,10 +36,19 @@ function Photo({
 
 /**
  * The place's photos: one large and four small on a wide screen, the large one alone on a phone or with fewer than
- * five photos, and "Show all photos" for the rest. A place without photos gets a drawn postcard, never an empty space.
+ * five photos, and a link to the photo tour, which holds every photo of the place and its rooms, grouped. A place
+ * without photos gets a drawn postcard, never an empty space.
  */
-export async function PhotoGallery({ name, photos }: { name: string; photos: readonly PublicPhoto[] }) {
-  const t = await getTranslations("placePage");
+export async function PhotoGallery({
+  place,
+  photoCount,
+}: {
+  place: Pick<PublicPlace, "name" | "slug" | "photos">;
+  /** Every photo of the place, its rooms included, which is what the photo tour shows. */
+  photoCount: number;
+}) {
+  const t = await getTranslations("photoTour");
+  const { name, photos } = place;
   const [first, ...rest] = photos;
   if (!first) {
     return (
@@ -69,23 +78,10 @@ export async function PhotoGallery({ name, photos }: { name: string; photos: rea
           <Photo key={photo.id} photo={photo} fallbackAlt={name} sizes="25vw" className="hidden lg:block" />
         ))}
       </div>
-      {rest.length > 0 ? (
-        <div className="mt-3">
-          <ShowAllDialog label={t("showAllPhotos")} title={name}>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {photos.map((photo) => (
-                <li key={photo.id}>
-                  <Photo
-                    photo={photo}
-                    fallbackAlt={name}
-                    sizes="(min-width: 640px) 45vw, 100vw"
-                    className="aspect-4/3 rounded-lg"
-                  />
-                </li>
-              ))}
-            </ul>
-          </ShowAllDialog>
-        </div>
+      {photoCount > 1 ? (
+        <p className="mt-3">
+          <ArrowLink href={`/p/${place.slug}/photos`}>{t("showAll", { count: photoCount })}</ArrowLink>
+        </p>
       ) : null}
     </div>
   );

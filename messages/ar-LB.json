@@ -202,6 +202,9 @@
       "pets": "الحيوانات أهلا وسهلا فيها",
       "generator": "كهربا ٢٤/٢٤"
     },
+    "whereYoullBe": "وين رح تكون",
+    "mapOf": "خريطة المنطقة حوالي {place}",
+    "approximate": "هيدي المنطقة، مش العنوان بالزبط. المضيف بيبعتلك العنوان الكامل مع حجزك.",
     "houseRules": "قوانين البيت",
     "cancellation": "الإلغاء",
     "reviews": "شو عم يقولوا الضيوف",
@@ -211,7 +214,6 @@
     "noRooms": "هالمحل ما عم ياخد حجوزات هلّق.",
     "bedrooms": "{count, plural, zero {ولا أوضة نوم} one {أوضة نوم وحدة} two {أوضتين نوم} few {# أوض نوم} many {# أوضة نوم} other {# أوضة نوم}}",
     "baths": "{count, plural, zero {ولا حمّام} one {حمّام واحد} two {حمّامين} few {# حمّامات} many {# حمّام} other {# حمّام}}",
-    "showAllPhotos": "شوف كل الصور",
     "whereYoullSleep": "وين رح تنام",
     "wholePlaceIntro": "بتحجز المحل كلّو، لحدّ {guests} ضيوف. هيدي أوضو.",
     "wholeHomeIn": "بيت كامل بـ {area}",
@@ -2019,9 +2021,8 @@
   },
   "photoTour": {
     "title": "جولة بالصور",
-    "showAll": "شوف كل الصور",
+    "showAll": "فرجيني كل الصور ({count})",
     "none": "ما في صور بعد.",
-    "photos": "{count, plural, zero {ولا صورة} one {صورة وحدة} two {صورتين} few {# صور} many {# صورة} other {# صورة}}",
     "areas": {
       "LIVING_ROOM": "الصالون",
       "KITCHEN": "المطبخ",
@@ -2038,14 +2039,7 @@
   },
   "share": {
     "button": "شارك",
-    "title": "شارك هالمحل",
-    "close": "سكّر",
-    "copyLink": "انسخ الرابط",
-    "copied": "انتسخ",
-    "email": "إيميل",
-    "messages": "رسائل",
-    "embed": "تضمين",
-    "more": "خيارات تانية"
+    "copied": "انتسخ"
   },
   "overviewAll": {
     "title": "كل محلاتي",

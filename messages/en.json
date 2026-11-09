@@ -202,6 +202,9 @@
       "pets": "Pets welcome",
       "generator": "24/7 electricity"
     },
+    "whereYoullBe": "Where you'll be",
+    "mapOf": "Map of the area around {place}",
+    "approximate": "The area, not the door. The host sends the exact address with your booking.",
     "houseRules": "House rules",
     "cancellation": "Cancellation",
     "reviews": "What guests say",
@@ -211,7 +214,6 @@
     "noRooms": "This place is not taking bookings right now.",
     "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
     "baths": "{count, plural, one {# bath} other {# baths}}",
-    "showAllPhotos": "Show all photos",
     "whereYoullSleep": "Where you'll sleep",
     "wholePlaceIntro": "You book the whole place, for up to {guests} guests. These are its rooms.",
     "wholeHomeIn": "Entire home in {area}",
@@ -2019,9 +2021,8 @@
   },
   "photoTour": {
     "title": "Photo tour",
-    "showAll": "Show all photos",
+    "showAll": "Show all {count} photos",
     "none": "No photos yet.",
-    "photos": "{count, plural, one {# photo} other {# photos}}",
     "areas": {
       "LIVING_ROOM": "Living room",
       "KITCHEN": "Kitchen",
@@ -2038,14 +2039,7 @@
   },
   "share": {
     "button": "Share",
-    "title": "Share this place",
-    "close": "Close",
-    "copyLink": "Copy link",
-    "copied": "Copied",
-    "email": "Email",
-    "messages": "Messages",
-    "embed": "Embed",
-    "more": "More options"
+    "copied": "Copied"
   },
   "overviewAll": {
     "title": "All my places",
