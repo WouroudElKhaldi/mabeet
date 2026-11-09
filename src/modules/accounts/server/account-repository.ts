@@ -166,6 +166,18 @@ export function findUserById(db: Db, userId: string) {
   return db.user.findFirst({ where: { id: userId, isDeleted: false }, select: { email: true } });
 }
 
+/** The person's own details, for their profile page in the dashboard or the admin area. */
+export function findProfile(db: Db, userId: string) {
+  return db.user.findFirst({
+    where: { id: userId, isDeleted: false },
+    select: { name: true, email: true, phone: true },
+  });
+}
+
+export function updateProfile(db: Db, userId: string, data: { name: string; phone: string | null }) {
+  return db.user.update({ where: { id: userId }, data, select: { name: true, email: true, phone: true } });
+}
+
 /** The language a person reads the site and their emails in. */
 export function setLocale(db: Db, userId: string, locale: string) {
   return db.user.update({ where: { id: userId }, data: { locale }, select: { id: true } });

@@ -549,7 +549,10 @@ guest who made it.
 
 Guests see their stays (`/account`), save favourites, review a stay after check-out, download all their data
 (`GET /api/me/export`), and delete their account (`POST /api/me/delete`, typing their email to confirm; see "Nothing
-is deleted"). Code: `account-service.ts`, `src/app/(site)/account/**`.
+is deleted"). Anyone with an account changes their own name and phone (`PATCH /api/me/profile`; the email is
+how they sign in, so it stays) and their password (Better Auth's change password, which signs out their other
+devices), on `/dashboard/[businessId]/profile` or `/admin/profile`. Code: `account-service.ts`,
+`src/app/(site)/account/**`.
 
 ### A. Activity log and notification bell
 
