@@ -26,6 +26,8 @@ interface AppFrameProps {
   badge?: string;
   viewSiteHref: string;
   userName: string;
+  /** The notification bell, built by the layout for this person. */
+  bell?: ReactNode;
   children: ReactNode;
 }
 
@@ -41,7 +43,7 @@ function Avatar({ name, label }: { name: string; label?: string }) {
 }
 
 /** The parts of the dashboard frame that move: the phone drawer, the bar at the bottom, the page name in the top bar. */
-export function AppFrame({ nav, areaLabel, badge, viewSiteHref, userName, children }: AppFrameProps) {
+export function AppFrame({ nav, areaLabel, badge, viewSiteHref, userName, bell, children }: AppFrameProps) {
   const t = useTranslations("shell");
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -94,6 +96,7 @@ export function AppFrame({ nav, areaLabel, badge, viewSiteHref, userName, childr
             {t("viewSite")}
             <ExternalLink className="size-4" aria-hidden />
           </Link>
+          {bell}
           <AppearanceMenu />
           <div className="hidden items-center gap-1 lg:flex">
             <Avatar name={userName} label={t("account")} />
