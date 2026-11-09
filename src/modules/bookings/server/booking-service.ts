@@ -100,6 +100,7 @@ export async function requestBooking(request: BookingRequest, now = new Date()) 
         action: "booking.requested",
         entity: "booking",
         entityId: created.id,
+        note: { guest: created.guestName, reference: created.reference },
       });
       refunds = await endExpired(tx, expired);
       return created;
@@ -160,7 +161,10 @@ async function decide(ctx: TenantContext, { bookingId, reason }: Decision, statu
     });
     if (!updated) throw conflict(JUST_CHANGED);
     const action = `booking.${status.toLowerCase()}`;
-    await recordAction(ctx, action, "booking", bookingId, tx);
+    await recordAction(ctx, action, "booking", bookingId, tx, {
+      guest: current.guestName,
+      reference: current.reference,
+    });
     await notePerson(tx, {
       userId: current.guestUserId,
       businessId: ctx.businessId,
@@ -254,6 +258,7 @@ export async function cancelStayAsGuest(
       action: "booking.cancelled_by_guest",
       entity: "booking",
       entityId: current.id,
+      note: { guest: current.guestName, reference: current.reference },
     });
     return { booking: updated, refunds: await refundPayments(tx, current.id, "Cancelled by the guest") };
   });

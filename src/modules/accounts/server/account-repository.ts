@@ -193,3 +193,18 @@ export function listNewestPeople(db: Db, take: number) {
 export function countPeople(db: Db) {
   return db.user.count({ where: { isDeleted: false } });
 }
+
+export function findNotificationsSeenAt(db: Db, userId: string) {
+  return db.user.findFirst({
+    where: { id: userId, isDeleted: false },
+    select: { notificationsSeenAt: true },
+  });
+}
+
+export function markNotificationsSeen(db: Db, userId: string, seenAt: Date) {
+  return db.user.update({
+    where: { id: userId },
+    data: { notificationsSeenAt: seenAt },
+    select: { id: true },
+  });
+}

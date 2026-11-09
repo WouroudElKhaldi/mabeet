@@ -2004,7 +2004,9 @@
       "member_role_changed": "{actor} changed someone's role",
       "member_invited": "{actor} invited someone to the team",
       "member_invitation_accepted": "{actor} accepted the invitation and joined the team",
-      "member_invitation_cancelled": "{actor} cancelled an invitation"
+      "member_invitation_cancelled": "{actor} cancelled an invitation",
+      "payout_sent": "Mabeet sent your payout",
+      "payout_refused": "Mabeet couldn't send your payout; the money is available again"
     },
     "viewAll": "View all notifications",
     "failed": "Couldn't load notifications. Try again.",
