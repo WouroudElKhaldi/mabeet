@@ -8,5 +8,6 @@ export {
   setMyLocale,
 } from "./server/account-service";
 export { createVerifiedAccount } from "./server/invited-account";
+export { markNotificationsSeen, notificationsSeenAt } from "./server/notifications-seen";
 export { ensurePlatformAdmin } from "./server/platform-admin";
 export { listPlatformPeople } from "./server/platform-people";

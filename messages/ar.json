@@ -2004,7 +2004,9 @@
       "member_role_changed": "غيّر {actor} دور أحد الأعضاء",
       "member_invited": "دعا {actor} شخصًا إلى الفريق",
       "member_invitation_accepted": "قبل {actor} الدعوة وانضمّ إلى الفريق",
-      "member_invitation_cancelled": "ألغى {actor} دعوة"
+      "member_invitation_cancelled": "ألغى {actor} دعوة",
+      "payout_sent": "أرسلت مبيت دفعتك",
+      "payout_refused": "تعذّر على مبيت إرسال دفعتك؛ المبلغ متاح من جديد"
     },
     "viewAll": "عرض كل الإشعارات",
     "failed": "تعذّر تحميل الإشعارات. حاول مجددًا.",

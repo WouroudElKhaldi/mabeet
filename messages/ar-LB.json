@@ -2004,7 +2004,9 @@
       "member_role_changed": "{actor} غيّر دور حدا",
       "member_invited": "{actor} عزم حدا عالفريق",
       "member_invitation_accepted": "{actor} قبل الدعوة وانضمّ عالفريق",
-      "member_invitation_cancelled": "{actor} لغى دعوة"
+      "member_invitation_cancelled": "{actor} لغى دعوة",
+      "payout_sent": "مبيت بعتتلك الدفعة",
+      "payout_refused": "مبيت ما قدرت تبعتلك الدفعة؛ المبلغ رجع متاح"
     },
     "viewAll": "شوف كل الإشعارات",
     "failed": "ما قدرنا نحمّل الإشعارات. جرّب كمان مرّة.",

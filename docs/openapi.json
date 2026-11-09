@@ -7774,7 +7774,7 @@
       "get": {
         "tags": ["Workspaces"],
         "summary": "The bell: the latest five notifications in this business",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace. The latest five notifications this member should see: booking news with bookings.read, money and team news for owners. Answers { items: [{ id, action, actorId, createdAt, actor: { name } | null, business: { id, name } | null, booking: { guest, reference } | null }], seenAt }.",
         "security": [
           {
             "session": []
@@ -7839,7 +7839,7 @@
       "post": {
         "tags": ["Workspaces"],
         "summary": "Mark notifications read (the bell was opened)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Marks everything up to now as read for this person, in every business.",
         "security": [
           {
             "session": []
@@ -7906,7 +7906,7 @@
       "get": {
         "tags": ["Platform"],
         "summary": "The admin bell: the latest five platform notifications",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). The latest five platform notifications: payout requests, late payments and new requests across every business. Answers { items: [{ id, action, actorId, createdAt, actor: { name } | null, business: { id, name } | null, booking: { guest, reference } | null }], seenAt }.",
         "security": [
           {
             "session": []
@@ -7962,7 +7962,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Mark platform notifications read",
-        "description": "Super admin only.",
+        "description": "Platform admins only. Marks everything up to now as read.",
         "security": [
           {
             "session": []

@@ -564,7 +564,13 @@ Every important action is recorded, through the `audit` module (`@/modules/audit
   exports a function for it with the first such event.
 
 The bell in the top bar shows the last five events of the business. "View all" opens the full list. Code:
-`audit.ts`, `notification-feed-service.ts`, `notification-bell.tsx`.
+`audit.ts` (the feed reads `listFeed`, `countFeed`, `countFeedSince`), `notification-feed-service.ts` in
+`notifications`, which reads them and when the person last looked (`notificationsSeenAt`, from `accounts`), and the
+bell and list in `src/modules/notifications/components/`.
+
+- The bell never reads the bookings: `notifications` may not call `bookings`, which calls it to send push. So the
+  booking engine writes the guest and the reference on the log line itself (`note: { guest, reference }`, saved in
+  `AuditLog.meta`), and the bell shows them from there.
 
 The bell is read from `AuditLog`, so it shows only the actions listed in `notification-feed-service.ts`. To add a
 new kind of bell entry (all four steps, or it shows a raw key or nothing):
