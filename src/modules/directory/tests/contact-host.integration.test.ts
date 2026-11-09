@@ -88,10 +88,18 @@ describe("asking a host a question", () => {
 
   it("is refused when the host answers on WhatsApp only, and sends nothing", async () => {
     const place = await createPlace();
+    await prisma.business.update({ where: { id: place.business.id }, data: { whatsapp: "+96171000111" } });
     await prisma.hostProfile.create({ data: { userId: place.owner.id, contactBy: "WHATSAPP" } });
     const response = await ask(place.business.slug, question);
     expect(response.status).toBe(403);
     expect(await emailsTo(place.owner.email)).toEqual([]);
+  });
+
+  it("is taken when the host chose WhatsApp only but the place has no number", async () => {
+    const place = await createPlace();
+    await prisma.hostProfile.create({ data: { userId: place.owner.id, contactBy: "WHATSAPP" } });
+    expect((await ask(place.business.slug, question)).status).toBe(202);
+    expect(await emailsTo(place.owner.email)).toHaveLength(1);
   });
 
   it("is taken when the host chose Contact host only, even with their profile hidden", async () => {

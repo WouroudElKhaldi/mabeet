@@ -18,8 +18,13 @@ export const MIN_REQUESTS_FOR_RESPONSE = 3;
 export const hostDisplayName = (place: Pick<PublicPlace, "name" | "host">): string =>
   place.host.profile?.name ?? place.name;
 
-/** Whether the host takes questions through the Contact host page. */
-export const acceptsMessages = (contactBy: HostContact): boolean => contactBy !== "WHATSAPP";
+/**
+ * Whether the host takes questions through the Contact host page, given the place's WhatsApp number. A host who
+ * chose WhatsApp only still does on a place with no number: the choice covers all their places, and the number is
+ * each place's own and can be removed, so this is the one rule that keeps a guest from being left with no way in.
+ */
+export const acceptsMessages = (contactBy: HostContact, whatsapp: string | null): boolean =>
+  contactBy !== "WHATSAPP" || !whatsapp;
 
 /** Whether the host offers a WhatsApp button. The number is always the place's own. */
 export const offersWhatsapp = (contactBy: HostContact): boolean => contactBy !== "MESSAGE";

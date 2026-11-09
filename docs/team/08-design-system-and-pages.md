@@ -539,7 +539,8 @@ avatar with their first letter and their name (the place's name while their prof
 the languages they speak, "New on Mabeet" in their first year, then the two figures guests weigh a host by (years
 hosting, response rate) and how quickly they answer as a sentence of its own ("Responds within an hour"). A figure
 nobody can know yet is simply not shown, never a 0 or a dash. Then their bio, "Contact host" and the WhatsApp
-button, each shown only if the host takes questions that way (`HostProfile.contactBy`), and the line asking the
+button, each shown only if the host takes questions that way (`HostProfile.contactBy`; a host who chose WhatsApp
+only keeps "Contact host" on a place with no WhatsApp number, so one of the two always shows), and the line asking the
 guest to book and pay through Mabeet. The WhatsApp number is the place's own, never the host's.
 
 `BookingBox` (a client component) holds the room, the dates and the guests; it asks the quote route when both dates are
@@ -588,8 +589,8 @@ and the house rules; each one is left out when the place has nothing to say for 
 booking box to check dates. Beside it, a `TicketCard` holds `ContactHostForm` (name, the email the host replies to,
 and the question, each checked before sending, with the host named in the placeholder; once sent, a thank-you
 saying where the answer will arrive, and a way to ask something else) and the WhatsApp button, each shown only if
-the host takes questions that way. A host who takes neither gets one calm line instead, pointing the guest to the
-dates. A stay carried in the address (`?checkIn=&checkOut=&guests=`, as the place page's links already pass it)
+the host takes questions that way. One of the two always shows: a host who chose WhatsApp only keeps the form on a
+place with no WhatsApp number. A stay carried in the address (`?checkIn=&checkOut=&guests=`, as the place page's links already pass it)
 shows on the ticket's stub and goes with the question, so the host answers about the right nights.
 
 #### `/b/[token]` The guest's booking page (F4; the pay buttons F4a)

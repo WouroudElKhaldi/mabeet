@@ -374,7 +374,8 @@ Whoever gets an email about a booking also gets a push on every device they turn
 - platform admins: AI budget warnings
 - hosts and staff who can decide bookings: questions from a place's Contact host page, sent with the guest's
   address as reply-to, so answering the email reaches the guest. A host can turn this page off (WhatsApp only) for
-  all their places; the route then refuses messages
+  all their places; the route then refuses messages, except on a place with no WhatsApp number, which keeps the
+  page so guests can always reach the host
 
 Inside the app, a bell shows each person the latest five events of their businesses (or of the platform, for
 admins), built from the audit log; "View all" opens the paged list.
