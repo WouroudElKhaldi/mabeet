@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { RoomKind } from "@prisma/client";
 import { toPermissions, type Permission } from "@/config/permissions";
 import { createWorkspace } from "@/modules/workspaces/server";
-import { resolveContext } from "@/server/auth/resolve-context";
-import type { TenantContext } from "@/server/auth/tenant-context";
+import { resolveContext, resolvePlatformActor } from "@/server/auth/resolve-context";
+import type { PlatformActor, TenantContext } from "@/server/auth/tenant-context";
 import { prisma } from "@/server/db/client";
 import { addDays, type DateRange, todayUtc } from "@/utils/dates";
 
@@ -62,4 +62,13 @@ export async function memberWith(businessId: string, permissions: Permission[]):
   });
   await prisma.membership.create({ data: { userId: user.id, businessId, roleId: role.id } });
   return contextOf(user.id, businessId);
+}
+
+/** A new platform admin, as the admin services see them. */
+export async function createPlatformAdmin(): Promise<PlatformActor> {
+  const user = await createUser("Platform Admin");
+  await prisma.user.update({ where: { id: user.id }, data: { platformRole: "SUPER_ADMIN" } });
+  const actor = await resolvePlatformActor(user.id);
+  if (!actor) throw new Error("expected a platform admin");
+  return actor;
 }

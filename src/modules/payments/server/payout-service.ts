@@ -34,6 +34,16 @@ export async function listBusinessPayouts(businessId: string) {
 
 // ---------- Platform admin ----------
 
+/** Requests to send, the oldest first, and the latest payouts already decided. */
+export async function getPayoutQueue(actor: PlatformActor, recentShown = 20) {
+  requirePlatformAdmin(actor);
+  const [requests, recent] = await Promise.all([
+    payouts.listPayoutRequests(prisma),
+    payouts.listDecidedPayouts(prisma, recentShown),
+  ]);
+  return { requests, recent };
+}
+
 /**
  * The admin sent the money (with the transfer's reference) or refuses the request (with a note the host sees).
  * Each request is decided once; a refused one is available to ask for again.

@@ -235,6 +235,29 @@ export function listBusinessPayments(db: Db, businessId: string, take: number) {
   });
 }
 
+/** Refunds a provider kept refusing and housekeeping stopped retrying: the admin sends them by hand. */
+export function listRefundsToSendByHand(db: Db, recordedBefore: Date) {
+  return db.refund.findMany({
+    where: { status: "PENDING", isDeleted: false, createdAt: { lt: recordedBefore } },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      businessId: true,
+      amountCents: true,
+      currency: true,
+      reason: true,
+      createdAt: true,
+      business: { select: { name: true } },
+      payment: {
+        select: {
+          method: true,
+          booking: { select: { reference: true, guestName: true, guestPhone: true, guestEmail: true } },
+        },
+      },
+    },
+  });
+}
+
 /** The admin sent a refund by hand. Only a pending one changes, so it is marked once. */
 export async function markRefundSentByHand(
   db: Db,

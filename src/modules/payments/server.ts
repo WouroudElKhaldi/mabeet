@@ -1,7 +1,13 @@
 // The only door into this module for server code (routes, the worker, other modules). Anything not exported here is
 // private to the module.
 export { lockBusinessMoney } from "./server/money-service";
-export { createPayoutRequest, decidePayout, listBusinessPayouts, sumPayouts } from "./server/payout-service";
+export {
+  createPayoutRequest,
+  decidePayout,
+  getPayoutQueue,
+  listBusinessPayouts,
+  sumPayouts,
+} from "./server/payout-service";
 export {
   createBillingPortalSession,
   createPaymentCheckout,

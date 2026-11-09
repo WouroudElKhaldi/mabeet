@@ -2,6 +2,8 @@ import type {
   BookingMode,
   BookingStatus,
   BookingUnit,
+  BusinessStatus,
+  ListingKind,
   FeedSource,
   PayoutMethod,
   PhotoArea,
@@ -66,6 +68,12 @@ export type OnlinePaymentMethod = (typeof ONLINE_PAYMENT_METHODS)[number];
 
 /** Where Mabeet sends a host's payout: a bank account (IBAN) or a Whish number. Never a card. */
 export const PAYOUT_METHODS = ["BANK_TRANSFER", "WHISH"] as const satisfies readonly PayoutMethod[];
+
+/** A business is live, or suspended by a platform admin (hidden everywhere until reactivated). */
+export const BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies readonly BusinessStatus[];
+
+/** What a browse category is for: places, experiences or services. */
+export const LISTING_KINDS = ["HOME", "EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
 
 /** Calendars we read taken nights from. */
 export const FEED_SOURCES = ["AIRBNB", "BOOKING", "OTHER"] as const satisfies readonly FeedSource[];

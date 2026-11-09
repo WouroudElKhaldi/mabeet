@@ -582,7 +582,19 @@ new kind of bell entry (all four steps, or it shows a raw key or nothing):
 
 `/admin`, for platform admins: businesses (suspend or reactivate), hosts, AI spending against the budget, calendar
 sync health, payouts and refunds to send by hand, categories, and the
-site's colour palette. Code: `admin-service.ts`, `src/app/admin/**`.
+site's colour palette. Code: `src/app/admin/**`.
+
+- Each admin read and change lives in the module that owns its table, never in `admin`: `workspaces` lists the
+  businesses and suspends them (`platform-service.ts`), `billing` adds up the plan revenue (`plan-revenue.ts`),
+  `payments` keeps the payout queue, `bookings` what each host is owed and the refunds to send by hand. `admin` keeps
+  only its own tables: the categories and the site's palette. So `workspaces` can keep calling `admin` with no circle.
+- Every one takes a `PlatformActor`, calls `requirePlatformAdmin` first, and logs its change with
+  `recordPlatformAction` (`business.suspended`, `business.reactivated`, `category.created`, `category.updated`,
+  `category.deleted`, `site.palette_changed`).
+- Suspending writes only `Business.status`: every public read and `resolveContext` already ask for `ACTIVE`, so the
+  page, the listing and the team's access go at once, and come back with `ACTIVE`.
+- A category's slug is its key: creating a deleted slug brings the row back. A category still used is never
+  deleted.
 
 ### A. AI: how it is built
 
