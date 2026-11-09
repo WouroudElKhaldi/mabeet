@@ -334,11 +334,13 @@ export function CalendarBoard(props: CalendarBoardProps) {
     );
   };
 
+  // Every column is minmax(0, …): the rooms view is wider than a phone, and an `auto` column would grow to its width
+  // and push the whole page sideways instead of scrolling inside its card.
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
       {dialog}
-      <div className="grid min-w-0 content-start gap-4">
-        <div className="rounded-xl bg-surface ring-1 ring-line">
+      <div className="grid min-w-0 grid-cols-1 content-start gap-4">
+        <div className="min-w-0 rounded-xl bg-surface ring-1 ring-line">
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-3 sm:px-4">
             <div className="flex items-center">
               <button
@@ -405,7 +407,7 @@ export function CalendarBoard(props: CalendarBoardProps) {
                 value={roomId}
                 onChange={(event) => setRoomId(event.target.value)}
                 aria-label={t("room")}
-                className={clsx(inputClass, "h-8 w-auto py-0 text-xs")}
+                className={clsx(inputClass, "h-8 w-auto max-w-full py-0 text-xs")}
               >
                 <option value="all">{t("allRooms")}</option>
                 {rooms.map((room) => (
