@@ -1287,7 +1287,8 @@
       "new": "New category",
       "delete": "Delete category",
       "deleteTitle": "Delete “{name}”?",
-      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first"
+      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first",
+      "slug": "Slug"
     },
     "ai": {
       "title": "AI this month",
@@ -1303,7 +1304,7 @@
     "sync": {
       "title": "Calendar sync",
       "summary": "{total, plural, one {# feed} other {# feeds}} connected · {problems, plural, =0 {all healthy} one {# needs attention} other {# need attention}}",
-      "allGood": "Every feed synced in the last two hours.",
+      "allGood": "Every calendar link was read in the last hour.",
       "lastSynced": "Last synced {when}",
       "never": "Never synced"
     },
@@ -1360,7 +1361,7 @@
     "overviewIntro": "The platform at a glance, and what needs you today.",
     "businessesIntro": "Every business on Mabeet. Suspending one hides it everywhere at once.",
     "usersIntro": "The newest accounts: guests, hosts and staff.",
-    "healthIntro": "What runs on its own: calendar sync with the platforms, and AI spending.",
+    "healthIntro": "What runs on its own: the calendar links each room reads from Airbnb and Booking.com.",
     "newestBusinesses": "Newest businesses",
     "seeAll": "See all",
     "attention": {

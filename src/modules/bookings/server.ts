@@ -29,6 +29,7 @@ export {
   markRefundSent,
   requestPayout,
 } from "./server/host-money-service";
+export { countPlatformBookings } from "./server/platform-bookings";
 export {
   type ChannelNights,
   getLifetimeDirectRevenue,

@@ -18,4 +18,5 @@ export {
 } from "./schemas";
 export { BookingRow } from "./components/booking-row";
 export { CalendarBoard } from "./components/calendar-board";
+export { RefundSent } from "./components/refund-sent";
 export type { CalendarEntry } from "./calendar-model";

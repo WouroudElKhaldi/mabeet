@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import type { Permission } from "@/config/permissions";
 import { auth } from "@/server/auth/better-auth";
-import { resolveContext } from "@/server/auth/resolve-context";
-import { can, type TenantContext } from "@/server/auth/tenant-context";
+import { resolveContext, resolvePlatformActor } from "@/server/auth/resolve-context";
+import { can, type PlatformActor, type TenantContext } from "@/server/auth/tenant-context";
 import { signInUrl } from "@/utils/sign-in-url";
 
 // Sign-in for pages (server components). API routes use route() and tenantRoute() instead; both answer a
@@ -43,3 +43,11 @@ export async function requirePageAccess(businessId: string, anyOf: readonly Perm
   if (!anyOf.some((permission) => can(ctx, permission))) notFound();
   return ctx;
 }
+
+/** The platform admin for an admin page. Anyone else gets the 404 page, so the admin area never shows it exists. */
+export const requirePageAdmin = cache(async (): Promise<PlatformActor> => {
+  const user = await requirePageUser("/admin");
+  const actor = await resolvePlatformActor(user.id);
+  if (!actor) notFound();
+  return actor;
+});
