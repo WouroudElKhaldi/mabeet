@@ -12,7 +12,7 @@ import { type ClashChange, flagImportClashes, lockActiveRoom } from "./booking-r
  * Re-flags the room's platform stays against our own nights and puts each clash that appeared or cleared in the
  * bell. A stay that simply ended is not news. The caller holds the room lock.
  */
-async function flagClashes(tx: Tx, businessId: string, roomId: string, now: Date) {
+export async function flagClashes(tx: Tx, businessId: string, roomId: string, now: Date) {
   const today = todayUtc(now);
   const changes = await flagImportClashes(tx, businessId, roomId);
   for (const change of changes) {
@@ -28,7 +28,7 @@ async function flagClashes(tx: Tx, businessId: string, roomId: string, now: Date
 }
 
 /** Emails the people who decide bookings about each new clash. Cleared ones only reach the bell and the calendar. */
-function announceClashes(changes: readonly ClashChange[], now: Date) {
+export function announceClashes(changes: readonly ClashChange[], now: Date) {
   for (const change of changes) {
     if (change.conflict) notifyImportClash(change.id, now);
   }

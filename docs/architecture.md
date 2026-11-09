@@ -214,7 +214,8 @@ refuses lowering capacity below seats sold. Test: 20 guests ask for the last 5 s
 
 ```
 CalendarFeed (room, URL, source)
-  │  every 15 min (scheduled job) · on "Sync now" · right before a host confirms a booking on that room
+  │  every 10 min (worker) · just before a guest books that room (unless read in the last 2 min)
+  │  · right before a host confirms a booking on that room · on "Sync now"
   ▼
 fetch: https only, public addresses only, no redirects, 10 s timeout,
        2 MB cap enforced while streaming (a huge feed is cut off, never buffered)  (src/modules/calendar-sync/server/safe-fetch.ts)
@@ -231,6 +232,14 @@ COMMIT
 record lastSyncedAt and lastError on the feed
 ```
 
+- **Read as late as we can.** Airbnb and Booking.com read our link only every few hours, so most double bookings are
+  stopped on our side, by reading theirs often and just in time: the worker reads every link not read in the last
+  10 minutes (it runs every 5); a guest's booking first reads the room's links again unless they were read in the
+  last 2 minutes (4 s at most, so the guest never waits long; a failing link keeps what it read last); and a host's
+  confirmation always reads them again. A stay sold on a platform a moment ago then refuses the request instead of
+  becoming a clash. At a place that can also be booked whole, the links of every unit are read, as they take turns.
+  Code: `src/modules/bookings/server/feed-sync-service.ts`; the links, the download and the files are in
+  `src/modules/calendar-sync`, which never calls the booking engine.
 - **Duplicates.** `@@unique([feedId, externalUid])` on `Occupancy`. The platform's event UID identifies a stay.
 - **Disappeared events.** Deactivated, not deleted. The nights free up.
 - **A failing feed** (404, timeout, bad file) changes nothing that was already imported. The error is stored on
@@ -285,7 +294,7 @@ windows. Without `REDIS_URL` (local development, tests) the counts live in the p
 | -------- | ---------------------------------------------------------------- | ------------------ | ----------------------------- | -------------------- |
 | `ai`     | Travel assistant answer, team assistant answer, analytics report | 4                  | 1, after 5 s                  | 1 hour               |
 | `notify` | Every booking, payment, refund and Contact host notice           | 8                  | 4, backing off from 30 s      | 1 day                |
-| `cron`   | Calendar sync (every 15 min), housekeeping (every 5 min)         | 1                  | none: the next run comes soon | 1 day                |
+| `cron`   | Calendar sync (every 5 min), housekeeping (every 5 min)          | 1                  | none: the next run comes soon | 1 day                |
 
 **Answer now, or queue.** AI routes call `runOrQueue` (`src/server/jobs/queue.ts`) with an estimate, in seconds,
 worked out from the input before the model is called (`src/modules/assistant/server/ai-jobs.ts`):
@@ -339,10 +348,10 @@ expires and is retried.
 
 ### Scheduled jobs
 
-| Job           | Schedule (worker)  | Also callable at              | What it does                                                                                                                         | If it never runs                                                                                           |
-| ------------- | ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| Calendar sync | every 15 min (UTC) | `POST /api/cron/sync-feeds`   | Re-reads up to 20 feeds not synced in the last 15 minutes                                                                            | Feeds still refresh on "Sync now" and before every confirmation                                            |
-| Housekeeping  | every 5 min (UTC)  | `POST /api/cron/expire-holds` | Re-checks online payments still pending after 2 minutes; expires unanswered and unpaid bookings; ends Whish plan months that ran out | Each new request on a room expires that room's stale holds; a returning guest's payment is checked at once |
+| Job           | Schedule (worker) | Also callable at              | What it does                                                                                                                         | If it never runs                                                                                           |
+| ------------- | ----------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Calendar sync | every 5 min (UTC) | `POST /api/cron/sync-feeds`   | Re-reads up to 60 feeds not synced in the last 10 minutes, 6 at a time                                                               | Feeds still refresh on "Sync now" and before every confirmation                                            |
+| Housekeeping  | every 5 min (UTC) | `POST /api/cron/expire-holds` | Re-checks online payments still pending after 2 minutes; expires unanswered and unpaid bookings; ends Whish plan months that ran out | Each new request on a room expires that room's stale holds; a returning guest's payment is checked at once |
 
 The worker keeps the schedule in the database, so with several workers each run happens once. The HTTP endpoints
 stay for a manual or outside run: both need `Authorization: Bearer $CRON_SECRET` (compared in constant time).

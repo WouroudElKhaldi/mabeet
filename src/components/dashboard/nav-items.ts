@@ -33,6 +33,7 @@ export const DASHBOARD_PAGES = {
   },
   bookings: { group: "bookings", path: "bookings", icon: "bookings", anyOf: ["bookings.read"], tab: true },
   calendar: { group: "bookings", path: "calendar", icon: "calendar", anyOf: ["calendar.read"], tab: true },
+  channels: { group: "bookings", path: "channels", icon: "channels", anyOf: ["feeds.manage"] },
   place: { group: "listings", path: "place", icon: "place", anyOf: ["settings.manage"] },
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
   settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
