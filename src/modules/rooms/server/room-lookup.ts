@@ -48,6 +48,19 @@ export function listRoomNames(businessId: string, db: Db = prisma) {
   return rooms.listRoomNames(db, businessId);
 }
 
+/**
+ * For the calendar links page: each room with its own calendar link's secret. Only for members who may manage the
+ * links: the booking engine checks that before calling.
+ */
+export function listRoomCalendarLinks(businessId: string, db: Db = prisma) {
+  return rooms.listRoomCalendarLinks(db, businessId);
+}
+
+/** The room a calendar link belongs to, or null for an unknown link. */
+export function findRoomByExportToken(exportToken: string, db: Db = prisma) {
+  return rooms.findRoomByExportToken(db, exportToken);
+}
+
 /** For analytics: the live units of the kind a place is booked by, so occupancy is out of the right number. */
 export function countActiveUnits(businessId: string, kind: RoomKind, db: Db = prisma) {
   return rooms.countActiveUnits(db, businessId, kind);

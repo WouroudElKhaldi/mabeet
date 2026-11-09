@@ -822,7 +822,7 @@ Two kinds, by how much they matter:
   - `notify`: every email and push: team invitations today, then every booking, payment, refund and Contact host
     notice. 8 at once. Retried 4 times, waiting longer each time.
   - `cron`: housekeeping every 5 minutes (`SCHEDULES` in `jobs/cron-jobs.ts`), on the worker's own schedule; the
-    calendar sync joins it (every 15 minutes) with F11.
+    calendar sync runs beside it (`cron.calendar-sync`, every 5 minutes, reading links not read in 10).
   - `ai` is added with the AI assistants (last bonus): travel and team assistant answers, reports. 4 at once per
     worker, retried once. `runOrQueue`, `GET /api/jobs/{jobId}` and the progress rows come with it; nothing uses
     them before then.
@@ -945,7 +945,7 @@ handles it:
 ### B. Bookings: the host decides
 
 - `confirmBooking` (modes 2 and 3) first reads the room's Airbnb and Booking.com calendars again
-  (`refreshRoomFeeds`, in `calendar-sync`, once calendar sync is built). Then it confirms, unless a platform stay now
+  (`refreshBeforeConfirming`, in `feed-sync-service.ts`). Then it confirms, unless a platform stay now
   covers those nights or the answer time ran out.
 - `declineBooking` and `cancelBooking` refund everything the guest paid online. `cancelBooking` is refused once the
   stay has started (its money may already be paid out).
@@ -1006,7 +1006,8 @@ taken by phone.
 
 ```
 CalendarFeed (room, link, source)
-  │  every 15 minutes (worker) · when the host presses "Sync now" · just before a host confirms
+  │  every 10 minutes (worker) · just before a guest books (unless read in the last 2 minutes)
+  │  · just before a host confirms · when the host presses "Sync now"
   ▼
 download: https only, public addresses only, no redirects, 10-second limit, 2 MB limit   (ical/safe-fetch.ts)
   ▼
@@ -1021,6 +1022,15 @@ in one transaction, with the room locked:
 then email and push the hosts about each NEW clash, and save lastSyncedAt and lastError
 ```
 
+- **Read as late as we can.** The platforms read our link only every few hours, so we read theirs often and just in
+  time: the worker every 10 minutes, a guest's booking first (`refreshBeforeBooking`: unless read in the last 2
+  minutes, 4 seconds at most), and a host's confirmation always (`refreshBeforeConfirming`). At a place that can
+  also be booked whole, every unit's links are read. A stay sold there a moment ago then refuses the request instead
+  of becoming a clash.
+- **Who does what.** `src/modules/calendar-sync` keeps the links (`CalendarFeed`), downloads and reads them, and
+  builds our file; it never calls the booking engine. `src/modules/bookings/server/feed-sync-service.ts` writes the
+  `IMPORTED` rows under the room lock and serves the routes: `GET/POST /api/workspaces/{id}/feeds`,
+  `DELETE .../feeds/{feedId}`, `POST .../feeds/{feedId}/sync` (all `feeds.manage`), `GET /api/ical/{token}`.
 - Imported rows are **not** under the overlap rule (its `WHERE` is `active AND kind <> 'IMPORTED'`), because Airbnb
   and Booking.com can overlap each other, and Airbnb can send a booking over nights we already sold (it refreshes
   only every few hours). So a clashing import is **stored as a normal active row with `conflict = true`**, never in
@@ -1040,12 +1050,15 @@ then email and push the hosts about each NEW clash, and save lastSyncedAt and la
 
 Each room shares `GET /api/ical/{exportToken}`:
 
-- our `DIRECT` and `MANUAL` nights from today,
+- our `DIRECT` and `MANUAL` nights from today, holds waiting for a payment or an answer included, so the platforms
+  stop selling them at their next read; at a place that can also be booked whole, the nights of the units it takes
+  turns with too (the whole place for a room, every room for the whole place),
 - the only text is "Not available" (no guest details),
 - no imported nights (that would create loops),
 - event ids never change (the platforms track events by id).
 
-An unknown link answers 404.
+An unknown link answers 404. The address may end in `.ics` (some platforms ask for it); the channels page shows it
+that way.
 
 ### C. Categories
 
@@ -1590,7 +1603,7 @@ bottom.
 
 | Job           | Worker schedule | Route (manual run)            | What it does                                                                                          | If it never runs                                                                              |
 | ------------- | --------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Calendar sync | every 15 min    | `POST /api/cron/sync-feeds`   | Reads up to 20 calendar links not read in 15 minutes                                                  | Calendars still update on "Sync now" and before each confirmation                             |
+| Calendar sync | every 5 min     | `POST /api/cron/sync-feeds`   | Reads up to 60 calendar links not read in 10 minutes, 6 at a time                                     | Calendars still update on "Sync now" and before each confirmation                             |
 | Housekeeping  | every 5 min     | `POST /api/cron/expire-holds` | Checks pending online payments, expires unanswered and unpaid bookings, ends unpaid Whish plan months | Each new request expires its room's old holds; a returning guest's payment is checked at once |
 
 The worker runs both on its own schedule (`src/modules/housekeeping/server/housekeeping-jobs.ts`), kept in the database so each run happens

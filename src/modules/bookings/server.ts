@@ -41,3 +41,11 @@ export {
 } from "./server/booking-stats";
 export { stayIssue } from "./server/booking-policy";
 export { addBlock, getCalendar, getCalendarBoard, removeBlock } from "./server/closed-dates-service";
+export {
+  buildRoomCalendar,
+  connectFeed,
+  disconnectFeed,
+  getCalendarLinks,
+  syncDueFeeds,
+  syncFeedNow,
+} from "./server/feed-sync-service";

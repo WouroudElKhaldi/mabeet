@@ -995,7 +995,7 @@ paths:
       tags:
         - Calendar
       summary: A room's availability as iCal, for Airbnb and Booking.com
-      description: No sign-in.
+      description: 'No sign-in: the secret in the address is the key. The token may end in .ics. Answers text/calendar: our bookings (holds included) and closed dates from today, each only "Not available"; never platform stays or guest details. An unknown link is 404.'
       security: []
       parameters:
         - name: token
@@ -2070,7 +2070,7 @@ paths:
       tags:
         - Calendar
       summary: Export links and imported calendars per room
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      description: "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Needs feeds.manage. Answers { rooms: [{ id, name, kind, active, exportUrl, feeds: [{ id, roomId, url, source, lastSyncedAt, lastError, createdAt }] }] }."
       security:
         - session: []
       parameters:
@@ -2114,7 +2114,7 @@ paths:
       tags:
         - Calendar
       summary: Connect an Airbnb, Booking.com or other platform calendar
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      description: "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Needs feeds.manage. Only public https links; the same link twice on one room is 409. The link is read at once: answers { feed, sync: { ok, clashes, error? } }."
       security:
         - session: []
       parameters:
@@ -2185,7 +2185,7 @@ paths:
       tags:
         - Calendar
       summary: Disconnect a calendar
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Needs feeds.manage. The nights the link brought are free again.
       security:
         - session: []
       parameters:
@@ -2235,7 +2235,7 @@ paths:
       tags:
         - Calendar
       summary: Sync a calendar now
-      description: Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.
+      description: "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Needs feeds.manage. Answers { ok, clashes, error? }: a link that fails is 200 with ok false and its error, which is also saved on the link."
       security:
         - session: []
       parameters:
@@ -5150,7 +5150,7 @@ paths:
       tags:
         - Platform
       summary: Sync calendars that are due
-      description: Bearer CRON_SECRET.
+      description: Bearer CRON_SECRET. Reads up to 60 links not read in 10 minutes; the worker runs it every 5 minutes. Answers { synced, failed }.
       security:
         - cronSecret: []
       parameters: []
