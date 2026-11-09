@@ -224,6 +224,15 @@
     "showAllReviews": "فرجيني كل التقييمات ({count})",
     "showAllAmenities": "فرجيني كل الأغراض ({count})"
   },
+  "reviews": {
+    "none": "لسا ما في تقييمات",
+    "count": "{count, plural, zero {ما في تقييمات} one {تقييم واحد} two {تقييمين} few {# تقييمات} many {# تقييم} other {# تقييم}}",
+    "anonymous": "ضيف",
+    "hostReply": "ردّ المضيف",
+    "write": "اكتب تقييم",
+    "sending": "عم ينتشر…",
+    "done": "تسلم. تقييمك صار منشور."
+  },
   "booking": {
     "perNight": "بالليلة",
     "room": "الغرفة",

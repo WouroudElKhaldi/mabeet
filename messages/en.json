@@ -224,6 +224,15 @@
     "showAllReviews": "Show all {count} reviews",
     "showAllAmenities": "Show all {count} amenities"
   },
+  "reviews": {
+    "none": "No reviews yet",
+    "count": "{count, plural, one {# review} other {# reviews}}",
+    "anonymous": "A guest",
+    "hostReply": "Reply from the host",
+    "write": "Write a review",
+    "sending": "Posting…",
+    "done": "Thank you. Your review is up."
+  },
   "booking": {
     "perNight": "a night",
     "room": "Room",

@@ -2,11 +2,15 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Pill } from "@/components/ui/pill";
 import type { Locale } from "@/config/appearance";
+import { ReviewForm } from "@/modules/reviews";
 import { parseIsoDate } from "@/utils/dates";
 import { formatMoney, formatStayDates } from "@/utils/format";
 import type { GuestTrip } from "../types";
 
-/** The stays that are alive or over, each a link to its booking page. A trip that needs the guest (payment) stands out. */
+/**
+ * The stays that are alive or over, each a link to its booking page. A trip that needs the guest (payment) stands
+ * out, and a stay that is over and not yet reviewed offers the form, under its card rather than inside the link.
+ */
 export async function TripList({ trips }: { trips: readonly GuestTrip[] }) {
   const [t, confirmation, locale] = await Promise.all([
     getTranslations("account"),
@@ -47,6 +51,11 @@ export async function TripList({ trips }: { trips: readonly GuestTrip[] }) {
               </span>
             </p>
           </Link>
+          {trip.canReview ? (
+            <div className="mt-2 ps-1">
+              <ReviewForm token={trip.publicToken} placeName={trip.place.name} />
+            </div>
+          ) : null}
         </li>
       ))}
     </ul>

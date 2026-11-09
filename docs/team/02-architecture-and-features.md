@@ -1114,9 +1114,27 @@ Hosts can sell seats in dated sessions (a hike, a wine tasting, an airport trans
 
 Code: `offering-service.ts`, `session-booking-service.ts`.
 
-### F. Favourites
+### F. Favourites (F5)
 
-Signed-in guests can save places. Code: `favorite-service.ts`, `src/app/actions/favorites.ts`.
+Signed-in guests can save places. Code: `favorite-service.ts` and `favorite-repository.ts` (directory), behind
+`directory/server.ts`: `setFavorite(userId, slug, saved)`, `isPlaceSaved(userId, slug)` and `listMyFavorites(userId)`.
+The reference project used a server action (`src/app/actions/favorites.ts`); ours is a route like every other write,
+`PUT` and `DELETE /api/me/favorites/{slug}` (signed in, 120 changes a minute), so it is wrapped by `route()`, is in
+the contract, and no server code is pulled into a browser file through the module's door.
+
+- Saving is about a place, never about a stay: no dates and no prices are kept, and the saved list shows what each
+  place costs a night today.
+- Nothing is deleted. Unsaving marks the row (`isDeleted`) and saving again brings the same one back, so one guest
+  never collects two rows for one place (`@@unique([userId, businessId])`).
+- Saying the same thing twice is not an error. The heart on the page and the list in the account can be out of
+  step, and the guest's last tap decides.
+- `listMyFavorites` reads the saved ids, then builds the same `PlaceCard`s search builds (`buildCards` in
+  `directory-service.ts`, shared by both so a card never means two things), newest first. A place its owner has
+  **unlisted** stays on the list, because its page still works and the guest chose it; a **paused or deleted** one
+  drops off, and so does one with no bookable unit left, because there is no price to show.
+- An unknown or paused place cannot be saved at all (404).
+
+Tests: `src/modules/directory/tests/favorites.integration.test.ts`.
 
 ### F. Featured partners and sponsored listings
 
@@ -1416,12 +1434,34 @@ push. `public/sw.js` shows the notification and opens its page (only pages of th
 (`PhoneAlerts`) comes with the account's notifications tab. Tests: `push.test.ts` and
 `push-devices.integration.test.ts` (notifications).
 
-### R. Reviews
+### R. Reviews (F5)
 
 Only a guest who stayed may review, only once, and only after check-out. A review is one overall rating (1 to 5) and
 a comment; there are no sub-ratings (cleanliness, location, value). Owners can reply or hide a review with a reason.
 A review whose author closed their account stays, without their name: closing an account keeps the user row (marked
 deleted), so review reads show no name when `author.isDeleted` (F17). Code: `review-service.ts`.
+
+**What exists today** (the `reviews` module: `review-service.ts`, `review-repository.ts`, behind
+`reviews/server.ts`):
+
+- `writeReview(guestUserId, publicToken, input, now?)`: the booking is found through `bookings`' own door
+  (`getBookingForGuest`), so someone else's stay is "not found", like its page. It must be `CONFIRMED` (a stay that
+  was declined, expired or cancelled never happened) and its check-out must be past (403 with the reason). The
+  second review of one stay is refused by the database itself — `Review.bookingId` is unique, wrapped in
+  `duplicateAsConflict` — so two taps cannot leave two reviews. Route: `POST /api/public/bookings/{token}/review`
+  (signed in, 10 per 10 minutes per guest), input `newReview` (rating 1 to 5, comment 10 to 2000 characters).
+- `listPlaceReviews(businessId)` and `getPlaceRating(businessId)`: only `PUBLISHED`, not deleted, newest first; the
+  average is to one decimal (`averageRating` in `reviews/rating.ts`, pure) and is null until someone has rated, so
+  a new place says "No reviews yet" instead of showing a 0. A hidden review counts for nothing, not even the
+  average.
+- `findReviewedBookings(bookingIds)`: which stays their guest has already reviewed. `listMyTrips` (directory) uses
+  it for `canReview`, so a stay is offered the form only while it is over, went ahead, and has no review.
+- `getPlace` carries `rating` and `reviews`, so the place page needs no second read.
+
+**Not built:** the owner replying or hiding (the dashboard's `/reviews` page). `ownerReply` and `status` are read
+and respected everywhere above, so that screen only has to write them.
+
+Tests: `src/modules/reviews/tests/reviews.integration.test.ts` and `rating.test.ts`.
 
 ### R. Rooms (dashboard)
 

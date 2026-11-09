@@ -14,6 +14,7 @@ const trip = (token: string, overrides: Partial<GuestTrip> = {}): GuestTrip => (
   currency: "USD",
   place: { name: "Beit el Arz", slug: "beit-el-arz" },
   roomName: "Cedar room",
+  canReview: false,
   ...overrides,
 });
 

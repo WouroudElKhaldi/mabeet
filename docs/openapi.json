@@ -842,6 +842,87 @@
         }
       }
     },
+    "/api/public/bookings/{token}/review": {
+      "post": {
+        "tags": ["Guests"],
+        "summary": "Review the stay this booking was",
+        "description": "Signed-in guest, their own booking (its private link says which). One overall rating from 1 to 5 and a comment; there are no sub-ratings. Only a stay that was confirmed and is over, and only once: the second is 409.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "comment": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": ["rating", "comment"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "written": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["written"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A rating outside 1 to 5, or too short a comment"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "The stay did not go ahead, or is not over yet"
+          },
+          "404": {
+            "description": "No such booking, or it is not theirs"
+          },
+          "409": {
+            "description": "They have already reviewed this stay"
+          },
+          "429": {
+            "description": "Too many reviews; slow down"
+          }
+        }
+      }
+    },
     "/api/me/bookings": {
       "get": {
         "tags": ["Guests"],
@@ -968,6 +1049,102 @@
           },
           "429": {
             "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/me/favorites/{slug}": {
+      "put": {
+        "tags": ["Guests"],
+        "summary": "Keep a place on the guest's saved list",
+        "description": "Signed-in user. Saving a place they already saved changes nothing. The list itself is on the account's Favourites page, not in this API.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "saved": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["saved"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "404": {
+            "description": "No such place, or it is paused"
+          },
+          "429": {
+            "description": "Too many changes; slow down"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Guests"],
+        "summary": "Take a place off the guest's saved list",
+        "description": "Signed-in user. Removing one that is not on the list changes nothing. The row is kept and marked, so saving the place again brings back the same one.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "saved": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["saved"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "404": {
+            "description": "No such place, or it is paused"
+          },
+          "429": {
+            "description": "Too many changes; slow down"
           }
         }
       }

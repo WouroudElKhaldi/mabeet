@@ -1,4 +1,5 @@
 import type { BookingMode, BookingStatus, BookingUnit, HostContact, PhotoArea } from "@prisma/client";
+import type { PlaceRating, PlaceReview } from "@/modules/reviews";
 import type { StayIssue } from "@/config/booking-limits";
 
 // What the public side shows and asks. Plain values only (money as whole cents, dates as ISO text), so a page can
@@ -88,6 +89,9 @@ export interface PublicPlace {
   latitude: number | null;
   longitude: number | null;
   host: PublicHost;
+  /** What guests who stayed said, newest first, and what their ratings add up to. */
+  rating: PlaceRating;
+  reviews: PlaceReview[];
   /** The photos of the place as a whole, first one largest. */
   photos: PublicPhoto[];
   /** What a guest can book: the rooms, or the one whole-place unit. */
@@ -110,6 +114,8 @@ export interface GuestTrip {
   currency: string;
   place: { name: string; slug: string };
   roomName: string;
+  /** Their stay is over and went ahead, and they have not reviewed it yet. */
+  canReview: boolean;
 }
 
 /** A unit a search found for the guest: free on their dates (when they gave dates) and fitting what they asked. */

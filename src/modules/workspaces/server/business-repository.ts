@@ -180,6 +180,33 @@ function inArea(text: string): Prisma.BusinessWhereInput {
  * Places in search: live, listed by their owner, and matching every filter, oldest first. Only what a result card
  * shows, never the owner's settings.
  */
+/** What a place shows as a card: in search, and in a guest's saved places. */
+const LISTED_BUSINESS_FIELDS = {
+  id: true,
+  slug: true,
+  name: true,
+  area: true,
+  currency: true,
+  bookingUnit: true,
+  categories: {
+    where: { isDeleted: false },
+    select: { categorySlug: true },
+    orderBy: { categorySlug: "asc" },
+  },
+} satisfies Prisma.BusinessSelect;
+
+/**
+ * The same fields as a search result, for places named by id: a guest's saved places. A place its owner has
+ * unlisted is still here (its page still works, and the guest chose it), but a paused or deleted one is not.
+ */
+export function findBusinessesByIds(db: Db, businessIds: readonly string[]) {
+  if (businessIds.length === 0) return Promise.resolve([]);
+  return db.business.findMany({
+    where: { id: { in: [...businessIds] }, status: "ACTIVE", isDeleted: false },
+    select: LISTED_BUSINESS_FIELDS,
+  });
+}
+
 export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number) {
   return db.business.findMany({
     where: {
@@ -204,19 +231,7 @@ export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number
           : {},
       ],
     },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      area: true,
-      currency: true,
-      bookingUnit: true,
-      categories: {
-        where: { isDeleted: false },
-        select: { categorySlug: true },
-        orderBy: { categorySlug: "asc" },
-      },
-    },
+    select: LISTED_BUSINESS_FIELDS,
     orderBy: { createdAt: "asc" },
     take,
   });

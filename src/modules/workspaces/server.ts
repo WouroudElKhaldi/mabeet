@@ -7,5 +7,6 @@ export {
   findPlacesForReports,
   getPublicPlace,
   listListedPlaces,
+  listPlacesByIds,
 } from "./server/place-lookup";
 export { getPlaceBasics, getSettings, saveBookingUnit, updateSettings } from "./server/settings-service";

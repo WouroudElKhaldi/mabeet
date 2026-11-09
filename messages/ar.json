@@ -224,6 +224,15 @@
     "showAllReviews": "اعرض كل التقييمات ({count})",
     "showAllAmenities": "اعرض كل المرافق ({count})"
   },
+  "reviews": {
+    "none": "لا توجد تقييمات بعد",
+    "count": "{count, plural, zero {لا تقييمات} one {تقييم واحد} two {تقييمان} few {# تقييمات} many {# تقييمًا} other {# تقييم}}",
+    "anonymous": "أحد الضيوف",
+    "hostReply": "ردّ المضيف",
+    "write": "اكتب تقييمًا",
+    "sending": "جارٍ النشر…",
+    "done": "شكرًا لك. تقييمك منشور الآن."
+  },
   "booking": {
     "perNight": "لليلة",
     "room": "الغرفة",
