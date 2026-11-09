@@ -1,4 +1,4 @@
-import type { TenantContext } from "@/server/auth/tenant-context";
+import type { PlatformActor, TenantContext } from "@/server/auth/tenant-context";
 import { type Db, prisma } from "@/server/db/client";
 import { type ActivityEntry, logActivity } from "./activity-repository";
 import { logAudit } from "./audit-repository";
@@ -36,6 +36,18 @@ export function recordSystemEvent(
   entry: { businessId: string; action: string; entity: string; entityId: string },
 ) {
   return logAudit(db, { ...entry, actorId: null });
+}
+
+/**
+ * Something a platform admin did from the admin area (a payout sent, a business suspended), under their own name.
+ * With a `businessId` it also reaches that business's audit log.
+ */
+export function recordPlatformAction(
+  actor: PlatformActor,
+  entry: { businessId: string | null; action: string; entity: string; entityId: string },
+  db: Db = prisma,
+) {
+  return logAudit(db, { ...entry, actorId: actor.userId });
 }
 
 /** Something that happened to a person (their booking was confirmed, declined or ran out): their own timeline. */

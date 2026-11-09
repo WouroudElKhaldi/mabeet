@@ -2,8 +2,8 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { auth } from "@/server/auth/better-auth";
-import { resolveContext } from "@/server/auth/resolve-context";
-import type { TenantContext } from "@/server/auth/tenant-context";
+import { resolveContext, resolvePlatformActor } from "@/server/auth/resolve-context";
+import type { PlatformActor, TenantContext } from "@/server/auth/tenant-context";
 import { env } from "@/server/env";
 import { AppError, forbidden, invalid, notFound, unauthenticated } from "@/server/errors";
 
@@ -156,5 +156,28 @@ export function tenantRoute<Schema extends z.ZodType<{ businessId: string }>>(
     const params = await parseParams(context, schema);
     const ctx = await requireTenant(request, params.businessId);
     return handler({ request, ctx, params });
+  });
+}
+
+interface AdminHandlerArgs<Params> {
+  request: Request;
+  actor: PlatformActor;
+  params: Params;
+}
+
+/**
+ * An admin route (/api/admin/**): parses the URL params, then checks the caller is a platform admin before the
+ * handler runs. Anyone else gets 404, as the admin area does not show it exists.
+ */
+export function adminRoute<Schema extends z.ZodType>(
+  schema: Schema,
+  handler: (args: AdminHandlerArgs<z.infer<Schema>>) => Promise<Response>,
+): Handler {
+  return route(async (request, context) => {
+    const params = await parseParams(context, schema);
+    const user = await requireUser(request);
+    const actor = await resolvePlatformActor(user.id);
+    if (!actor) throw notFound("Page");
+    return handler({ request, actor, params });
   });
 }

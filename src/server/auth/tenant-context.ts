@@ -20,6 +20,20 @@ export interface TenantContext {
   readonly readOnly?: boolean;
 }
 
+/**
+ * A platform admin in the admin area (`/admin`, `/api/admin/**`), where no business is chosen. Only
+ * `resolvePlatformActor` makes one, after reading the person's role from the database.
+ */
+export interface PlatformActor {
+  readonly userId: string;
+  readonly platformAdmin: true;
+}
+
+/** For what only a platform admin may do. The type already says so; this refuses anything that got around it. */
+export function requirePlatformAdmin(actor: PlatformActor): void {
+  if (actor.platformAdmin !== true) throw forbidden("Platform admins only");
+}
+
 export function can(ctx: TenantContext, permission: Permission): boolean {
   return ctx.permissions.has(permission);
 }

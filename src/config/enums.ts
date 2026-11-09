@@ -1,4 +1,11 @@
-import type { BookingMode, BookingStatus, BookingUnit, FeedSource, PhotoArea } from "@prisma/client";
+import type {
+  BookingMode,
+  BookingStatus,
+  BookingUnit,
+  FeedSource,
+  PayoutMethod,
+  PhotoArea,
+} from "@prisma/client";
 
 // Value lists shared by validation, the AI tools and the screens. `satisfies` checks them against the
 // database enums, so adding a status in the schema cannot silently miss a list here.
@@ -56,6 +63,9 @@ export const CURRENCIES = ["USD", "LBP", "EUR"] as const;
 /** How a guest pays online: with Whish, or by card (Stripe Checkout). */
 export const ONLINE_PAYMENT_METHODS = ["WHISH", "CARD"] as const;
 export type OnlinePaymentMethod = (typeof ONLINE_PAYMENT_METHODS)[number];
+
+/** Where Mabeet sends a host's payout: a bank account (IBAN) or a Whish number. Never a card. */
+export const PAYOUT_METHODS = ["BANK_TRANSFER", "WHISH"] as const satisfies readonly PayoutMethod[];
 
 /** Calendars we read taken nights from. */
 export const FEED_SOURCES = ["AIRBNB", "BOOKING", "OTHER"] as const satisfies readonly FeedSource[];

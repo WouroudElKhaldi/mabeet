@@ -8316,7 +8316,7 @@
       "get": {
         "tags": ["Payments"],
         "summary": "What Mabeet holds for the business, its online payments and payouts (owners)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Owners only. Answers { balances: [{ currency, earnedCents, upcomingCents, paidOutCents, requestedCents, availableCents }], payouts, payments, lastDetails }. Available is confirmed stays that have started, net of refunds, minus payouts sent or asked for.",
         "security": [
           {
             "session": []
@@ -8381,7 +8381,7 @@
       "post": {
         "tags": ["Payments"],
         "summary": "Ask for a payout to a bank account (IBAN) or a Whish number, up to the available balance (owners)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404. Owners only. More than is available is 409; the business's money is locked, so two requests at once never spend the same balance. A bank transfer needs bankName and iban; Whish needs whishPhone.",
         "security": [
           {
             "session": []
@@ -8506,7 +8506,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Mark a payout as sent, with its transfer reference, or refuse it",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). The admin sent it by hand from Mabeet's Whish or Stripe account (paid, with the transfer's reference) or refuses it (rejected, with a note). Each payout is decided once: again is 409.",
         "security": [
           {
             "session": []
@@ -8613,7 +8613,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Mark a refund sent by hand (partial Whish refunds, or ones a provider refused)",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). Marks a pending refund sent by hand, once: again is 409.",
         "security": [
           {
             "session": []
