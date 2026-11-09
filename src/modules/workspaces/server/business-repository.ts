@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { BusinessStatus, Prisma } from "@prisma/client";
 import { areasMatching, regionNamed } from "@/config/regions";
 import type { Db, Tx } from "@/server/db/client";
 
@@ -220,4 +220,43 @@ export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number
     orderBy: { createdAt: "asc" },
     take,
   });
+}
+
+/**
+ * Every business on the platform for the admin, the newest first: its status, its owners and how big it is. Deleted
+ * businesses stay out; a suspended one stays in, so it can be brought back.
+ */
+export function listPlatformBusinesses(db: Db, take: number) {
+  return db.business.findMany({
+    where: { isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      area: true,
+      status: true,
+      plan: true,
+      createdAt: true,
+      memberships: {
+        where: { status: "ACTIVE", role: { isOwner: true } },
+        select: { user: { select: { id: true, name: true, email: true, phone: true } } },
+      },
+      _count: { select: { rooms: { where: { isDeleted: false } }, bookings: true } },
+    },
+  });
+}
+
+export function countPlatformBusinesses(db: Db) {
+  return db.business.count({ where: { isDeleted: false } });
+}
+
+/** Suspends or reactivates a business. False when there is no such business. */
+export async function setBusinessStatus(db: Db, businessId: string, status: BusinessStatus) {
+  const { count } = await db.business.updateMany({
+    where: { id: businessId, isDeleted: false },
+    data: { status },
+  });
+  return count > 0;
 }

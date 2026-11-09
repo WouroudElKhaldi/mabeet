@@ -11,3 +11,4 @@ export {
   startWhishPlanCheckout,
 } from "./server/billing-service";
 export { getPlanFeesPaid } from "./server/plan-fees";
+export { getPlanRevenue } from "./server/plan-revenue";

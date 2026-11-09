@@ -6471,7 +6471,7 @@
       "patch": {
         "tags": ["Platform"],
         "summary": "Suspend or reactivate a business",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). SUSPENDED hides the business everywhere at once (its page, its listing, its team's access); ACTIVE brings it back. Its bookings stay as they are. Logged under the admin's name; an unknown business is 404.",
         "security": [
           {
             "session": []
@@ -6556,7 +6556,7 @@
       "patch": {
         "tags": ["Platform"],
         "summary": "Set the website's colour palette",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). Sets the one palette the whole website wears; visitors still choose light or dark. Logged.",
         "security": [
           {
             "session": []
@@ -6632,7 +6632,7 @@
       "get": {
         "tags": ["Platform"],
         "summary": "Categories and their use",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). Every live category with how many places and experiences use it: [{ slug, kind, nameEn, nameAr, icon, position, _count: { businesses, offerings } }].",
         "security": [
           {
             "session": []
@@ -6688,7 +6688,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Add a browse category",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). A slug already in use is 409; a deleted category with the same slug is brought back instead of copied. The icon is one of src/config/category-icons.ts.",
         "security": [
           {
             "session": []
@@ -6715,8 +6715,17 @@
                   },
                   "icon": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 40
+                    "enum": [
+                      "mountain",
+                      "beach",
+                      "countryside",
+                      "old-town",
+                      "guesthouse",
+                      "cabin",
+                      "camping",
+                      "vineyard",
+                      "ski"
+                    ]
                   },
                   "position": {
                     "type": "integer",
@@ -6789,7 +6798,7 @@
       "patch": {
         "tags": ["Platform"],
         "summary": "Rename, re-icon or reorder a category",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). The slug and the kind never change. An unknown slug is 404.",
         "security": [
           {
             "session": []
@@ -6825,8 +6834,17 @@
                   },
                   "icon": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 40
+                    "enum": [
+                      "mountain",
+                      "beach",
+                      "countryside",
+                      "old-town",
+                      "guesthouse",
+                      "cabin",
+                      "camping",
+                      "vineyard",
+                      "ski"
+                    ]
                   },
                   "position": {
                     "type": "integer",
@@ -6887,7 +6905,7 @@
       "delete": {
         "tags": ["Platform"],
         "summary": "Delete an unused category",
-        "description": "Super admin only.",
+        "description": "Platform admins only (anyone else gets 404). A category places or experiences still use is 409 (move them first). Deleting keeps the row (isDeleted).",
         "security": [
           {
             "session": []

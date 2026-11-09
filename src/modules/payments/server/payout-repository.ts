@@ -57,6 +57,25 @@ export async function sumPayouts(db: Db, businessId: string | null) {
   }));
 }
 
+/** Requests waiting for an admin, the oldest first, with the business they are for. */
+export function listPayoutRequests(db: Db) {
+  return db.payout.findMany({
+    where: { status: "REQUESTED", isDeleted: false },
+    orderBy: { createdAt: "asc" },
+    include: { business: { select: { id: true, name: true } } },
+  });
+}
+
+/** Payouts already sent or refused, the latest first. */
+export function listDecidedPayouts(db: Db, take: number) {
+  return db.payout.findMany({
+    where: { status: { not: "REQUESTED" }, isDeleted: false },
+    orderBy: { decidedAt: "desc" },
+    take,
+    include: { business: { select: { id: true, name: true } } },
+  });
+}
+
 export function findPayout(db: Db, payoutId: string) {
   return db.payout.findFirst({ where: { id: payoutId, isDeleted: false } });
 }

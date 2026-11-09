@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { BOOKING_MODES, CURRENCIES } from "@/config/enums";
+import { BOOKING_MODES, BUSINESS_STATUSES, CURRENCIES } from "@/config/enums";
 import { ACCESSIBILITY, TAGS } from "@/config/listing";
 import { REGION_KEYS } from "@/config/regions";
-import { phone } from "@/lib/schemas";
+import { id, phone } from "@/lib/schemas";
 
 /** Creating a place: the person who creates it becomes its owner. */
 export const workspaceInput = z.object({
@@ -58,3 +58,10 @@ export const settingsInput = z
     longitude: z.number().min(-180).max(180).nullable(),
   })
   .partial();
+
+// ---------- Platform admin ----------
+
+export const platformBusinessParams = z.object({ businessId: id });
+
+/** A platform admin suspends a business, or brings it back. */
+export const businessStatusInput = z.object({ status: z.enum(BUSINESS_STATUSES) });

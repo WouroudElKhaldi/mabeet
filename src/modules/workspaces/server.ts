@@ -8,4 +8,5 @@ export {
   getPublicPlace,
   listListedPlaces,
 } from "./server/place-lookup";
+export { listPlatformBusinesses, setBusinessStatus } from "./server/platform-service";
 export { getPlaceBasics, getSettings, saveBookingUnit, updateSettings } from "./server/settings-service";

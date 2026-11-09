@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { decidePayout } from "@/modules/payments/server";
+import { decidePayout, getPayoutQueue } from "@/modules/payments/server";
 import { resolvePlatformActor } from "@/server/auth/resolve-context";
-import type { PlatformActor } from "@/server/auth/tenant-context";
-import { createUser, memberWith, prisma, stay } from "@tests/integration/helpers";
+import { createPlatformAdmin, createUser, memberWith, prisma, stay } from "@tests/integration/helpers";
 import { addDays, todayUtc } from "@/utils/dates";
-import { getPayouts, markRefundSent, requestBooking, requestPayout } from "../server";
+import {
+  getHostBalances,
+  getPayouts,
+  listRefundsToSend,
+  markRefundSent,
+  requestBooking,
+  requestPayout,
+} from "../server";
 import { placeWithRoom, requestFor } from "./fixtures";
 
 // Payouts: only money for confirmed stays that have started can be asked for, never more than is there, even with
@@ -40,14 +46,6 @@ const toWhish = (amountCents: number) => ({
   accountName: "Rima Khoury",
   whishPhone: "+96170123456",
 });
-
-async function platformAdmin(): Promise<PlatformActor> {
-  const user = await createUser("Platform Admin");
-  await prisma.user.update({ where: { id: user.id }, data: { platformRole: "SUPER_ADMIN" } });
-  const actor = await resolvePlatformActor(user.id);
-  if (!actor) throw new Error("The admin should resolve");
-  return actor;
-}
 
 const usd = async (place: Place) =>
   (await getPayouts(place.ctx)).balances.find((row) => row.currency === "USD");
@@ -109,11 +107,50 @@ describe("asking for a payout", () => {
   });
 });
 
+/** A refund still waiting, recorded `hoursAgo` hours ago. */
+async function pendingRefund(place: Place, paymentId: string, hoursAgo: number) {
+  return prisma.refund.create({
+    data: {
+      businessId: place.business.id,
+      paymentId,
+      amountCents: 8_000,
+      currency: "USD",
+      status: "PENDING",
+      reason: "Cancelled by the host",
+      createdAt: new Date(Date.now() - hoursAgo * 60 * 60_000),
+    },
+  });
+}
+
+describe("what the admin sees to send", () => {
+  it("lists the payouts asked for, what each host is owed, and only refunds housekeeping stopped retrying", async () => {
+    const place = await placeWithRoom("AUTOMATIC");
+    await paidStay(place, 10_000, 1, 10);
+    const admin = await createPlatformAdmin();
+    const asked = await requestPayout(place.ctx, toWhish(3_000));
+
+    const queue = await getPayoutQueue(admin);
+    expect(queue.requests.find((payout) => payout.id === asked.id)?.business.name).toBe(place.business.name);
+    expect(
+      (await getHostBalances(admin)).find(
+        (row) => row.businessId === place.business.id && row.currency === "USD",
+      ),
+    ).toMatchObject({ earnedCents: 10_000, requestedCents: 3_000, availableCents: 7_000 });
+
+    const payment = await paidStay(place, 8_000, -3, 20);
+    const fresh = await pendingRefund(place, payment.id, 1);
+    const stuck = await pendingRefund(place, payment.id, 30);
+    const toSend = (await listRefundsToSend(admin)).map((refund) => refund.id);
+    expect(toSend).toContain(stuck.id);
+    expect(toSend).not.toContain(fresh.id);
+  });
+});
+
 describe("the admin sends payouts and refunds by hand", () => {
   it("marks a payout sent once; a refused one is available again", async () => {
     const place = await placeWithRoom("AUTOMATIC");
     await paidStay(place, 10_000, 1, 10);
-    const admin = await platformAdmin();
+    const admin = await createPlatformAdmin();
     const first = await requestPayout(place.ctx, toWhish(6_000));
     await decidePayout(admin, first.id, { action: "paid", reference: "WH-123" });
     await expect(decidePayout(admin, first.id, { action: "rejected" })).rejects.toMatchObject({
@@ -145,7 +182,7 @@ describe("the admin sends payouts and refunds by hand", () => {
         reason: "Cancelled by the host",
       },
     });
-    const admin = await platformAdmin();
+    const admin = await createPlatformAdmin();
     await markRefundSent(admin, refund.id, "WH-REF-9");
     expect(await prisma.refund.findUniqueOrThrow({ where: { id: refund.id } })).toMatchObject({
       status: "DONE",

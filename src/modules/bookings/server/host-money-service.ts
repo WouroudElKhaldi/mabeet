@@ -25,6 +25,8 @@ import * as payments from "./payment-repository";
 const OWNER_ONLY = "Only an owner can see and ask for payouts";
 /** How many online payments the payouts page lists. */
 const PAYMENTS_SHOWN = 50;
+/** Housekeeping stops retrying a refund after a day; from then on it waits for the admin to send it by hand. */
+const AUTOMATIC_REFUND_WINDOW_MS = 24 * 60 * 60_000;
 
 interface Balance {
   currency: string;
@@ -127,6 +129,19 @@ export async function requestPayout(ctx: TenantContext, input: PayoutRequest, no
 }
 
 // ---------- Platform admin ----------
+
+/** What Mabeet holds for each host that still has money with it or coming. */
+export async function getHostBalances(actor: PlatformActor, now = new Date()) {
+  requirePlatformAdmin(actor);
+  const money = await balances(null, now);
+  return money.filter((row) => row.earnedCents + row.upcomingCents - row.paidOutCents !== 0);
+}
+
+/** Refunds the providers kept refusing, to send by hand: the oldest first, with who to send each one to. */
+export function listRefundsToSend(actor: PlatformActor, now = new Date()) {
+  requirePlatformAdmin(actor);
+  return payments.listRefundsToSendByHand(prisma, new Date(now.getTime() - AUTOMATIC_REFUND_WINDOW_MS));
+}
 
 /** The admin sent a refund by hand, with the transfer's reference. Each one is marked once. */
 export async function markRefundSent(

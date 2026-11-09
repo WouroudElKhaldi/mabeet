@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { prisma } from "@tests/integration/helpers";
-import { getSitePalette } from "../server";
+import { createPlatformAdmin, prisma } from "@tests/integration/helpers";
+import { getSitePalette, setSitePalette } from "../server";
 
 // The whole website wears the palette the super admin saved. The settings are one shared row, so these tests put back
 // whatever was there before them.
@@ -33,5 +33,14 @@ describe("the site palette", () => {
   it("falls back to Cedar when the saved value is not a palette the site has", async () => {
     await savePalette("neon");
     expect(await getSitePalette()).toBe("cedar");
+  });
+
+  it("is saved by a platform admin, under their name", async () => {
+    const admin = await createPlatformAdmin();
+    await setSitePalette(admin, "byblos");
+    expect(await getSitePalette()).toBe("byblos");
+    expect(
+      await prisma.auditLog.count({ where: { actorId: admin.userId, action: "site.palette_changed" } }),
+    ).toBe(1);
   });
 });
