@@ -168,8 +168,12 @@ describe("reading the platforms as late as we can", () => {
       data: { lastSyncedAt: new Date(Date.now() - 11 * 60_000) },
     });
     platform = [{ uid: "a1", range: stay(10, 2) }];
-    const run = await syncDueFeeds();
-    expect(run.synced).toBeGreaterThanOrEqual(1);
+    // Each run reads a batch, the longest waiting first, and the test database keeps links from earlier runs: run as
+    // the worker would, minute after minute, until it reaches this one.
+    for (let run = 0; run < 20 && (await imported(place.feed.id)).length === 0; run += 1) {
+      const { synced, failed } = await syncDueFeeds();
+      if (synced + failed === 0) break;
+    }
     expect(await imported(place.feed.id)).toHaveLength(1);
   });
 });

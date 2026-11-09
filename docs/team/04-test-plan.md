@@ -400,16 +400,16 @@ Every pull request runs: types, lint, format, unused code, unit tests, the docum
 tests with a real database. A red check blocks the merge. End-to-end tests can run on a schedule, or before a
 release, if they are too slow for every pull request.
 
-### Setting up Playwright (once, in the new repository)
+### Playwright (set up)
 
-The first person who writes a browser test does this:
-
-- Add `@playwright/test` as a dev package.
-- Add `playwright.config.ts` with a `mobile` project (390 × 844, a phone browser) and a `webServer` that starts the
-  app.
-- Add the `tests/e2e/` folder and the `test:e2e` script.
-- Keep e2e tests out of the Vitest projects.
-- Fill a separate database with demo data before the run.
+- `playwright.config.ts`: one `mobile` project (390 × 844, Chromium), one browser at a time. A `sign-in` step signs
+  the four demo accounts in once (`tests/e2e/auth.setup.ts`) and keeps their cookies in `test-results/.auth/`.
+- The app runs on its own database, `E2E_DATABASE_URL` (name ending in `_e2e`, see `.env.example`).
+  `tests/e2e/prepare-database.ts` migrates it and runs the demo seed before the app starts; no outside service is
+  called (no emails, no AI, no Stripe; Whish is its simulator).
+- Run: `pnpm build`, then `pnpm test:e2e` (starts the built app on port 3100, or reuses one already there).
+- Besides the files in Part 4: `dashboard.spec.ts`, `admin.spec.ts` and `site.spec.ts` press each page's buttons,
+  tabs, filters and forms; whatever a test changes it puts back.
 
 ---
 
