@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-error";
 import { authClient } from "@/lib/auth-client";
+import { PASSWORD_MIN_LENGTH } from "@/config/passwords";
 
 /** Asks for a reset link. Always answers the same way, so it never reveals which emails have accounts. */
 export function ForgotPasswordForm() {
@@ -108,7 +109,7 @@ export function ResetPasswordForm() {
         name="password"
         type="password"
         required
-        minLength={10}
+        minLength={PASSWORD_MIN_LENGTH}
         autoComplete="new-password"
         hint={t("passwordHint")}
       />

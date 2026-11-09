@@ -1980,7 +1980,7 @@
     "password": "كلمة السر",
     "currentPassword": "كلمة السر الحالية",
     "newPassword": "كلمة السر الجديدة",
-    "passwordRules": "8 حروف عالأقل.",
+    "passwordRules": "10 حروف عالأقل.",
     "passwordWrong": "كلمة السر الحالية مش صح.",
     "changePassword": "غيّر كلمة السر",
     "passwordChanged": "تغيّرت كلمة السر، وطلعنا من الأجهزة التانية.",

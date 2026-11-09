@@ -8,6 +8,7 @@ import { sendPasswordResetEmail, sendVerificationEmail } from "@/server/email/au
 import { emailReachesEveryone } from "@/server/email/send";
 import { env } from "@/server/env";
 import { MCP_READ_SCOPE, MCP_RESOURCE, pickedWorkspace } from "./mcp-oauth";
+import { PASSWORD_MIN_LENGTH } from "@/config/passwords";
 
 // Email and password sign-in on the existing User, Session, Account and Verification tables. Sessions live in
 // Postgres, so signing out or resetting a password ends them everywhere. AI apps connect to the host MCP with
@@ -23,7 +24,7 @@ export const auth = betterAuth({
   disabledPaths: ["/token"],
   emailAndPassword: {
     enabled: true,
-    minPasswordLength: 10,
+    minPasswordLength: PASSWORD_MIN_LENGTH,
     // Only demand a verified email once it can actually reach people (a key and a verified sending domain).
     requireEmailVerification: emailReachesEveryone(),
     sendResetPassword: ({ user, url }) =>

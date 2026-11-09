@@ -37,7 +37,13 @@ interface PayoutRequestFormProps {
 export function PayoutRequestForm({ businessId, balances, last }: PayoutRequestFormProps) {
   const t = useTranslations("dashboard.payouts");
   const locale = useLocale();
-  const { run, pending, error, fieldErrors } = useAction();
+  const { run, pending, error, fieldErrors } = useAction([
+    "amountCents",
+    "accountName",
+    "whishPhone",
+    "bankName",
+    "iban",
+  ]);
   const payable = balances.filter((balance) => balance.availableCents >= SMALLEST_PAYOUT_CENTS);
   const [currency, setCurrency] = useState(payable[0]?.currency ?? "");
   const [method, setMethod] = useState<PayoutMethod>(last?.method ?? "WHISH");

@@ -67,13 +67,19 @@ export function errorMessage(caught: unknown, fallback: string): string {
 }
 
 /**
- * What a form shows after a failed call: when the server named the wrong fields, a message under each one
- * (`fieldErrors`, by field name) and no message for the whole form; otherwise one message for the whole form.
+ * What a form shows after a failed call: a message under each wrong field the form shows (`shownFields`), and one
+ * message for the whole form for anything else. A field the form does not show (a button that saves one choice, or a
+ * value the screen sends on its own) still gets that one message, so a refusal is never silent; the server's text
+ * for a wrong field is the generic "Invalid input", so the calm fallback is shown instead.
  */
-export function formFailure(caught: unknown, fallback: string) {
-  const fieldErrors = caught instanceof ApiError ? caught.fieldErrors : {};
-  const namesFields = Object.keys(fieldErrors).length > 0;
-  return { error: namesFields ? null : errorMessage(caught, fallback), fieldErrors };
+export function formFailure(caught: unknown, fallback: string, shownFields: readonly string[] = []) {
+  const named = caught instanceof ApiError ? caught.fieldErrors : {};
+  const fieldErrors = Object.fromEntries(
+    Object.entries(named).filter(([field]) => shownFields.includes(field)),
+  );
+  const unshown = Object.keys(named).some((field) => !shownFields.includes(field));
+  if (unshown) return { error: fallback, fieldErrors };
+  return { error: Object.keys(fieldErrors).length > 0 ? null : errorMessage(caught, fallback), fieldErrors };
 }
 
 /** True when we cancelled the call ourselves. Nothing went wrong, so nothing should be shown. */
