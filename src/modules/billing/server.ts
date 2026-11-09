@@ -2,11 +2,13 @@
 // private to the module.
 export {
   assertPlanAllowsAnother,
+  getBilling,
   handleStripeWebhook,
   handleWhishCallback,
   openBillingPortal,
   planPaymentMethods,
   runPlanHousekeeping,
+  settlePlanPayment,
   startCheckout,
   startWhishPlanCheckout,
 } from "./server/billing-service";

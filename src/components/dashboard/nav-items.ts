@@ -42,6 +42,7 @@ export const DASHBOARD_PAGES = {
   profile: { group: "business", path: "profile", icon: "profile", anyOf: [], everyone: true },
   analytics: { group: "money", path: "analytics", icon: "analytics", anyOf: ["analytics.read"] },
   payouts: { group: "money", path: "payouts", icon: "payouts", anyOf: [], ownerOnly: true },
+  billing: { group: "money", path: "billing", icon: "billing", anyOf: ["settings.manage"] },
   team: { group: "team", path: "team", icon: "team", anyOf: ["team.manage", "roles.manage"] },
   keys: { group: "ai", path: "keys", icon: "keys", anyOf: ["ai.use"] },
 } as const satisfies Partial<Record<NavLabel, DashboardPage>>;
