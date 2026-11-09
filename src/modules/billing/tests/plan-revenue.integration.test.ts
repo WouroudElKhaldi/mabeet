@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { createPlace, createPlatformAdmin, prisma } from "@tests/integration/helpers";
 import { getPlanRevenue } from "../server";
 
-// Mabeet's own revenue: plans paid by card or Whish. Only paid payments count, and each month is its own. Other tests add plan payments too, so the months used here are far in the future.
+// Mabeet's own revenue: plans paid by card or Whish. Only paid payments count, and each month is its own. The months used here are far in the future, away from
+// the plan payments other tests add.
 
 const NOW = new Date("2090-06-15T12:00:00Z");
 
@@ -39,10 +40,15 @@ describe("plan revenue", () => {
     await planPayment(business.id, 9_900, "STRIPE", new Date("2090-06-11T09:00:00Z"), "FAILED");
 
     const revenue = await getPlanRevenue(admin, NOW);
-    expect(revenue.thisMonth).toEqual([{ currency: "USD", cents: 5_800, payments: 2 }]);
-    expect(revenue.byWhish).toEqual([{ currency: "USD", cents: 5_800, payments: 2 }]);
-    expect(revenue.byCard).toEqual([{ currency: "USD", cents: 2_900, payments: 1 }]);
-    const usd = (rows: typeof revenue.allTime) => rows.find((row) => row.currency === "USD")?.cents ?? 0;
-    expect(usd(revenue.allTime) - usd(before.allTime)).toBe(8_700);
+    // Tests never empty the database, so each figure is compared with what was there before.
+    const added = (key: "allTime" | "thisMonth" | "byCard" | "byWhish") => {
+      const usd = (rows: Array<{ currency: string; cents: number }>) =>
+        rows.find((row) => row.currency === "USD")?.cents ?? 0;
+      return usd(revenue[key]) - usd(before[key]);
+    };
+    expect(added("thisMonth")).toBe(5_800);
+    expect(added("byWhish")).toBe(5_800);
+    expect(added("byCard")).toBe(2_900);
+    expect(added("allTime")).toBe(8_700);
   });
 });
