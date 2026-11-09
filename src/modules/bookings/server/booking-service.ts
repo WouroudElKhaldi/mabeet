@@ -15,6 +15,7 @@ import { refundPayments, type RefundToSend, sendRefunds } from "./booking-paymen
 import { assertBookableStay, holdUntil, initialStatus } from "./booking-policy";
 import * as bookings from "./booking-repository";
 import { assertOwnerCanAnswer, assertTransition } from "./booking-status";
+import { refreshBeforeBooking, refreshBeforeConfirming } from "./feed-sync-service";
 import { recheckImportClashes } from "./import-clashes";
 
 // The booking engine. A guest's request takes the room at once, so when two guests race for the last free night
@@ -56,6 +57,8 @@ export async function requestBooking(request: BookingRequest, now = new Date()) 
   assertBookableRange(range, now);
   const business = await findBookablePlace(businessSlug);
   if (!business) throw notFound("Place");
+  // A stay booked on Airbnb or Booking.com a moment ago is read in first, so it refuses this request.
+  await refreshBeforeBooking(business.id, request.roomId, now);
 
   let expired: Awaited<ReturnType<typeof bookings.expireStaleHolds>> = [];
   let refunds: RefundToSend[] = [];
@@ -133,6 +136,12 @@ export function cancelBooking(ctx: TenantContext, decision: Decision, now = new 
 
 async function decide(ctx: TenantContext, { bookingId, reason }: Decision, status: BookingStatus, now: Date) {
   requirePermission(ctx, "bookings.decide");
+  if (status === "CONFIRMED") {
+    // The platforms' calendars are read again first, so a stay sold there since the request stops this confirmation.
+    const waiting = await bookings.findBooking(prisma, ctx.businessId, bookingId);
+    if (!waiting) throw notFound("Booking");
+    await refreshBeforeConfirming(ctx.businessId, waiting.roomId, now);
+  }
   const { booking, refunds } = await runInTransaction(async (tx) => {
     const current = await bookings.findBooking(tx, ctx.businessId, bookingId);
     if (!current) throw notFound("Booking");

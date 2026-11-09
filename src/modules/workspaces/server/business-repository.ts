@@ -142,6 +142,14 @@ export function findBookableBusinessBySlug(db: Db, slug: string) {
   });
 }
 
+/** For calendar sync: the place's name and time zone, and how it is booked. */
+export function findPlaceForCalendar(db: Db, businessId: string) {
+  return db.business.findFirst({
+    where: { id: businessId, isDeleted: false },
+    select: { id: true, name: true, timezone: true, bookingUnit: true },
+  });
+}
+
 /** For analytics: what the reports need of each place, live ones only. */
 export function findPlacesForReports(db: Db, businessIds: readonly string[]) {
   return db.business.findMany({

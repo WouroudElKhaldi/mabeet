@@ -17,8 +17,6 @@
     "tailwindcss",
     "@modelcontextprotocol/sdk",
     "aws4fetch",
-    "ical-generator",
-    "node-ical",
     "web-push",
     "@types/web-push"
   ]

@@ -4,6 +4,7 @@ export { getHostSection } from "./server/host-service";
 export { createWorkspace } from "./server/onboarding-service";
 export {
   findBookablePlace,
+  findPlaceForCalendar,
   findPlacesForReports,
   getPublicPlace,
   listListedPlaces,
