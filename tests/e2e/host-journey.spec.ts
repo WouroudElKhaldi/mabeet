@@ -110,6 +110,25 @@ test("rooms: add a room, change its price, take it off the site, and the plan's 
   await saved.click();
   await expect(saved.getByRole("spinbutton", { name: "Nightly rate" })).toHaveValue("110");
 
+  // A special price for a few nights (a holiday), then back to the base rate.
+  const holiday = new Date();
+  holiday.setUTCDate(holiday.getUTCDate() + 30);
+  const firstNight = holiday.toISOString().slice(0, 10);
+  holiday.setUTCDate(holiday.getUTCDate() + 2);
+  await saved.getByLabel("First night").fill(firstNight);
+  await saved.getByLabel("Last night").fill(holiday.toISOString().slice(0, 10));
+  await saved.getByLabel("Price a night (USD)").fill("150");
+  await saved.getByRole("button", { name: "Set price" }).click();
+  await expect(saved.getByText("$150.00 a night")).toBeVisible();
+  await saved.getByRole("button", { name: "Back to the base rate" }).click();
+  await expect(saved.getByText("No special prices coming up.")).toBeVisible();
+
+  // The room's own photos, shown when a guest opens this room.
+  await saved
+    .locator('input[type="file"]')
+    .setInputFiles({ name: "loft.png", mimeType: "image/png", buffer: await samplePhoto(page) });
+  await expect(saved.getByRole("button", { name: "Delete photo" })).toHaveCount(1, { timeout: 30_000 });
+
   // Not bookable any more: it says so, and guests are not offered it.
   await saved.getByText("Bookable by guests", { exact: true }).click();
   await saved.getByRole("button", { name: /Save/ }).first().click();

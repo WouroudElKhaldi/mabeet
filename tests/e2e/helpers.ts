@@ -188,3 +188,33 @@ export async function newHost(page: Page, name: string): Promise<string> {
   await expect(page).toHaveURL(/\/dashboard\/[^/]+$/, { timeout: 20_000 });
   return new URL(page.url()).pathname;
 }
+
+/**
+ * At a place that takes online payment: picks free nights, books them (`link` is the place page's booking link:
+ * "Book and pay", or "Request to book" where the host answers first) and pays with Whish's simulator. Returns the
+ * booking page's address.
+ */
+export async function bookAndPayWithWhish(
+  page: Page,
+  slug: string,
+  guestName: string,
+  link = "Book and pay",
+) {
+  await page.goto(`/p/${slug}`);
+  await page
+    .getByRole("button", { name: /Check-in/ })
+    .first()
+    .click();
+  await pickFreeStay(page);
+  await page.getByRole("link", { name: link }).click();
+  await page.getByLabel("Full name").fill(guestName);
+  await page.getByLabel("Mobile number").fill("+96171123456");
+  await page.getByRole("button", { name: "Book and pay" }).click();
+  await page.getByRole("button", { name: "Pay with Whish" }).click();
+  await expect(page).toHaveURL(/\/whish-simulator\/pay\//);
+  await page.getByLabel("Whish phone number").fill("96170123456");
+  await page.getByLabel("Code sent to your Whish app").fill("111111");
+  await page.getByRole("button", { name: "Confirm payment" }).click();
+  await expect(page).toHaveURL(/\/b\//, { timeout: 20_000 });
+  return page.url();
+}

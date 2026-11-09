@@ -417,14 +417,19 @@ release, if they are too slow for every pull request.
 - `guest-journey.spec.ts`: signing up, out and in, a forgotten password, booking and paying with Whish at an
   automatic place, the stay in My trips and its cancellation with a full refund, the contact forms, the account's
   notifications and privacy pages (download, delete), and becoming a host.
-- `host-journey.spec.ts`: declining a request and cancelling a stay, rooms (add, change the price, hide, the Free
-  plan's 3-room limit), photos, switching the booking mode with the payment policy, inviting and taking back an
-  invitation, closing and reopening nights, and what a front-desk member cannot open.
+- `host-journey.spec.ts`: declining a request and cancelling a stay, rooms (add, change the price, special prices,
+  the room's own photos, hide, the Free plan's 3-room limit), the place's photos, switching the booking mode with the
+  payment policy, inviting and taking back an invitation, closing and reopening nights, and what a front-desk member
+  cannot open.
+- `money-journey.spec.ts`: where the host answers first, the guest pays and the host confirms, declines or never
+  answers (the request ends at housekeeping and the guest is refunded in full); a started stay's host asks for a
+  payout and an admin marks it sent; a refund that did not go through is sent by hand by an admin.
 - The database is kept between runs, so it fills up. Tests that pick dates use `pickFreeStay` (the first stay the
   calendar offers), and tests that add what cannot be taken back (rooms, closed nights, the booking mode) make their
   own host and place with `newHost`.
-- A payout cannot be asked for in the browser tests: money becomes available only once a stay has started. The
-  integration tests cover it (`bookings/tests/payouts.integration.test.ts`).
+- What clicking cannot do is in `tests/e2e/time-passes.ts`, and only on the test's own booking: a stay that has
+  started, an answer time that ran out, a refund that did not go through. Housekeeping is then run through its cron
+  route, with `CRON_SECRET` from `.env`.
 
 ---
 
