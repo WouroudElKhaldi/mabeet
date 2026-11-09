@@ -26,6 +26,7 @@ export {
   type ChannelNights,
   getLifetimeDirectRevenue,
   getPlaceSnapshots,
+  getResponseStats,
   getStayNumbers,
   type MonthlyNights,
   type MonthlyRevenue,

@@ -2142,17 +2142,27 @@
     "location": "The place is in {area}.",
     "priceAvailability": "Price and availability",
     "fullPayment": "You pay the full price to confirm your booking; there is no deposit.",
+    "checkAvailability": "Check availability",
     "stillQuestions": "Still have questions? Message the host",
     "stillQuestionsBody": "{name} gets your message by email and replies to the address you give.",
+    "yourStay": "Your dates",
     "name": "Your name",
     "email": "Your email",
     "emailHint": "The host replies here.",
     "message": "Message",
     "placeholder": "Hi {name}, I'd like to know…",
     "send": "Send message",
+    "sending": "Sending…",
     "sentTitle": "Message sent",
     "sentBody": "{name} will reply to your email. Keep an eye on your inbox, and your spam folder just in case.",
-    "checkAvailability": "Check availability"
+    "another": "Ask something else",
+    "orWhatsapp": "Or message them on WhatsApp",
+    "unavailable": "This host is not taking questions here right now. Pick your dates to book, or try again later.",
+    "errors": {
+      "name": "Please give your name, 2 characters or more.",
+      "email": "Please check your email address; the host replies to it.",
+      "message": "Please write at least a few words, so the host can answer."
+    }
   },
   "regions": {
     "label": "Region",

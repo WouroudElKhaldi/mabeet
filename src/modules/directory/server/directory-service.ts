@@ -1,5 +1,11 @@
 import { BOOKABLE_ROOM_KIND, MAX_STAY_NIGHTS } from "@/config/booking-limits";
-import { findFreeRooms, getTakenNights, listMyBookings, stayIssue } from "@/modules/bookings/server";
+import {
+  findFreeRooms,
+  getResponseStats,
+  getTakenNights,
+  listMyBookings,
+  stayIssue,
+} from "@/modules/bookings/server";
 import {
   findPlaceCovers,
   findRoomForBooking,
@@ -9,14 +15,21 @@ import {
   priceStay,
   priceStays,
 } from "@/modules/rooms/server";
-import { findBookablePlace, getPublicPlace, listListedPlaces } from "@/modules/workspaces/server";
+import {
+  findBookablePlace,
+  getHostSection,
+  getPublicPlace,
+  listListedPlaces,
+} from "@/modules/workspaces/server";
 import { notFound } from "@/server/errors";
-import { countNights, type DateRange, toIsoDate } from "@/utils/dates";
+import { addDays, countNights, type DateRange, toIsoDate } from "@/utils/dates";
+import { MIN_REQUESTS_FOR_RESPONSE, RESPONSE_WINDOW_DAYS } from "../host";
 import type { PlaceSearch } from "../search-query";
 import type {
   GuestTrip,
   PlaceAvailability,
   PlaceCard,
+  PublicHost,
   PublicPlace,
   RoomAvailability,
   RoomQuote,
@@ -56,14 +69,15 @@ export async function quoteRoom(
  * whole also lists its rooms, to show. A place with no photos of its own shows its rooms' photos, so a host who only
  * photographed the rooms still has a gallery.
  */
-export async function getPlace(slug: string): Promise<PublicPlace | null> {
+export async function getPlace(slug: string, now: Date = new Date()): Promise<PublicPlace | null> {
   const place = await getPublicPlace(slug);
   if (!place) return null;
   const whole = place.bookingUnit === "WHOLE_PLACE";
-  const [units, placePhotos, rooms] = await Promise.all([
+  const [units, placePhotos, rooms, host] = await Promise.all([
     listPublicUnits(place.id, BOOKABLE_ROOM_KIND[place.bookingUnit]),
     listPlacePhotos(place.id),
     whole ? listPublicUnits(place.id, "ROOM") : null,
+    getPublicHost(place.id, now),
   ]);
   return {
     slug: place.slug,
@@ -77,9 +91,29 @@ export async function getPlace(slug: string): Promise<PublicPlace | null> {
     houseRules: place.houseRules,
     bookingUnit: place.bookingUnit,
     bookingMode: place.bookingMode,
+    whatsapp: place.whatsapp,
+    host,
     photos: placePhotos.length > 0 ? placePhotos : (rooms ?? units).flatMap((unit) => unit.photos),
     units,
     rooms: rooms ?? units,
+  };
+}
+
+/**
+ * A place's host as guests meet them: how to reach them, their profile if they show it, and how they answered
+ * requests over the past year. The answer figures are only given with enough requests to mean something.
+ */
+async function getPublicHost(businessId: string, now: Date): Promise<PublicHost> {
+  const [section, stats] = await Promise.all([
+    getHostSection(businessId),
+    getResponseStats(businessId, addDays(now, -RESPONSE_WINDOW_DAYS)),
+  ]);
+  return {
+    ...section,
+    response:
+      stats.requests < MIN_REQUESTS_FOR_RESPONSE
+        ? null
+        : { rate: stats.answered / stats.requests, medianMinutes: stats.medianMinutes },
   };
 }
 

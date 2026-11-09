@@ -441,8 +441,8 @@
     "/api/public/places/{slug}/messages": {
       "post": {
         "tags": ["Guests"],
-        "summary": "Email the host a question from the Contact host page (rate limited)",
-        "description": "No sign-in.",
+        "summary": "Ask a place's host a question from its Contact host page (rate limited: 5 an hour per address)",
+        "description": "No sign-in. The question is emailed to the people who can decide the place's bookings, with the guest as the reply address; nothing is stored. checkIn and checkOut are optional, but come as a pair with check-out after check-in. 403 when the host takes questions on WhatsApp only.",
         "security": [],
         "parameters": [
           {
@@ -500,8 +500,21 @@
           }
         },
         "responses": {
-          "201": {
-            "description": "Success"
+          "202": {
+            "description": "Accepted: the email is on its way",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sent": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["sent"]
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid input",
@@ -528,17 +541,11 @@
               }
             }
           },
-          "401": {
-            "description": "Sign-in or key required"
-          },
           "403": {
-            "description": "Missing permission"
+            "description": "The host answers on WhatsApp only"
           },
           "404": {
-            "description": "Not found, or not yours"
-          },
-          "409": {
-            "description": "Conflict, e.g. dates or seats just taken"
+            "description": "No such place, or it is paused"
           },
           "429": {
             "description": "Rate limited"

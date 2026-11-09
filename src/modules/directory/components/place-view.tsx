@@ -7,6 +7,7 @@ import { lowestRateCents } from "../summary";
 import type { PublicPlace } from "../types";
 import { AmenityList } from "./amenity-list";
 import { BookingBox } from "./booking-box";
+import { MeetHost } from "./meet-host";
 import { PhotoGallery } from "./photo-gallery";
 import { PlaceHeader } from "./place-header";
 import { PlaceSummary } from "./place-summary";
@@ -27,10 +28,11 @@ export async function PlaceView({
   initial?: { roomId?: string; checkIn?: string; checkOut?: string; guests?: number };
 }) {
   const [t, locale] = await Promise.all([getTranslations("placePage"), getLocale()]);
-  const [booking, known, card] = await Promise.all([
+  const [booking, known, card, host] = await Promise.all([
     getTranslations("booking"),
     getTranslations("thingsToKnow"),
     getTranslations("place"),
+    getTranslations("meetHost"),
   ]);
   const whole = place.bookingUnit === "WHOLE_PLACE";
   const fromRate = lowestRateCents(place.units);
@@ -59,6 +61,9 @@ export async function PlaceView({
           ) : null}
           <Section id="amenities" title={t("amenities")}>
             <AmenityList units={allUnits} />
+          </Section>
+          <Section id="host" title={host("title")}>
+            <MeetHost place={place} />
           </Section>
           <Section id="things-to-know" title={known("title")}>
             <ThingsToKnow place={place} />

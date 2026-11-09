@@ -170,3 +170,50 @@ export async function placeSnapshots(
     GROUP BY b."businessId"`;
   return rows.map((row) => ({ ...row, monthRevenueCents: moneyNumber(row.monthRevenueCents) }));
 }
+
+export interface ResponseStats {
+  /** Requests that waited for the host's answer: offline requests, and requests paid for in mode 2. */
+  requests: number;
+  /** Of those, the ones the host confirmed or declined before they expired. */
+  answered: number;
+  /** How long the host typically took to answer, in minutes, or null when they answered none. */
+  medianMinutes: number | null;
+}
+
+/**
+ * How the host answers requests made since `since`, for guests deciding whether to book. Only requests that really
+ * waited for the host count: an automatic booking never asks them, and in mode 2 a booking whose payment never came
+ * never reached them. A request counts as answered when it ends confirmed or declined by a person, and as missed
+ * when it expired waiting; one cancelled meanwhile counts as neither, since a later cancellation overwrites when it
+ * was decided. The clock starts when the request reached the host: at once offline, at the payment in mode 2.
+ */
+export async function responseStats(db: Db, businessId: string, since: Date): Promise<ResponseStats> {
+  const [row] = await db.$queryRaw<Array<ResponseStats>>`
+    WITH waited AS (
+      SELECT b.status, b."decidedAt",
+             COALESCE(
+               (SELECT MIN(p."paidAt") FROM "Payment" p WHERE p."bookingId" = b.id AND p."paidAt" IS NOT NULL),
+               b."createdAt"
+             ) AS "reachedAt"
+      FROM "Booking" b
+      WHERE b."businessId" = ${businessId} AND b."isDeleted" = false AND b."bookingMode" <> 'AUTOMATIC'
+        AND b."createdAt" >= ${since}
+        AND (
+          (b.status IN ('CONFIRMED', 'DECLINED') AND b."decidedById" IS NOT NULL)
+          OR (
+            b.status = 'EXPIRED'
+            AND (
+              b."bookingMode" = 'OFFLINE'
+              OR EXISTS (SELECT 1 FROM "Payment" p WHERE p."bookingId" = b.id AND p."paidAt" IS NOT NULL)
+            )
+          )
+        )
+    )
+    SELECT COUNT(*)::int AS requests,
+           COUNT(*) FILTER (WHERE status <> 'EXPIRED')::int AS answered,
+           (percentile_cont(0.5) WITHIN GROUP (
+              ORDER BY EXTRACT(EPOCH FROM ("decidedAt" - "reachedAt")) / 60
+            ) FILTER (WHERE status <> 'EXPIRED'))::int AS "medianMinutes"
+    FROM waited`;
+  return row ?? { requests: 0, answered: 0, medianMinutes: null };
+}

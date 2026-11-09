@@ -1,4 +1,4 @@
-import type { BookingMode, BookingStatus, BookingUnit, PhotoArea } from "@prisma/client";
+import type { BookingMode, BookingStatus, BookingUnit, HostContact, PhotoArea } from "@prisma/client";
 import type { StayIssue } from "@/config/booking-limits";
 
 // What the public side shows and asks. Plain values only (money as whole cents, dates as ISO text), so a page can
@@ -46,6 +46,28 @@ export interface PublicUnit {
   photos: PublicPhoto[];
 }
 
+/** A place's host, as its page and its Contact host page show them. */
+export interface PublicHost {
+  /** How guests may reach the host: WhatsApp, the Contact host page, or both. */
+  contactBy: HostContact;
+  /** The host's own details, only when they chose to show them. */
+  profile: {
+    name: string;
+    bio: string | null;
+    city: string | null;
+    /** Language codes, as the host picked them. */
+    languages: string[];
+    hostingSince: number | null;
+  } | null;
+  /** How the host answered requests over the past year, or null with too few requests to say. */
+  response: {
+    /** The share of requests they answered before they expired, from 0 to 1. */
+    rate: number;
+    /** Their typical answer time in minutes, or null when they answered none. */
+    medianMinutes: number | null;
+  } | null;
+}
+
 /** A place as its page shows it. */
 export interface PublicPlace {
   slug: string;
@@ -60,6 +82,9 @@ export interface PublicPlace {
   houseRules: string | null;
   bookingUnit: BookingUnit;
   bookingMode: BookingMode;
+  /** The place's own WhatsApp number, the only one guests are given; never the host's personal number. */
+  whatsapp: string | null;
+  host: PublicHost;
   /** The photos of the place as a whole, first one largest. */
   photos: PublicPhoto[];
   /** What a guest can book: the rooms, or the one whole-place unit. */
