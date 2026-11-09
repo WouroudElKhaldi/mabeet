@@ -414,7 +414,7 @@ the keyboard focus away.
 | `Panel`                                             | `shell/page-header.tsx` | A titled card on a dashboard page (`panelClass` + `text-xl` title + optional intro and action)                                     |
 | `BackLink`                                          | `shell/back-link.tsx`   | The Back button                                                                                                                    |
 | `Pagination`                                        | `shell/pagination.tsx`  | Page numbers for long lists                                                                                                        |
-| `NotificationBell`, `NotificationList`              | `shell/`                | The bell (latest 5) and the full list                                                                                              |
+| `NotificationBell`, `NotificationList`              | `notifications` module  | The bell (latest 5) and the full list; the layout builds the bell and hands it to `AppShell` (`bell`)                              |
 | `StatTile`                                          | `ui/stat-tile.tsx`      | One number with its label (percent, count or money); a long number shrinks to the tile's width (`cqi`) instead of being cut        |
 | `BarChart`, analytics charts                        | `dashboard/`            | Charts, coloured with tokens and `channel-colors.ts`                                                                               |
 | `SiteHeader`, `SiteFooter`, `SearchBar`, `SiteMenu` | `site/`                 | The public site's header, footer and search, and the header's menu on phones                                                       |
