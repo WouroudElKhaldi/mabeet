@@ -1980,7 +1980,7 @@
     "password": "كلمة المرور",
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
-    "passwordRules": "8 أحرف على الأقل.",
+    "passwordRules": "10 أحرف على الأقل.",
     "passwordWrong": "كلمة المرور الحالية غير صحيحة.",
     "changePassword": "غيّر كلمة المرور",
     "passwordChanged": "تم تغيير كلمة المرور، وتم تسجيل الخروج من الأجهزة الأخرى.",

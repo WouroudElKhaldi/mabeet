@@ -8,6 +8,7 @@ import { FormError } from "@/components/ui/form-error";
 import { useAction } from "@/hooks/use-action";
 import { api } from "@/lib/api-client";
 import { authClient } from "@/lib/auth-client";
+import { PASSWORD_MIN_LENGTH } from "@/config/passwords";
 
 /** Under a form's button: what went wrong, or that it worked. */
 function SaveStatus({ saved, error, label }: { saved: boolean; error: string | null; label: string }) {
@@ -25,7 +26,7 @@ function SaveStatus({ saved, error, label }: { saved: boolean; error: string | n
  */
 export function ProfileForm({ profile }: { profile: { name: string; email: string; phone: string | null } }) {
   const t = useTranslations("profile");
-  const { run, pending, error, fieldErrors } = useAction();
+  const { run, pending, error, fieldErrors } = useAction(["name", "phone"]);
   const [saved, setSaved] = useState(false);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -126,7 +127,7 @@ export function PasswordForm() {
         name="next"
         type="password"
         autoComplete="new-password"
-        minLength={8}
+        minLength={PASSWORD_MIN_LENGTH}
         required
         hint={t("passwordRules")}
       />

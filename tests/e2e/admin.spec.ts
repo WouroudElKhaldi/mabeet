@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoSidewaysScroll, PLACES, signedIn, startingWith, watchForErrors } from "./helpers";
+import { expectNoSidewaysScroll, newHost, PLACES, signedIn, startingWith, watchForErrors } from "./helpers";
 
 // The platform admin's pages, control by control, on a phone. Whatever a test changes (a business suspended, the
 // site's colours, a category) it puts back, so the demo looks the same after the run.
@@ -77,9 +77,11 @@ test("hosts: a host's page, opening a business, and suspending then reactivating
     await business.getByRole("button", { name: "Suspend" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Suspend" }).click();
     await expect(reactivate).toBeVisible();
-    // While suspended, guests find no page for it.
-    await guestPage.goto(`/p/${PLACES.wholePlace.slug}`);
+    // While suspended, guests find no page for it, and search engines and shared links are told so too.
+    const hidden = await guestPage.goto(`/p/${PLACES.wholePlace.slug}`);
+    expect(hidden?.status()).toBe(404);
     await expect(guestPage.getByRole("heading", { level: 1 })).toBeVisible();
+    expect((await guestPage.request.get(`/p/${PLACES.wholePlace.slug}/book`)).status()).toBe(404);
     await expect(placeTitle).toBeHidden();
   } finally {
     // Back as it was, even when a check above failed, so the other tests find the place listed.
@@ -92,6 +94,28 @@ test("hosts: a host's page, opening a business, and suspending then reactivating
 
   await business.getByRole("link", { name: "Open dashboard" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+});
+
+test("a host's own page: suspending their place from there, and reactivating it", async ({
+  page,
+  browser,
+}) => {
+  // A new host and place, so the demo places stay listed whatever happens.
+  const newcomer = await browser.newContext();
+  const hostPage = await newcomer.newPage();
+  const name = `Sana Bitar ${Date.now() % 100_000}`;
+  await newHost(hostPage, name);
+  await newcomer.close();
+
+  await page.goto("/admin/hosts");
+  await page.getByRole("region", { name }).getByRole("link", { name: "Host profile" }).click();
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+  await page.getByRole("button", { name: "Suspend" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Suspend" }).click();
+  await expect(page.getByRole("button", { name: "Reactivate" })).toBeVisible();
+  await page.getByRole("button", { name: "Reactivate" }).click();
+  await expect(page.getByRole("button", { name: "Suspend" })).toBeVisible();
+  await expectNoSidewaysScroll(page);
 });
 
 test("categories: add one, rename it, and delete it", async ({ page }) => {

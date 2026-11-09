@@ -402,14 +402,34 @@ release, if they are too slow for every pull request.
 
 ### Playwright (set up)
 
-- `playwright.config.ts`: one `mobile` project (390 × 844, Chromium), one browser at a time. A `sign-in` step signs
-  the four demo accounts in once (`tests/e2e/auth.setup.ts`) and keeps their cookies in `test-results/.auth/`.
+- `playwright.config.ts`: one `mobile` project (390 × 844, the Google Chrome installed on the computer), one browser
+  at a time. A `sign-in` step signs the four demo accounts in once (`tests/e2e/auth.setup.ts`) and keeps their
+  cookies in `test-results/.auth/`.
 - The app runs on its own database, `E2E_DATABASE_URL` (name ending in `_e2e`, see `.env.example`).
   `tests/e2e/prepare-database.ts` migrates it and runs the demo seed before the app starts; no outside service is
-  called (no emails, no AI, no Stripe; Whish is its simulator).
+  called (no emails, no AI, no Stripe, no R2; Whish is its simulator).
 - Run: `pnpm build`, then `pnpm test:e2e` (starts the built app on port 3100, or reuses one already there).
+  `pnpm test:e2e:headed` shows the Chrome window, to watch each click. To keep one Chrome open across runs, start a
+  Playwright browser server (`chromium.launchServer({ channel: "chrome", headless: false })`) and run the tests with
+  `PW_TEST_CONNECT_WS_ENDPOINT` set to its address.
 - Besides the files in Part 4: `dashboard.spec.ts`, `admin.spec.ts` and `site.spec.ts` press each page's buttons,
   tabs, filters and forms; whatever a test changes it puts back.
+- `guest-journey.spec.ts`: signing up, out and in, a forgotten password, booking and paying with Whish at an
+  automatic place, the stay in My trips and its cancellation with a full refund, the contact forms, the account's
+  notifications and privacy pages (download, delete), and becoming a host.
+- `host-journey.spec.ts`: declining a request and cancelling a stay, rooms (add, change the price, special prices,
+  the room's own photos, hide, the Free plan's 3-room limit), the place's photos, switching the booking mode with the
+  payment policy, inviting and taking back an invitation, closing and reopening nights, and what a front-desk member
+  cannot open.
+- `money-journey.spec.ts`: where the host answers first, the guest pays and the host confirms, declines or never
+  answers (the request ends at housekeeping and the guest is refunded in full); a started stay's host asks for a
+  payout and an admin marks it sent; a refund that did not go through is sent by hand by an admin.
+- The database is kept between runs, so it fills up. Tests that pick dates use `pickFreeStay` (the first stay the
+  calendar offers), and tests that add what cannot be taken back (rooms, closed nights, the booking mode) make their
+  own host and place with `newHost`.
+- What clicking cannot do is in `tests/e2e/time-passes.ts`, and only on the test's own booking: a stay that has
+  started, an answer time that ran out, a refund that did not go through. Housekeeping is then run through its cron
+  route, with `CRON_SECRET` from `.env`.
 
 ---
 

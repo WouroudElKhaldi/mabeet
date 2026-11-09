@@ -1980,7 +1980,7 @@
     "password": "Password",
     "currentPassword": "Current password",
     "newPassword": "New password",
-    "passwordRules": "At least 8 characters.",
+    "passwordRules": "At least 10 characters.",
     "passwordWrong": "Your current password isn't right.",
     "changePassword": "Change password",
     "passwordChanged": "Password changed. Other devices were signed out.",

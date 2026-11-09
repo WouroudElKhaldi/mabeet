@@ -38,7 +38,7 @@ export function RoleEditor({
   const t = useTranslations("dashboard.team");
   const tPermission = useTranslations("permissions");
   const tConfirm = useTranslations("confirm");
-  const { run, pending, error, fieldErrors } = useAction();
+  const { run, pending, error, fieldErrors } = useAction(["name"]);
   const { confirm, dialog } = useConfirm();
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {

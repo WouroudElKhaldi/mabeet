@@ -37,7 +37,7 @@ function isoDaysFromToday(days: number): string {
  * A stay far enough ahead, and spread enough, that runs reusing the same database rarely ask for the same nights; a
  * test that needs free nights still checks what the calendar offers.
  */
-export function freshStay(nights = 2) {
+function freshStay(nights = 2) {
   const start = 40 + Math.floor(Math.random() * 280);
   return { checkIn: isoDaysFromToday(start), checkOut: isoDaysFromToday(start + nights) };
 }
@@ -65,6 +65,53 @@ export async function pickStay(page: Page, stay: { checkIn: string; checkOut: st
   }
   await dialog.getByRole("button", { name: "Apply" }).click();
   await expect(dialog).toBeHidden();
+}
+
+/** The open date picker's button for a day, when the month it is in is showing. */
+function dayButton(page: Page, isoDate: string) {
+  return page
+    .getByRole("dialog", { name: "Choose your dates" })
+    .getByRole("button", { name: new RegExp(`^${dayName(isoDate)}`) });
+}
+
+async function isFree(page: Page, isoDate: string): Promise<boolean> {
+  const button = dayButton(page, isoDate);
+  return (await button.isVisible()) && (await button.getAttribute("aria-disabled")) !== "true";
+}
+
+/**
+ * Picks a stay whose nights are all free in the open date picker, and returns it. The browser tests share one
+ * database that fills up run after run, so instead of trusting a random stay to be free, this tries a few, earliest
+ * first, and keeps the first one the calendar offers.
+ */
+export async function pickFreeStay(page: Page, nights = 2): Promise<{ checkIn: string; checkOut: string }> {
+  const dialog = page.getByRole("dialog", { name: "Choose your dates" });
+  const candidates = Array.from({ length: 15 }, () => freshStay(nights)).sort((a, b) =>
+    a.checkIn.localeCompare(b.checkIn),
+  );
+  for (const stay of candidates) {
+    for (let month = 0; month < 13 && !(await dayButton(page, stay.checkIn).isVisible()); month += 1) {
+      await dialog.getByRole("button", { name: "Next month" }).click();
+    }
+    const nightsOfStay = Array.from({ length: nights }, (_, night) => isoDaysAfter(stay.checkIn, night));
+    const free = await Promise.all(nightsOfStay.map((night) => isFree(page, night)));
+    if (!free.every(Boolean)) continue;
+    await dayButton(page, stay.checkIn).click();
+    for (let month = 0; month < 2 && !(await dayButton(page, stay.checkOut).isVisible()); month += 1) {
+      await dialog.getByRole("button", { name: "Next month" }).click();
+    }
+    await dayButton(page, stay.checkOut).click();
+    await dialog.getByRole("button", { name: "Apply" }).click();
+    await expect(dialog).toBeHidden();
+    return stay;
+  }
+  throw new Error("The calendar offered none of the stays tried: the browser-test database may need a reset");
+}
+
+function isoDaysAfter(isoDate: string, days: number): string {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 /** The page is no wider than the phone: nothing makes the visitor scroll sideways. */
@@ -106,4 +153,68 @@ export async function placeDashboard(page: Page, placeName: string): Promise<str
     .getAttribute("href");
   if (!href) throw new Error(`The owner's list of places has no link to ${placeName}`);
   return href;
+}
+
+/** An email address no account has yet. */
+export function newEmail(name: string): string {
+  return `${name}-${Date.now()}-${Math.floor(Math.random() * 10_000)}@example.test`;
+}
+
+/** Makes a new account through the sign-up page, and leaves it signed in. */
+export async function signUp(page: Page, name: string): Promise<string> {
+  const email = newEmail(name.split(" ")[0]?.toLowerCase() ?? "guest");
+  await page.goto("/sign-up");
+  await page.getByLabel("Full name").fill(name);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).not.toHaveURL(/\/sign-up/, { timeout: 15_000 });
+  return email;
+}
+
+/**
+ * A new host with a new place on the Free plan, made the way a person does it (sign up, then "Create your
+ * workspace"); returns the place's dashboard address. For tests that add what cannot be taken back, such as rooms.
+ */
+export async function newHost(page: Page, name: string): Promise<string> {
+  await signUp(page, name);
+  await page.goto("/host");
+  const create = page.getByRole("region", { name: "Create your workspace" });
+  await create
+    .getByLabel("Name of your place")
+    .fill(`${name.split(" ")[0] ?? "New"}'s guesthouse ${Date.now() % 100_000}`);
+  await create.getByLabel("Town or area").fill("Batroun");
+  await create.getByRole("button", { name: "Create workspace" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/[^/]+$/, { timeout: 20_000 });
+  return new URL(page.url()).pathname;
+}
+
+/**
+ * At a place that takes online payment: picks free nights, books them (`link` is the place page's booking link:
+ * "Book and pay", or "Request to book" where the host answers first) and pays with Whish's simulator. Returns the
+ * booking page's address.
+ */
+export async function bookAndPayWithWhish(
+  page: Page,
+  slug: string,
+  guestName: string,
+  link = "Book and pay",
+) {
+  await page.goto(`/p/${slug}`);
+  await page
+    .getByRole("button", { name: /Check-in/ })
+    .first()
+    .click();
+  await pickFreeStay(page);
+  await page.getByRole("link", { name: link }).click();
+  await page.getByLabel("Full name").fill(guestName);
+  await page.getByLabel("Mobile number").fill("+96171123456");
+  await page.getByRole("button", { name: "Book and pay" }).click();
+  await page.getByRole("button", { name: "Pay with Whish" }).click();
+  await expect(page).toHaveURL(/\/whish-simulator\/pay\//);
+  await page.getByLabel("Whish phone number").fill("96170123456");
+  await page.getByLabel("Code sent to your Whish app").fill("111111");
+  await page.getByRole("button", { name: "Confirm payment" }).click();
+  await expect(page).toHaveURL(/\/b\//, { timeout: 20_000 });
+  return page.url();
 }

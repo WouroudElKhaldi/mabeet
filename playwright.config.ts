@@ -2,10 +2,10 @@ import { config } from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
 import { e2eDatabaseUrl } from "./tests/e2e/e2e-database";
 
-// Browser tests (tests/e2e): a phone-sized Chromium clicks through the built app like a person. The app runs on its
+// Browser tests (tests/e2e): Google Chrome, at a phone's size, clicks through the built app like a person. The app runs on its
 // own database filled with the demo data (E2E_DATABASE_URL, named ..._e2e), so a run never touches development data.
 // Build first (`pnpm build`); `pnpm test:e2e` then prepares that database and starts the built app on port 3100, or
-// reuses an app already running there.
+// reuses an app already running there. `pnpm test:e2e:headed` opens the Chrome window, to watch each click.
 
 config({ quiet: true });
 
@@ -24,6 +24,8 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
+    // The Google Chrome installed on the computer, as hosts and guests use it, not Playwright's own Chromium.
+    channel: "chrome",
     locale: "en-US",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
@@ -49,12 +51,18 @@ export default defineConfig({
       DATABASE_URL: e2eDatabaseUrl(),
       BETTER_AUTH_URL: baseURL,
       // Jobs run in the request, so a run needs no worker. No outside service is called: emails are logged instead
-      // of sent, the AI and card payments are off, and Whish is its simulator.
+      // of sent, the AI and card payments are off, Whish is its simulator and photos stay in the database.
       JOBS_MODE: "inline",
       RESEND_API_KEY: "",
       DEEPSEEK_API_KEY: "",
       STRIPE_SECRET_KEY: "",
       WHISH_MODE: "simulator",
+      // Photos are kept in the database, so a run never uploads to the real bucket.
+      R2_ACCOUNT_ID: "",
+      R2_ACCESS_KEY_ID: "",
+      R2_SECRET_ACCESS_KEY: "",
+      R2_PUBLIC_BUCKET: "",
+      R2_PUBLIC_URL: "",
     },
   },
 });

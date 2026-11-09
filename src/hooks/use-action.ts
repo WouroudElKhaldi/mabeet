@@ -28,14 +28,15 @@ export function createSingleFlight() {
 /**
  * Calls the API for a button or a form, then refreshes what the page shows. `pending` stays true until both are done
  * (disable the button, show "Saving…"). After a failure, `error` is the text for `FormError` (what the server said, or
- * a calm fallback), or, when the server named the wrong fields, `fieldErrors` has one entry per field and `error` is
- * null. Choose the text shown under a field by its name, in the visitor's language. A second call while one is
- * running is ignored (it resolves to `false` and changes nothing).
+ * a calm fallback). A form that shows a message under its fields names them (`shownFields`): when the server named
+ * only those, `fieldErrors` has one entry per field and `error` is null. Choose the text shown under a field by its
+ * name, in the visitor's language. A second call while one is running is ignored (it resolves to `false` and changes
+ * nothing).
  *
- *   const { run, pending, error, fieldErrors } = useAction();
+ *   const { run, pending, error, fieldErrors } = useAction(["name", "phone"]);
  *   <Button disabled={pending} onClick={() => run(() => api.post(url, body))}>
  */
-export function useAction() {
+export function useAction(shownFields: readonly string[] = []) {
   const t = useTranslations("common");
   const router = useRouter();
   const [calling, setCalling] = useState(false);
@@ -58,7 +59,7 @@ export function useAction() {
     } catch (caught) {
       // A call we cancelled ourselves is not a failure to show.
       if (isAborted(caught)) return false;
-      const failure = formFailure(caught, t("error"));
+      const failure = formFailure(caught, t("error"), shownFields);
       setError(failure.error);
       setFieldErrors(failure.fieldErrors);
       return false;

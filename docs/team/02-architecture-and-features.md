@@ -1562,16 +1562,21 @@ cannot give, a change to their own access, or an owner's row to someone who is n
 - Show a failure with `errorMessage(caught, fallback)` and `FormError`. It returns the server's own sentence when a
   person can act on it ("Those dates were just taken"), and the translated `fallback` for a crash (`INTERNAL`), a lost
   connection, a timeout or an answer that is not ours. Until `localizeError` exists, a server sentence is in English.
-- For a form, `formFailure(caught, fallback)` also gives `fieldErrors`: the first problem of each wrong field, by field
-  name. Show the text you want under each field, in the visitor's language.
+- For a form, `formFailure(caught, fallback, shownFields)` also gives `fieldErrors`: the first problem of each wrong
+  field the form shows, by field name. Show the text you want under each field, in the visitor's language. A wrong
+  field the form does not show (a value the screen sends on its own) gives the whole form the `fallback`, so a refusal
+  is never silent.
 - `api.run` (slow AI answers) is built with the AI features.
 
 ### Shared hooks
 
-- `useAction()` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } = useAction()`. `run(() =>
-api.post(...))` calls the API, then refreshes the page, and resolves to `true` when it worked. `pending` covers both
-  steps. After a failure, either `error` (for `FormError`) or `fieldErrors` is set, never both. A second `run` while
-  one is going is ignored (a double click can never save, book or pay twice) and resolves to `false`.
+- `useAction(shownFields?)` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } =
+useAction(["name", "phone"])`. `run(() => api.post(...))` calls the API, then refreshes the page, and resolves to
+  `true` when it worked. `pending` covers both steps. A form that shows a message under its fields names them; a
+  button or a form without field messages passes nothing. After a failure, `fieldErrors` holds the named fields the
+  server refused, and `error` (for `FormError`) is set for everything else, so every refusal shows something. A
+  second `run` while one is going is ignored (a double click can never save, book or pay twice) and resolves to
+  `false`.
 - `useLiveQuery<T>(url, query, { delayMs, timeoutMs })` (`src/hooks/use-live-query.ts`): reads from the API and keeps
   the answer in step with what the screen asks as the visitor changes it: the dates, the guests, a search text.
   `const quote = useLiveQuery<Quote>(ready ? url : null, { checkIn, checkOut })` gives `{ data, error, loading,
