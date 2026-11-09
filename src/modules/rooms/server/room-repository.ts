@@ -188,6 +188,23 @@ export function listRoomNames(db: Db, businessId: string) {
   });
 }
 
+/** For the calendar links page: every room's own calendar link, the secret its address is made from. */
+export function listRoomCalendarLinks(db: Db, businessId: string) {
+  return db.room.findMany({
+    where: { businessId, isDeleted: false },
+    orderBy: [{ kind: "asc" }, { createdAt: "asc" }],
+    select: { id: true, name: true, kind: true, active: true, exportToken: true },
+  });
+}
+
+/** The room behind a calendar link, as Airbnb and Booking.com call it. Deleted rooms have no link any more. */
+export function findRoomByExportToken(db: Db, exportToken: string) {
+  return db.room.findFirst({
+    where: { exportToken, isDeleted: false },
+    select: { id: true, businessId: true, name: true, kind: true },
+  });
+}
+
 /** For analytics: how many live units of one kind a place has, the nights it could sell each night. */
 export function countActiveUnits(db: Db, businessId: string, kind: RoomKind) {
   return db.room.count({ where: { businessId, kind, active: true, isDeleted: false } });

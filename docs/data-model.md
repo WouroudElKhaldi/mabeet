@@ -110,7 +110,7 @@ pg-boss creates and upgrades it when it starts.
 | ----------------- | ------------------------------------------------------------------------------------------------------ |
 | `pgboss.job`      | One row per job: queue, `{ job, data }` payload, state (created → active → completed / failed), output |
 | `pgboss.queue`    | The three queues (`ai`, `notify`, `cron`) with their retry and retention settings                      |
-| `pgboss.schedule` | The worker's schedules: calendar sync every 15 minutes, housekeeping every 5                           |
+| `pgboss.schedule` | The worker's schedules: calendar sync and housekeeping, every 5 minutes each                           |
 
 Beside it, in our own schema, `JobProgress` holds what a running AI job has written so far (the tool in use and
 the reply so far), so the person watches the answer arrive. The worker writes it at most every 300 ms and deletes
