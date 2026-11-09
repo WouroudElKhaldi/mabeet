@@ -5,6 +5,7 @@ import type {
   BusinessStatus,
   ListingKind,
   FeedSource,
+  HostContact,
   PayoutMethod,
   PhotoArea,
 } from "@prisma/client";
@@ -74,6 +75,9 @@ export const BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies read
 
 /** What a browse category is for: places, experiences or services. */
 export const LISTING_KINDS = ["HOME", "EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
+
+/** How guests may reach a host: WhatsApp and the Contact host page, or only one of them. */
+export const HOST_CONTACT_OPTIONS = ["BOTH", "WHATSAPP", "MESSAGE"] as const satisfies readonly HostContact[];
 
 /** Calendars we read taken nights from. */
 export const FEED_SOURCES = ["AIRBNB", "BOOKING", "OTHER"] as const satisfies readonly FeedSource[];

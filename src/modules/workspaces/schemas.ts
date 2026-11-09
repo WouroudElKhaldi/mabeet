@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { BOOKING_MODES, BUSINESS_STATUSES, CURRENCIES } from "@/config/enums";
-import { ACCESSIBILITY, TAGS } from "@/config/listing";
+import { BOOKING_MODES, BUSINESS_STATUSES, CURRENCIES, HOST_CONTACT_OPTIONS } from "@/config/enums";
+import { ACCESSIBILITY, LANGUAGES, TAGS } from "@/config/listing";
 import { REGION_KEYS } from "@/config/regions";
 import { id, phone } from "@/lib/schemas";
 
@@ -65,3 +65,25 @@ export const platformBusinessParams = z.object({ businessId: id });
 
 /** A platform admin suspends a business, or brings it back. */
 export const businessStatusInput = z.object({ status: z.enum(BUSINESS_STATUSES) });
+
+// ---------- Host profile ----------
+
+/** Empty text is saved as nothing, so a cleared field goes back to its default (the account name, no city...). */
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullish()
+    .transform((value) => value || null);
+
+/** The owner's own host profile, shared by all their places. Never a phone or WhatsApp: guests use the business's. */
+export const hostProfileInput = z.object({
+  displayName: optionalText(80),
+  bio: optionalText(1500),
+  city: optionalText(80),
+  languages: z.array(z.enum(LANGUAGES)).max(LANGUAGES.length),
+  hostingSince: z.number().int().min(1950).max(2100).nullish(),
+  showOnListings: z.boolean(),
+  contactBy: z.enum(HOST_CONTACT_OPTIONS).default("BOTH"),
+});

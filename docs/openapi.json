@@ -7479,7 +7479,7 @@
       "get": {
         "tags": ["Workspaces"],
         "summary": "The signed-in owner's own host profile (owners)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Owners only (staff get 403). The person's own host profile, shared by all their places: { displayName, bio, city, languages, hostingSince, showOnListings, contactBy }, or null before the first save.",
         "security": [
           {
             "session": []
@@ -7544,7 +7544,7 @@
       "put": {
         "tags": ["Workspaces"],
         "summary": "Save the host profile and whether guests see it on the host's listings (owners)",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Owners only. Saves the host profile on the person (one row each, whatever place it is saved from). Empty text is saved as null. Guests see it on every place the person owns only while showOnListings is true; contactBy applies either way.",
         "security": [
           {
             "session": []
