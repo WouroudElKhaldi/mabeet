@@ -7,7 +7,8 @@ import type { PlatformActor, TenantContext } from "@/server/auth/tenant-context"
 import { env } from "@/server/env";
 import { AppError, forbidden, invalid, notFound, unauthenticated } from "@/server/errors";
 
-type RouteContext = { params: Promise<Record<string, string>> };
+// A route at a fixed address (no [segment] in its folder) gets no params from Next.js at all.
+type RouteContext = { params?: Promise<Record<string, string> | undefined> };
 type Handler = (request: Request, context: RouteContext) => Promise<Response>;
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -102,7 +103,7 @@ export async function parseParams<T extends z.ZodType>(
   context: RouteContext,
   schema: T,
 ): Promise<z.infer<T>> {
-  return schema.parse(await context.params);
+  return schema.parse((await context.params) ?? {});
 }
 
 export async function optionalUser(request: Request) {
