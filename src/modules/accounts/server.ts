@@ -6,6 +6,7 @@ export {
   findAccountByEmail,
   findAccountEmail,
   setMyLocale,
+  updateMyProfile,
 } from "./server/account-service";
 export { createVerifiedAccount } from "./server/invited-account";
 export { markNotificationsSeen, notificationsSeenAt } from "./server/notifications-seen";

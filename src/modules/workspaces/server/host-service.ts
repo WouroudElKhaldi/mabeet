@@ -1,7 +1,7 @@
 import type { HostContact } from "@prisma/client";
 import type { z } from "zod";
 import { recordAction } from "@/modules/audit/server";
-import { requireOwner, type TenantContext } from "@/server/auth/tenant-context";
+import { requireBusinessOwner, type TenantContext } from "@/server/auth/tenant-context";
 import { prisma } from "@/server/db/client";
 import type { hostProfileInput } from "../schemas";
 import { findOwnHostProfile, findPlaceHost, saveHostProfile } from "./host-repository";
@@ -53,9 +53,9 @@ export async function getHostSection(businessId: string): Promise<HostSection> {
 
 const OWNERS_ONLY = "Only an owner has a host profile";
 
-/** The owner's own host profile, to edit; null before the first save. Owners only: staff are not the host. */
+/** The owner's own host profile, to edit; null before the first save. Owners only: staff and visiting admins are not the host. */
 export async function getMyHostProfile(ctx: TenantContext) {
-  requireOwner(ctx, OWNERS_ONLY);
+  requireBusinessOwner(ctx, OWNERS_ONLY);
   return findOwnHostProfile(prisma, ctx.userId);
 }
 
@@ -64,7 +64,7 @@ export async function getMyHostProfile(ctx: TenantContext) {
  * this place; the log line goes to the place they saved it from.
  */
 export async function saveMyHostProfile(ctx: TenantContext, input: z.infer<typeof hostProfileInput>) {
-  requireOwner(ctx, OWNERS_ONLY);
+  requireBusinessOwner(ctx, OWNERS_ONLY);
   const profile = await saveHostProfile(prisma, ctx.userId, {
     ...input,
     hostingSince: input.hostingSince ?? null,

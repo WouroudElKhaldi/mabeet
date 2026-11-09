@@ -549,7 +549,10 @@ guest who made it.
 
 Guests see their stays (`/account`), save favourites, review a stay after check-out, download all their data
 (`GET /api/me/export`), and delete their account (`POST /api/me/delete`, typing their email to confirm; see "Nothing
-is deleted"). Code: `account-service.ts`, `src/app/(site)/account/**`.
+is deleted"). Anyone with an account changes their own name and phone (`PATCH /api/me/profile`; the email is
+how they sign in, so it stays) and their password (Better Auth's change password, which signs out their other
+devices), on `/dashboard/[businessId]/profile` or `/admin/profile`. Code: `account-service.ts`,
+`src/app/(site)/account/**`.
 
 ### A. Activity log and notification bell
 
@@ -1287,10 +1290,13 @@ Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `send
 - **Platform admins** reach `/api/admin/**` through `adminRoute(paramsSchema, handler)` (`src/server/http/route.ts`),
   which reads the person's role from the database and answers 404 to anyone else. Services take a `PlatformActor`
   and call `requirePlatformAdmin`; what they do is logged with `recordPlatformAction`, under the admin's name.
+- **Only the business's own owners** ask for its payouts and write its host profile (`requireBusinessOwner`,
+  `isBusinessOwner` in `tenant-context.ts`). A platform admin visiting a business has an owner's rights to help, but
+  is not its owner: those menu lines and pages are hidden from them, and the admin sends payouts from `/admin/money`.
 - **The screen** is `/dashboard/{id}/payouts`: the balances per currency, `PayoutRequestForm` (from `payments`, filled
   with the details used last time) and the payouts and online payments. Its menu line is `ownerOnly` in
   `src/components/dashboard/nav-items.ts`, so a member whose role holds every permission still never sees it, and the
-  page answers 404 to anyone but an owner.
+  page answers 404 to anyone but the business's own owners.
 
 ### N. Near your stay (things to do nearby)
 

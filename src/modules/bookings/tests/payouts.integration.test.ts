@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decidePayout, getPayoutQueue } from "@/modules/payments/server";
-import { resolvePlatformActor } from "@/server/auth/resolve-context";
+import { resolveContext, resolvePlatformActor } from "@/server/auth/resolve-context";
 import { createPlatformAdmin, createUser, memberWith, prisma, stay } from "@tests/integration/helpers";
 import { addDays, todayUtc } from "@/utils/dates";
 import {
@@ -76,6 +76,15 @@ describe("what a host can be paid out", () => {
     ]);
     await expect(getPayouts(staff)).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(requestPayout(staff, toWhish(100))).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("is never asked for by a platform admin visiting the business", async () => {
+    const place = await placeWithRoom("AUTOMATIC");
+    await paidStay(place, 10_000, 1, 10);
+    const admin = await createPlatformAdmin();
+    const visiting = await resolveContext(admin.userId, place.business.id);
+    if (!visiting) throw new Error("expected the admin to open the business");
+    await expect(requestPayout(visiting, toWhish(1_000))).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
 
