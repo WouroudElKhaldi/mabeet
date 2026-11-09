@@ -25,3 +25,14 @@ export const ACCESSIBILITY = [
   "wide-doorways",
   "low-sensory",
 ] as const;
+
+/**
+ * Languages a host says they speak, on their profile and on their places' pages. Keys, like every list here; the
+ * names are in `listing.languages` in the message files.
+ */
+const LANGUAGES = ["ar", "en", "fr"] as const;
+
+export type Language = (typeof LANGUAGES)[number];
+
+export const isLanguage = (value: string): value is Language =>
+  (LANGUAGES as readonly string[]).includes(value);

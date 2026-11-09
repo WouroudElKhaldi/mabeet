@@ -33,6 +33,14 @@ export async function getStayNumbers(businessId: string, kind: RoomKind, range: 
   };
 }
 
+/**
+ * How the host answers the requests that waited for them since `since`: how many, how many they answered, and their
+ * typical answer time. Public facts about a place, shown to guests on its page.
+ */
+export function getResponseStats(businessId: string, since: Date) {
+  return stats.responseStats(prisma, businessId, since);
+}
+
 /** Every confirmed direct booking since the place joined, by currency. */
 export function getLifetimeDirectRevenue(businessId: string) {
   return stats.lifetimeDirectRevenue(prisma, businessId);

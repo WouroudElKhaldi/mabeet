@@ -50,6 +50,30 @@ export const availabilityQuery = z
     };
   });
 
+/**
+ * A question to a place's host from its Contact host page. The email is where the host replies. The stay is
+ * optional (many guests ask before they choose dates), but dates come as a pair a guest could book.
+ */
+export const hostMessage = z
+  .object({
+    name: z.string().trim().min(2).max(80),
+    email: z.email().max(254),
+    message: z.string().trim().min(10).max(2000),
+    checkIn: isoDate.optional(),
+    checkOut: isoDate.optional(),
+    guests: z.number().int().min(1).max(50).optional(),
+  })
+  .refine(({ checkIn, checkOut }) => (checkIn === undefined) === (checkOut === undefined), {
+    message: "Give both dates, or neither",
+    path: ["checkOut"],
+  })
+  .refine(({ checkIn, checkOut }) => !checkIn || !checkOut || checkOut > checkIn, {
+    message: "Check-out must be after check-in",
+    path: ["checkOut"],
+  });
+
+export type HostMessage = z.infer<typeof hostMessage>;
+
 /** A comma-separated list in the address, keeping only the values we know. */
 const listOf = <Value extends string>(allowed: readonly Value[]) =>
   z

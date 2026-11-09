@@ -3,6 +3,8 @@
 import { cache } from "react";
 import { getPlace } from "./server/directory-service";
 
+export { sendHostMessage } from "./server/contact-host-service";
+
 export {
   checkPlaceAvailability,
   getPlace,

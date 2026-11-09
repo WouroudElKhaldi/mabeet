@@ -3,6 +3,7 @@
 // one kernel file that reaches into modules: it is where the worker is put together.
 import "@/modules/bookings/server/booking-notifications";
 import "@/modules/contact/server/contact-notifications";
+import "@/modules/directory/server/directory-notifications";
 import "@/modules/team/server/team-notifications";
 
 export { SCHEDULES } from "@/modules/housekeeping/server/housekeeping-jobs";

@@ -531,8 +531,16 @@ Experiences and services have no tab yet: they come with their module (F8).
 `PhotoGallery` (one large and four small photos, the large one alone on a phone or with fewer than five photos, "Show all photos" in a dialog, a drawn
 postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the rooms of a place booked whole shown
 without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
-`ThingsToKnow` and `BookingBox`. Not built yet: reviews, the map, "Meet your host", the photo tour, share and
+`ThingsToKnow`, `MeetHost` and `BookingBox`. Not built yet: reviews, the map, the photo tour, share and
 favourite, and "Near your stay".
+
+`MeetHost` (the `host` section, between the amenities and the things to know) is who hosts this place: the arch
+avatar with their first letter and their name (the place's name while their profile is hidden, so no line is empty),
+the languages they speak, "New on Mabeet" in their first year, then the two figures guests weigh a host by (years
+hosting, response rate) and how quickly they answer as a sentence of its own ("Responds within an hour"). A figure
+nobody can know yet is simply not shown, never a 0 or a dash. Then their bio, "Contact host" and the WhatsApp
+button, each shown only if the host takes questions that way (`HostProfile.contactBy`), and the line asking the
+guest to book and pay through Mabeet. The WhatsApp number is the place's own, never the host's.
 
 `BookingBox` (a client component) holds the room, the dates and the guests; it asks the quote route when both dates are
 picked (`useLiveQuery`, so a late answer to old dates is never shown), and shows the price, or the reason the stay
@@ -572,6 +580,17 @@ host's answer time), or arrange payment with the host.
 2. "What guests usually ask": getting there, price and availability (the full price is paid; no deposit), the
    refund rule, house rules.
 3. "Still have questions?": `ContactHostForm` and the WhatsApp button, depending on the host's choice.
+
+**Built so far** (`src/app/(site)/p/[slug]/contact/`, with its `loading.tsx`): under the layout's own back link, the
+title ("Contact {name}", the host's shown name or the place's) with how quickly they answer under it, and what
+guests usually ask as a two-column list: getting there (the area), the full price and no deposit, the refund rule,
+and the house rules; each one is left out when the place has nothing to say for it. A link leads back to the
+booking box to check dates. Beside it, a `TicketCard` holds `ContactHostForm` (name, the email the host replies to,
+and the question, each checked before sending, with the host named in the placeholder; once sent, a thank-you
+saying where the answer will arrive, and a way to ask something else) and the WhatsApp button, each shown only if
+the host takes questions that way. A host who takes neither gets one calm line instead, pointing the guest to the
+dates. A stay carried in the address (`?checkIn=&checkOut=&guests=`, as the place page's links already pass it)
+shows on the ticket's stub and goes with the question, so the host answers about the right nights.
 
 #### `/b/[token]` The guest's booking page (F4; the pay buttons F4a)
 

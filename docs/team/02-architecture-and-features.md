@@ -1034,10 +1034,25 @@ An unknown link answers 404.
 Browse categories (mountain, beach, hiking…) managed by admins, each for homes, experiences or services. A category's
 slug and kind never change, because links use them.
 
-### C. Contact the host
+### C. Contact the host (F2a)
 
-A guest can email a host from the place page (`POST /api/public/places/{slug}/messages`). It is rate limited. The
-guest's email is the reply address. A host can turn it off and offer WhatsApp only.
+A guest can ask a place's host a question from its Contact host page (`POST /api/public/places/{slug}/messages`, no
+sign-in: many guests ask before they have an account). `hostMessage` in `src/modules/directory/schemas.ts` checks it
+(name, email, the message, and optionally the stay and the number of guests; the dates come as a pair with check-out
+after check-in, or not at all). The route allows five questions an hour per address, counted across all places, so
+nobody can flood the hosts' inboxes. `sendHostMessage` (`directory/server/contact-host-service.ts`) refuses with 404
+for a place that is unknown, paused or deleted, and with 403 when the host takes questions on WhatsApp only
+(`HostProfile.contactBy`); otherwise it queues `notify.host-message`. Nothing is stored: there is no inbox in the
+app to read, and a question nobody answers must not look answered.
+
+`notify.host-message` (`directory/server/directory-notifications.ts`) writes to the people who can decide the
+place's bookings (`listPeopleWhoDecideBookings`, the same readers as a new request), one email per language with the
+**guest as the reply address**, so answering the email reaches the guest; then a push to each of their devices, after
+the emails, so a retried email never pushes twice. The job carries the question itself (plain values: there is no
+row to load) and reads the host's choice again when it runs, so a host who switches to WhatsApp only meanwhile is
+not written to. Each question has its own reference, so a retried delivery is never sent twice.
+
+Tests: `src/modules/directory/tests/contact-host.integration.test.ts`.
 
 ### C. Contact the Mabeet team (F24)
 
@@ -1117,7 +1132,7 @@ Bonus (F23), built on "N. Near your stay".
 - This needs tables that do not exist yet: the database keeper adds them first (`07`, "Waiting for the database
   keeper").
 
-### H. Host profile
+### H. Host profile (F7a)
 
 The owner's own profile (name, bio, city, languages, years hosting, how guests may contact them). It shows on their
 listings only if they choose. Code: `host-service.ts`.
@@ -1125,6 +1140,27 @@ listings only if they choose. Code: `host-service.ts`.
 It has **no phone or WhatsApp number**. The numbers guests use are always the **business's** (`Business.whatsapp`
 and `phone`), the same on the place page and the booking page. The host's own number is `User.phone`, for the
 platform admins.
+
+**What guests see.** `getHostSection(businessId)` in `workspaces/server/host-service.ts` (behind
+`workspaces/server.ts`) gives the host of a place's public pages: `contactBy`, and `profile` only when the host
+turned `showOnListings` on. The host is the place's **first owner still on the team** (`host-repository.ts`, the
+oldest active membership on the owner role), so the page does not change when another owner joins. A host who never
+wrote a profile, or whose profile is deleted, is shown as no profile and reached both ways (`BOTH`, the schema's own
+default): how guests may reach a host is a setting, not a personal detail, so it applies even while the profile is
+hidden. The shown name is `displayName`, or the account name when it is empty.
+
+**How the host answers.** `getResponseStats(businessId, since)` in `bookings` (`booking-stats.ts`, the raw query in
+`booking-stats-repository.ts`) counts only the requests that really waited for the host: an automatic booking never
+asks them, and a mode 2 booking whose payment never came never reached them. A request counts as **answered** when a
+person confirmed or declined it, and as **missed** when it expired waiting; one cancelled meanwhile counts as
+neither, because a later cancellation overwrites `decidedAt`. The clock starts when the request reached the host: at
+once offline, at the payment in mode 2. `getPlace` turns it into `host.response` (the share answered, and the
+typical minutes) over the past year (`RESPONSE_WINDOW_DAYS`), and gives nothing at all under three requests
+(`MIN_REQUESTS_FOR_RESPONSE`), because one missed request would read as a 0% response rate. The pure rules for how
+guests read these figures are in `src/modules/directory/host.ts` (`acceptsMessages`, `offersWhatsapp`,
+`responseSpeed`, `yearsHosting`).
+
+Tests: `src/modules/directory/tests/host-section.integration.test.ts` and `host.test.ts` (directory).
 
 ### L. Languages
 
@@ -1328,6 +1364,8 @@ The public page reads, for `getPlace` (all without sign-in, each through its mod
   photos in the host's order. Never the room's `exportToken`, its private calendar link.
 - `listPlacePhotos(businessId)` in `rooms`: the place's own photos (not a room's or an experience's), in order, for
   the gallery and the photo tour.
+- `getHostSection(businessId)` in `workspaces` and `getResponseStats` in `bookings`: the host as guests meet them
+  (see "H. Host profile"), which `getPlace` gives as `host`, next to the place's own `whatsapp` number.
 
 Tests: `public-place.integration.test.ts` (workspaces) and `public-units.integration.test.ts` (rooms).
 `getPlace(slug)` (directory) puts them together as a `PublicPlace`: the place's public fields, its bookable `units` (the
