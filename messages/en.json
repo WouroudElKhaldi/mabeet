@@ -1857,10 +1857,14 @@
     "usage": {
       "rooms": "Rooms",
       "offerings": "Experiences and services",
-      "members": "Team members"
+      "members": "Team members",
+      "title": "What your place uses",
+      "allowed": "Your plan allows {count}"
     },
     "payWhish": "Pay a month with Whish",
-    "whishPending": "We're waiting for Whish to confirm your payment. Refresh in a minute."
+    "whishPending": "We're waiting for Whish to confirm your payment. Refresh in a minute.",
+    "cardOff": "Paying by card isn't set up yet. You can pay a month at a time with Whish.",
+    "whishFailed": "Whish didn't take the payment, so nothing was charged. You can try again."
   },
   "oauth": {
     "kicker": "Connect an AI app",
