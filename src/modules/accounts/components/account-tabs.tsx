@@ -20,7 +20,10 @@ export function AccountTabs() {
   const t = useTranslations("account.tabs");
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line" aria-label={t("label")}>
+    <nav
+      className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line"
+      aria-label={t("label")}
+    >
       {TABS.map(({ key, href }) => {
         const active = pathname === href;
         return (
