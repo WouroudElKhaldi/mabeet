@@ -3,6 +3,7 @@
 import { cache } from "react";
 import { getPlace } from "./server/directory-service";
 
+export { listMyActivity } from "./server/activity-service";
 export { sendHostMessage } from "./server/contact-host-service";
 export { isPlaceSaved, listMyFavorites, setFavorite } from "./server/favorite-service";
 

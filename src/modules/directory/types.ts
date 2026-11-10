@@ -2,6 +2,7 @@ import type { BookingMode, BookingStatus, BookingUnit, HostContact, PhotoArea } 
 import type { PlaceRating, PlaceReview } from "@/modules/reviews";
 import type { StayIssue } from "@/config/booking-limits";
 import type { NearbyPartner } from "@/modules/partners";
+import type { ActivityAction } from "@/config/activity";
 
 // What the public side shows and asks. Plain values only (money as whole cents, dates as ISO text), so a page can
 // hand them to a screen that runs in the browser.
@@ -172,4 +173,18 @@ export interface PlaceAvailability {
   currency: string;
   nightCount: number;
   units: UnitAvailability[];
+}
+
+/** One line of a guest's Activity page. */
+export interface ActivityItem {
+  id: string;
+  action: ActivityAction;
+  /** When it happened, as an ISO timestamp. */
+  at: string;
+  /** The place it was about, or null when there is none (or it has closed since). */
+  placeName: string | null;
+  /** The booking's page for a stay, the place's page otherwise, or null. */
+  href: string | null;
+  /** The booking's reference, for a stay. */
+  reference: string | null;
 }

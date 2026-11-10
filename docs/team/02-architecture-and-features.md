@@ -563,8 +563,18 @@ Every important action is recorded, through the `audit` module (`@/modules/audit
 - `recordPersonAndBusiness(tx, { userId, businessId, action, entity, entityId })` for something a person did that
   the business must hear about (a guest's request, someone joining the team): it goes on the person's own timeline
   (`ActivityLog`) and in the business's `AuditLog`.
+- `notePerson(tx, { userId, businessId, action, entity, entityId })` for what only the person's own timeline needs:
+  a host's decision on their booking, a request that ran out, a place saved or unsaved (`favorite.saved`,
+  `favorite.removed`, only when the heart really changes), a review written (`review.written`).
 - Something the system noticed (a sync, a payment callback) goes in `AuditLog` with no actor; the audit module
   exports a function for it with the first such event.
+
+The guest's Activity page (`/account/activity`) reads the timeline through `listMyActivity(userId)` (`directory`
+module, `activity-service.ts`): the newest 100 entries (`listPersonActivity` in `audit`), each with the place's
+name and where it leads (the booking's page for a stay, found through `listMyBookings`; the place's page
+otherwise, through `listPlacesByIds`). A place that has closed since keeps its line without a name or link. Only
+the kinds in `src/config/activity.ts` are shown; a new kind needs a line there, its icon and text key in
+`activity-list.tsx` and its text in the three message files. Test: `activity.integration.test.ts` (directory).
 
 The bell in the top bar shows the last five events of the business. "View all" opens the full list. Code:
 `audit.ts` (the feed reads `listFeed`, `countFeed`, `countFeedSince`), `notification-feed-service.ts` in
@@ -839,7 +849,7 @@ saved (revenue × the place's rate), channels, nights by month, requests by outc
 `getSavings(ctx)`: since the place joined, per currency, and the plan fees paid. `getAnalytics(ctx, scope, range)`:
 one place or every place the member may read, with totals (money per currency). `getPlacesOverview(userId)`: each of
 the person's places with today's numbers where they may read bookings. Route: `GET /api/workspaces/{id}/analytics`
-(`from`, `to`; the last 30 days by default, two years at most). Reviews are not built, so there is no rating yet.
+(`from`, `to`; the last 30 days by default, two years at most). The rating is on the Reviews page, not here.
 Tests: `analytics.integration.test.ts` (analytics).
 
 ### B. Background work
@@ -1569,10 +1579,17 @@ deleted), so review reads show no name when `author.isDeleted` (F17). Code: `rev
   it for `canReview`, so a stay is offered the form only while it is over, went ahead, and has no review.
 - `getPlace` carries `rating` and `reviews`, so the place page needs no second read.
 
-**Not built:** the owner replying or hiding (the dashboard's `/reviews` page). `ownerReply` and `status` are read
-and respected everywhere above, so that screen only has to write them.
+- `listTeamReviews(ctx)`, `replyToReview(ctx, reviewId, { reply })` and `setReviewVisibility(ctx, reviewId,
+{ hidden, reason })`, all behind `reviews.reply`: the team sees every review, hidden ones included, with the room
+  and booking reference of the stay. A reply shows under the review on the place's page; an empty one takes it
+  away. Hiding needs a reason (3 to 500 characters), keeps the review, and takes it out of the page and the rating;
+  showing it again clears the reason. Each change is logged (`review.replied`, `review.reply_removed`,
+  `review.hidden`, `review.shown`). Routes: `GET /api/workspaces/{id}/reviews`, `PUT .../reviews/{reviewId}/reply`
+  and `PUT .../reviews/{reviewId}/visibility`. Screen: the dashboard's Reviews page (`TeamReviewList`,
+  `ReviewControls`).
 
-Tests: `src/modules/reviews/tests/reviews.integration.test.ts` and `rating.test.ts`.
+Tests: `src/modules/reviews/tests/reviews.integration.test.ts`, `team-reviews.integration.test.ts` and
+`rating.test.ts`.
 
 ### R. Rooms (dashboard)
 

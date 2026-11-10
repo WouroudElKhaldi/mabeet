@@ -841,7 +841,10 @@
       "hide": "خبّي",
       "show": "رجّع ورجيه",
       "hideReason": "ليش بدّك تخبّي هالتقييم؟ الضيوف ما رح يشوفوه، والسبب بيتسجّل.",
-      "hiddenBecause": "مخبّا: {reason}"
+      "hiddenBecause": "مخبّا: {reason}",
+      "intro": "شو كتبوا الضيوف بعد ما نزلوا عندك. ردّ عليهم قدّام الكل، أو خبّي مراجعة ما بتلتزم بالقواعد.",
+      "hidden": "مخبّاية",
+      "replyHint": "بيطلع تحت المراجعة بصفحة محلّك. فضّيه لتشيله."
     },
     "settings": {
       "title": "الإعدادات",
@@ -1052,7 +1055,7 @@
       "label": "أقسام الحساب",
       "trips": "الرحلات",
       "favorites": "المفضّلة",
-      "activity": "شو عملت",
+      "activity": "النشاط",
       "privacy": "الخصوصية",
       "notifications": "الإشعارات"
     },
@@ -1080,25 +1083,19 @@
       "scale": "1 = سيّئ · 5 = بيجنّن"
     },
     "activity": {
-      "empty": "ما في شي هون بعد.",
-      "booking": {
-        "requested": "طلبت حجز",
-        "confirmed": "المضيف أكّد حجزك",
-        "awaiting_payment": "حجزك ناطر دفعتك",
-        "declined": "المضيف رفض طلبك",
-        "cancelled": "المضيف لغى حجزك",
-        "cancelled_by_guest": "لغيت حجز",
-        "expired": "خلصت مهلة طلبك قبل ما يرد المضيف"
-      },
-      "favorite": {
-        "added": "حفظت محل",
-        "removed": "شلت محل محفوظ"
-      },
-      "review": {
-        "submitted": "نشرت تقييم"
-      },
-      "member": {
-        "invitation_accepted": "انضمّيت لفريق"
+      "empty": "لسّا ما في شي هون. حجوزاتك والمحلات اللي بتحفظها ومراجعاتك رح يطلعوا هون.",
+      "aPlace": "محل",
+      "actions": {
+        "booking_requested": "طلبت تنزل بـ{place}",
+        "booking_confirmed": "{place} أكّد إقامتك",
+        "booking_declined": "{place} رفض طلبك",
+        "booking_cancelled": "{place} لغى إقامتك",
+        "booking_cancelled_by_guest": "لغيت إقامتك بـ{place}",
+        "booking_expired": "خلصت مهلة طلبك بـ{place}",
+        "review_written": "كتبت مراجعة عن إقامتك بـ{place}",
+        "favorite_saved": "حفظت {place}",
+        "favorite_removed": "شلت {place} من المحلات المحفوظة",
+        "member_invitation_accepted": "صرت بفريق {place}"
       }
     },
     "experiences": "التجارب والخدمات",

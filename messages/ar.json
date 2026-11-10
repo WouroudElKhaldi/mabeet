@@ -841,7 +841,10 @@
       "hide": "أخفِ",
       "show": "أظهِر مجددًا",
       "hideReason": "لماذا تخفي هذا التقييم؟ لن يراه الضيوف، والسبب يُسجَّل.",
-      "hiddenBecause": "مخفي: {reason}"
+      "hiddenBecause": "مخفي: {reason}",
+      "intro": "ما كتبه الضيوف بعد إقامتهم. ردّ عليهم علنًا، أو أخفِ مراجعة تخالف القواعد.",
+      "hidden": "مخفية",
+      "replyHint": "يظهر تحت المراجعة في صفحة مكانك. امسحه لإزالته."
     },
     "settings": {
       "title": "الإعدادات",
@@ -1080,25 +1083,19 @@
       "scale": "1 = سيئ · 5 = رائع"
     },
     "activity": {
-      "empty": "لا شيء هنا بعد.",
-      "booking": {
-        "requested": "طلبت حجزًا",
-        "confirmed": "أكّد المضيف حجزك",
-        "awaiting_payment": "حجزك بانتظار دفعتك",
-        "declined": "رفض المضيف طلبك",
-        "cancelled": "ألغى المضيف حجزك",
-        "cancelled_by_guest": "ألغيت حجزًا",
-        "expired": "انتهت مهلة طلبك قبل أن يرد المضيف"
-      },
-      "favorite": {
-        "added": "حفظت مكانًا",
-        "removed": "أزلت مكانًا محفوظًا"
-      },
-      "review": {
-        "submitted": "نشرت تقييمًا"
-      },
-      "member": {
-        "invitation_accepted": "انضممت إلى فريق"
+      "empty": "لا شيء هنا بعد. ستظهر هنا حجوزاتك والأماكن التي تحفظها ومراجعاتك.",
+      "aPlace": "مكان",
+      "actions": {
+        "booking_requested": "طلبت الإقامة في {place}",
+        "booking_confirmed": "أكّد {place} إقامتك",
+        "booking_declined": "رفض {place} طلبك",
+        "booking_cancelled": "ألغى {place} إقامتك",
+        "booking_cancelled_by_guest": "ألغيت إقامتك في {place}",
+        "booking_expired": "انتهت مهلة طلبك في {place}",
+        "review_written": "كتبت مراجعة عن إقامتك في {place}",
+        "favorite_saved": "حفظت {place}",
+        "favorite_removed": "أزلت {place} من الأماكن المحفوظة",
+        "member_invitation_accepted": "انضممت إلى فريق {place}"
       }
     },
     "experiences": "التجارب والخدمات",

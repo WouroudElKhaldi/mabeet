@@ -4,6 +4,7 @@ export {
   countFeed,
   countFeedSince,
   listFeed,
+  listPersonActivity,
   notePerson,
   recordAction,
   recordPersonAndBusiness,

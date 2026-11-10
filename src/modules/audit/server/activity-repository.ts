@@ -17,3 +17,13 @@ export interface ActivityEntry {
 export function logActivity(db: Db, entry: ActivityEntry) {
   return db.activityLog.create({ data: entry });
 }
+
+/** One person's timeline, newest first, at most `take` entries. */
+export function readActivity(db: Db, userId: string, take: number) {
+  return db.activityLog.findMany({
+    where: { userId, isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: { id: true, action: true, entity: true, entityId: true, businessId: true, createdAt: true },
+  });
+}
