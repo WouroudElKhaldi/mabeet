@@ -88,6 +88,8 @@ test("a guest sees the region's partners near the stay, sponsored ones first, on
   const cards = nearby.getByRole("article");
   await expect(cards.first()).toContainText("Sponsored");
   await expect(cards.filter({ hasText: "Sponsored" })).toHaveCount(1);
+  // The demo places and partners have map pins, so each card says how far it is.
+  await expect(cards.first()).toContainText(/\d+(\.\d)? km away/);
   // Partners of other regions are not near this stay.
   await expect(nearby.getByText("Valley Winery (demo)")).toBeHidden();
   await expectNoSidewaysScroll(page);

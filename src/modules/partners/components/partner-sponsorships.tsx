@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { inputClass, labelledControlClass } from "@/components/ui/field";
@@ -9,17 +9,13 @@ import { FormError } from "@/components/ui/form-error";
 import { useAction } from "@/hooks/use-action";
 import { api } from "@/lib/api-client";
 import { addDays, parseIsoDate, toIsoDate } from "@/utils/dates";
+import { formatStayDates } from "@/utils/format";
 
 export interface SponsorshipDays {
   id: string;
   startsOn: string;
   /** The day after the last one, like a check-out. */
   endsOn: string;
-  /**
-   * The first and last day as the reader's text, written by the server: the browser's date library spaces a range
-   * differently from the server's, and the page must read the same in both.
-   */
-  label: string;
 }
 
 /**
@@ -36,6 +32,7 @@ export function PartnerSponsorships({
   sponsorships: SponsorshipDays[];
 }) {
   const t = useTranslations("admin.partners");
+  const locale = useLocale();
   const { run, pending, error, fieldErrors } = useAction(["endsOn"]);
   const { confirm, dialog } = useConfirm();
   const url = `/api/admin/partners/${partnerId}/sponsorships`;
@@ -74,7 +71,13 @@ export function PartnerSponsorships({
               key={sponsorship.id}
               className="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-4 py-2.5 text-sm"
             >
-              <span>{sponsorship.label}</span>
+              <span>
+                {formatStayDates(
+                  parseIsoDate(sponsorship.startsOn),
+                  addDays(parseIsoDate(sponsorship.endsOn), -1),
+                  locale,
+                )}
+              </span>
               <button
                 type="button"
                 disabled={pending}

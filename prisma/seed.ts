@@ -40,6 +40,8 @@ interface DemoRoom {
 interface DemoPlace {
   name: string;
   area: string;
+  /** Roughly where the area is, so a guest sees how far the partners near it are. */
+  pin: { latitude: number; longitude: number };
   description: string;
   categories: Array<(typeof CATEGORIES)[number]["slug"]>;
   bookingMode: "AUTOMATIC" | "ONLINE_APPROVAL" | "OFFLINE";
@@ -54,6 +56,7 @@ const PLACES: DemoPlace[] = [
   {
     name: "Dar Al Sindiyan (demo)",
     area: "Chouf",
+    pin: { latitude: 33.695, longitude: 35.564 },
     description:
       "A restored 19th-century stone house under oak trees, ten minutes from the cedar reserve. Breakfast is made from the garden.\n\nDemo listing.",
     categories: ["mountain", "guesthouse"],
@@ -87,6 +90,7 @@ const PLACES: DemoPlace[] = [
   {
     name: "Bayt El Bahr (demo)",
     area: "Batroun",
+    pin: { latitude: 34.256, longitude: 35.6575 },
     description:
       "Rooms facing the old harbour, a rooftop for sunsets and the souk around the corner.\n\nDemo listing.",
     categories: ["beach", "old-town"],
@@ -120,6 +124,7 @@ const PLACES: DemoPlace[] = [
   {
     name: "Beit Ghazir (demo)",
     area: "Ehden",
+    pin: { latitude: 34.291, longitude: 35.995 },
     description:
       "A family guesthouse on the main square, known for its mezze breakfast and hiking maps.\n\nDemo listing.",
     categories: ["mountain", "guesthouse", "old-town"],
@@ -153,6 +158,7 @@ const PLACES: DemoPlace[] = [
   {
     name: "Kroum Cabin (demo)",
     area: "Tannourine",
+    pin: { latitude: 34.208, longitude: 35.93 },
     description:
       "A timber cabin at the edge of the cedar forest, with a wood stove and trails from the door. Booked as a whole.\n\nDemo listing.",
     categories: ["cabin", "mountain"],
@@ -187,6 +193,7 @@ const PLACES: DemoPlace[] = [
   {
     name: "Karm Sunset (demo)",
     area: "West Bekaa",
+    pin: { latitude: 33.55, longitude: 35.742 },
     description:
       "Rooms between the vines, wine tastings in the cellar and long tables at harvest.\n\nDemo listing.",
     categories: ["vineyard", "countryside"],
@@ -359,6 +366,7 @@ async function main() {
       where: { id: business.id },
       data: {
         description: place.description,
+        ...place.pin,
         listedPublicly: true,
         bookingMode: place.bookingMode,
         // The online modes need the owner to have accepted full refunds.
@@ -423,6 +431,11 @@ async function main() {
   for (const place of PLACES) {
     const business = await seedPlace(place, host.id);
     if (business) created.push({ place, business });
+  }
+
+  // Places made before they had a map pin get theirs; a pin the host set is left as it is.
+  for (const place of PLACES) {
+    await prisma.business.updateMany({ where: { name: place.name, latitude: null }, data: place.pin });
   }
 
   // The front desk of the stage place, so roles can be tried without setting anything up.

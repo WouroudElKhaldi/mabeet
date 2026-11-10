@@ -1188,8 +1188,7 @@ Bonus (F23), built on "N. Near your stay".
 - Screens (`src/modules/partners/components/`): `/admin/partners` shows `PartnerManager`: each live partner is a
   `DisclosurePanel` (its kind, or "Sponsored now", beside the name) holding `PartnerForm` (every field; the link can be
   a website or a social page), `PartnerSponsorships` (first and last day; the form sends the day after the last) and
-  Remove; then "New partner"; then the removed ones with "Bring back". The page writes each sponsorship's dates as text
-  on the server, because the browser's date library spaces a range differently and React would see two texts. The
+  Remove; then "New partner"; then the removed ones with "Bring back". The
   place page shows `NearbyPartners` under "Things to do near your stay" (between the amenities and Meet your host, as
   the map is not built yet): cards in a `ScrollRail` with the photo (any https host, so not through the image
   resizer), the kind, "Sponsored", the town and distance, the link (named Instagram, Facebook or TikTok for those
