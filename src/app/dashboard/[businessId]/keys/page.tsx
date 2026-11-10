@@ -38,6 +38,7 @@ export default async function KeysPage({ params }: PageProps) {
             id: key.id,
             name: key.name,
             prefix: key.prefix,
+            canWrite: key.canWrite,
             lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
             expiresAt: key.expiresAt?.toISOString() ?? null,
           }))}

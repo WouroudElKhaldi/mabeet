@@ -211,6 +211,14 @@ export function findBooking(db: Db, businessId: string, bookingId: string) {
   });
 }
 
+/** A booking by the reference the guest and host see ("MB-7KX3P9"), as an AI app names it. */
+export function findBookingByReference(db: Db, businessId: string, reference: string) {
+  return db.booking.findFirst({
+    where: { reference: reference.trim().toUpperCase(), businessId, isDeleted: false },
+    include: staffFields,
+  });
+}
+
 /** A booking by its private link, only for the guest who made it: anyone else gets nothing. */
 export function findBookingByPublicToken(db: Db, publicToken: string, guestUserId: string) {
   return db.booking.findFirst({

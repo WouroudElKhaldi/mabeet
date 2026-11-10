@@ -74,6 +74,23 @@ async function balances(businessId: string | null, now: Date, db: Db = prisma) {
     .sort((a, b) => a.businessId.localeCompare(b.businessId) || a.currency.localeCompare(b.currency));
 }
 
+/**
+ * The money still with Mabeet in one currency that a refund could come from: guests' payments net of refunds, minus
+ * payouts sent or asked for. `hostCents` is this business's share; `platformCents` is every business's together,
+ * which is the company's money and is never shown to a host. Only the AI app's cancellation checks read it.
+ */
+export async function moneyFreeForRefunds(businessId: string, currency: string, now = new Date()) {
+  const free = (balance: Balance) =>
+    balance.earnedCents + balance.upcomingCents - balance.paidOutCents - balance.requestedCents;
+  const everyBusiness = (await balances(null, now)).filter((balance) => balance.currency === currency);
+  return {
+    hostCents: everyBusiness
+      .filter((balance) => balance.businessId === businessId)
+      .reduce((total, balance) => total + free(balance), 0),
+    platformCents: everyBusiness.reduce((total, balance) => total + free(balance), 0),
+  };
+}
+
 /** The payouts page: what is available, coming and paid out, the payouts, the online payments. Owners only. */
 export async function getPayouts(ctx: TenantContext, now = new Date()) {
   requireOwner(ctx, OWNER_ONLY);

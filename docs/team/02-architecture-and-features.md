@@ -671,7 +671,7 @@ Route: `POST /api/mcp`.
 - **First version: read and report only.** Free rooms, bookings, revenue, the commission saved, and the numbers
   for a report over a period (`getBusinessReport`, the same figures as the analytics page). The person's AI app
   writes the report. Every key is read-only.
-- **Then: a few actions**, only what the person's role allows: `cancel_booking` (full automatic refund),
+- **Then: a few actions** (built, see below), only what the person's role allows: `cancel_booking` (full automatic refund),
   `close_dates` and `reopen_dates`, `confirm_booking` and `decline_booking`. Each calls the same service as the
   dashboard button. Keys can then have write access; read-only keys never see these tools. They are marked as
   changing data, so the AI app asks the person before running them. Marking a guest as arrived needs a new booking
@@ -692,8 +692,34 @@ the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_ro
 id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
 come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. `get_report`
 (`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give
-the same numbers as the analytics page. Not yet: the actions. Tests: `mcp-isolation.integration.test.ts` and
+the same numbers as the analytics page. Tests: `mcp-isolation.integration.test.ts` and
 `mcp-oauth.integration.test.ts` (assistant).
+
+**The actions** (`ACTION_TOOLS` in `team-tools.ts`, all `mutates: true`). A key is read only unless the member ticks
+"Allow changes" when making it (`keyInput.canWrite`, stored as `ApiKey.canWrite`); signing in with OAuth stays read
+only. A read-only key is never offered an action (`teamToolsFor`), and a member is offered only those their role
+allows there. Each takes the optional `place` like the reading tools:
+
+- `confirm_booking` (`bookings.decide`): `confirmBookingByReference`, the dashboard's confirm.
+- `decline_booking` and `cancel_booking` (`bookings.decide`): `endBookingByReference`
+  (`bookings/server/ai-booking-decisions.ts`). A booking nobody paid online for ends at once. One with an online
+  payment ends only after every check, in this order: the member is an owner; the stay starts more than two days
+  from now; the first call only answers what would happen (the refund, formatted) and the second must repeat that
+  exact refund as `confirmRefund`; the payment is in one currency and not refunded yet; what Mabeet holds for the
+  place, and for every place together, still covers the refund (`moneyFreeForRefunds` in `host-money-service.ts`:
+  payments net of refunds, minus payouts sent or asked for); for a card payment, Mabeet's Stripe balance in that
+  currency covers it too (`getStripeAvailableCents`, and a card refund is refused while it cannot be read); and at
+  most three such refunds a day per place (`enforceRateLimit`). A refusal is logged as
+  `booking.ai_refund_refused.<check>` and the member is only told to use the dashboard: the company's figures never
+  reach a host or an AI app. Then the dashboard's own decline or cancel runs, with its full refund.
+- `close_dates` and `reopen_dates` (`blocks.manage`): `addBlock` and `removeBlock`. Reopening only removes closed
+  dates lying wholly inside the days asked, and says which ones it left; bookings and platform stays are never
+  touched.
+- `set_room_open` (`rooms.manage`): `updateRoom` with `active`.
+- `sync_calendars` (`feeds.manage`): `syncFeedNow` for every connected calendar link of the place.
+
+A room is named by its id or (part of) its name; a name that fits several rooms is refused. Tests:
+`mcp-actions.integration.test.ts` (assistant).
 
 **OAuth sign-in** (for ChatGPT, Claude.ai and any app that connects without a key). Better Auth's `jwt` and
 `oauthProvider` plugins (`src/server/auth/better-auth.ts`) make Mabeet the app's sign-in server. The app finds it
