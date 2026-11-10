@@ -113,8 +113,9 @@ Arabic (F18). Everything else in Part A is finished by Checkpoint 2 (Tuesday 10 
   stay with the host, the reviews without their name.
 - **F18. Three languages.** English, Arabic and Lebanese Arabic, right-to-left included, from the first day. Anyone
   can switch from the menu.
-- **F21. Find the way back.** Every page has a Back button to the page it belongs to (a room's page goes to its
-  place, a place to search). It works the same after a refresh or from a shared link.
+- **F21. Find the way back.** Every page has a Back button. It returns to the page the person came from on Mabeet in
+  this tab. When they arrived from outside (a shared link, a new tab, a notification), it goes to the page this one
+  belongs to instead (a room's page goes to its place, a place to search).
 
 ---
 
