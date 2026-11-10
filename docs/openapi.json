@@ -6136,7 +6136,7 @@
       },
       "post": {
         "tags": ["AI"],
-        "summary": "Create a read-only MCP key (secret shown once)",
+        "summary": "Create an MCP key, read only unless it allows changes (secret shown once)",
         "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
         "security": [
           {
@@ -6178,6 +6178,10 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "canWrite": {
+                    "default": false,
+                    "type": "boolean"
                   }
                 },
                 "required": ["name"]

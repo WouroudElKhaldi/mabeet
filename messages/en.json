@@ -1196,7 +1196,7 @@
       "days": "{count} days",
       "never": "Never",
       "allowWrite": "Allow changes",
-      "allowWriteHint": "Lets the AI confirm or decline bookings and close dates, if your role allows. Your AI app asks you before each change.",
+      "allowWriteHint": "Lets your AI app confirm, decline or cancel bookings, close and reopen dates, open or close rooms and sync your calendars, as far as your role allows. It asks you before each change. Bookings paid online can only be ended by an owner, with extra checks.",
       "generate": "Create key",
       "copyNow": "Copy this key now. For your safety it won't be shown again.",
       "secret": "Your key",

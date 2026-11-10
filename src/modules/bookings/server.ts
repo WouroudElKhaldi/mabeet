@@ -21,6 +21,7 @@ export {
   settleOnlinePayment,
   startBookingCheckout,
 } from "./server/booking-payments";
+export { confirmBookingByReference, endBookingByReference } from "./server/ai-booking-decisions";
 export { findFreeRooms, getTakenNights } from "./server/availability-service";
 export {
   getHostBalances,

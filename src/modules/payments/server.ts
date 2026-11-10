@@ -13,6 +13,7 @@ export {
   createPaymentCheckout,
   createStripeRefund,
   createSubscriptionCheckout,
+  getStripeAvailableCents,
   retrieveCheckoutSession,
   type StripeEvent,
   stripeEnabled,
