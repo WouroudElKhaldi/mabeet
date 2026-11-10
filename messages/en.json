@@ -1080,25 +1080,19 @@
       "scale": "1 = poor · 5 = wonderful"
     },
     "activity": {
-      "empty": "Nothing here yet.",
-      "booking": {
-        "requested": "You requested a booking",
-        "confirmed": "The host confirmed your booking",
-        "awaiting_payment": "Your booking is waiting for your payment",
-        "declined": "The host declined your request",
-        "cancelled": "The host cancelled your booking",
-        "cancelled_by_guest": "You cancelled a booking",
-        "expired": "Your request ran out before the host answered"
-      },
-      "favorite": {
-        "added": "You saved a place",
-        "removed": "You removed a saved place"
-      },
-      "review": {
-        "submitted": "You posted a review"
-      },
-      "member": {
-        "invitation_accepted": "You joined a team"
+      "empty": "Nothing here yet. What you book, save and review will show up here.",
+      "aPlace": "a place",
+      "actions": {
+        "booking_requested": "You asked to stay at {place}",
+        "booking_confirmed": "{place} confirmed your stay",
+        "booking_declined": "{place} declined your request",
+        "booking_cancelled": "{place} cancelled your stay",
+        "booking_cancelled_by_guest": "You cancelled your stay at {place}",
+        "booking_expired": "Your request at {place} ran out of time",
+        "review_written": "You reviewed your stay at {place}",
+        "favorite_saved": "You saved {place}",
+        "favorite_removed": "You removed {place} from your saved places",
+        "member_invitation_accepted": "You joined the team of {place}"
       }
     },
     "experiences": "Experiences & services",

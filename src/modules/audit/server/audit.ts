@@ -1,7 +1,7 @@
 import type { PlatformActor, TenantContext } from "@/server/auth/tenant-context";
 import type { FeedNote } from "./audit-repository";
 import { type Db, prisma } from "@/server/db/client";
-import { type ActivityEntry, logActivity } from "./activity-repository";
+import { type ActivityEntry, logActivity, readActivity } from "./activity-repository";
 import { countFeedRows, countFeedRowsSince, type FeedScope, logAudit, readFeed } from "./audit-repository";
 
 /**
@@ -85,4 +85,9 @@ export function countFeedSince(
   excludeUserId: string,
 ) {
   return countFeedRowsSince(prisma, scope, actions, since, excludeUserId);
+}
+
+/** The newest entries of one person's own timeline, for their account's Activity page. */
+export function listPersonActivity(userId: string, take: number) {
+  return readActivity(prisma, userId, take);
 }
