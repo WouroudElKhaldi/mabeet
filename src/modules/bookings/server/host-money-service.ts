@@ -31,9 +31,9 @@ const AUTOMATIC_REFUND_WINDOW_MS = 24 * 60 * 60_000;
 
 interface Balance {
   currency: string;
-  /** Confirmed stays that have started, net of refunds. */
+  /** Confirmed stays and sessions that have started, net of refunds. */
   earnedCents: number;
-  /** Stays still ahead (or waiting for an answer), net of refunds: available once they start. */
+  /** Stays and sessions still ahead (or waiting for an answer), net of refunds: available once they start. */
   upcomingCents: number;
   paidOutCents: number;
   requestedCents: number;
@@ -102,7 +102,11 @@ export async function getPayouts(ctx: TenantContext, now = new Date()) {
   return {
     balances: money.map(({ businessId: _, ...balance }) => balance),
     payouts: history,
-    payments: paymentsList,
+    // One line per payment, the same for a stay and for seats in a session.
+    payments: paymentsList.map(({ sessionBooking, ...payment }) => ({
+      ...payment,
+      booking: payment.booking ?? sessionBooking,
+    })),
     lastDetails: last,
   };
 }
@@ -156,9 +160,16 @@ export async function getHostBalances(actor: PlatformActor, now = new Date()) {
 }
 
 /** Refunds the providers kept refusing, to send by hand: the oldest first, with who to send each one to. */
-export function listRefundsToSend(actor: PlatformActor, now = new Date()) {
+export async function listRefundsToSend(actor: PlatformActor, now = new Date()) {
   requirePlatformAdmin(actor);
-  return payments.listRefundsToSendByHand(prisma, new Date(now.getTime() - AUTOMATIC_REFUND_WINDOW_MS));
+  const owed = await payments.listRefundsToSendByHand(
+    prisma,
+    new Date(now.getTime() - AUTOMATIC_REFUND_WINDOW_MS),
+  );
+  return owed.map(({ payment: { sessionBooking, ...payment }, ...refund }) => ({
+    ...refund,
+    payment: { ...payment, booking: payment.booking ?? sessionBooking },
+  }));
 }
 
 /** The admin sent a refund by hand, with the transfer's reference. Each one is marked once. */

@@ -34,6 +34,25 @@ export function holdUntil(status: BookingStatus, holdHours: number, now: Date): 
   return null;
 }
 
+/** The same, for seats in a session: a booking never waits past the moment its session starts. */
+export function sessionHoldUntil(
+  status: BookingStatus,
+  holdHours: number,
+  startsAt: Date,
+  now: Date,
+): Date | null {
+  const until = holdUntil(status, holdHours, now);
+  return until && new Date(Math.min(until.getTime(), startsAt.getTime()));
+}
+
+/**
+ * Whether a session's day has come: from then on its money may be paid out to the owner (as a stay's from its
+ * check-in day), so the booking can no longer be cancelled and refunded.
+ */
+export function sessionDayHasCome(startsAt: Date, now: Date): boolean {
+  return startsAt < addDays(todayUtc(now), 1);
+}
+
 /** What the guest pays online: always the full total, with no deposit. Null when they pay the owner directly. */
 export function amountDueOnline(mode: BookingMode, totalCents: number): number | null {
   return isOnlineMode(mode) ? totalCents : null;

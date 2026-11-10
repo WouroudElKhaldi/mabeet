@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { prisma, stay } from "@tests/integration/helpers";
-import { requestBooking } from "../server";
-import { placeWithRoom, requestFor } from "./fixtures";
+import { requestBooking, requestSessionBooking } from "../server";
+import { placeWithRoom, placeWithSession, requestFor, seatsFor } from "./fixtures";
 
-// All or nothing: the booking, its nights and its log line are one transaction. When the last step fails, the
-// earlier ones are undone, so no half-made booking holds the room.
+// All or nothing: the booking, its nights or seats, and its log line are one transaction. When the last step fails,
+// the earlier ones are undone, so no half-made booking holds the room or the seats.
 
 const failNextLog = vi.hoisted(() => ({ on: false }));
 vi.mock(import("@/modules/audit/server"), async (importOriginal) => {
@@ -31,5 +31,16 @@ describe("a booking whose last step fails", () => {
     expect(await prisma.occupancy.count({ where: { roomId: place.room.id } })).toBe(0);
 
     await expect(requestBooking(requestFor(place, range))).resolves.toMatchObject({ status: "HELD" });
+  });
+});
+
+describe("seats whose last step fails", () => {
+  it("leaves no booking and no taken seats, and the same request then succeeds", async () => {
+    const place = await placeWithSession("OFFLINE", { capacity: 2 });
+    failNextLog.on = true;
+    await expect(requestSessionBooking(seatsFor(place, 2))).rejects.toThrow("the log could not be written");
+    expect(await prisma.sessionBooking.count({ where: { sessionId: place.session.id } })).toBe(0);
+
+    await expect(requestSessionBooking(seatsFor(place, 2))).resolves.toMatchObject({ status: "HELD" });
   });
 });

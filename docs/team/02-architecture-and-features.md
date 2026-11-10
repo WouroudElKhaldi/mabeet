@@ -1191,11 +1191,49 @@ Shared pieces:
 
 Hosts can sell seats in dated sessions (a hike, a wine tasting, an airport transfer).
 
-- The `session_seats_guard` trigger locks the session and refuses selling too many seats. If 20 guests race for the
-  last 5 seats, exactly 5 get one.
-- Same statuses, rules and payments as stays.
+- **Two modules.** `offerings` owns the catalogue and its schedule (`offering-service.ts`, `offering-repository.ts`):
+  what is sold and when its sessions run. Who sits in a session is the booking engine's, so seat bookings live in
+  `bookings` (`session-booking-service.ts`, `session-booking-repository.ts`), next to stays, and `bookings` calls
+  `offerings` (never the other way). `offering-lookup.ts` is what `bookings` reads and changes there: the bookable
+  offering by its link, an open session, the session lock (`lockSession`), taking a session off the schedule, and
+  `priceSession` (the price for each guest, or once for the group).
+- **The catalogue** (`offerings.manage`): `createOffering` counts against the plan
+  (`assertPlanAllowsAnother(businessId, "offerings", tx)` in the same transaction; Free has one), gets a unique link
+  from the title, and takes its region from the town when the host picks none. A category must be one of the admin's
+  categories of the same type. `updateOffering` changes only the fields sent; `active: false` takes it off the site.
+  Each change is logged (`offering.created`, `.updated`).
+- **The schedule**: `scheduleSessions` makes one session on each date, all at the same local time where the business
+  is (`zonedInstant` in `src/utils/zoned-time.ts`: 06:30 in Beirut is 04:30 UTC in winter, 03:30 in summer), each as
+  long as the offering, and only in the future (`session.scheduled`). `cancelSession` (in `bookings`, because it reads
+  the seats) locks the session, lets holds that ran out go, and refuses while anyone holds seats in it: their bookings
+  are declined or cancelled first, so each guest is told and refunded (`session.cancelled`).
+- **The same engine as a stay.** The seats are taken at once, in the business's mode (`initialStatus`): 10 minutes for
+  the online payment, or the owner's answer time offline. A booking never waits past the moment its session starts
+  (`sessionHoldUntil`). The owner confirms, declines or cancels with the same rules and the same refusals
+  (`assertOwnerCanAnswer`, `assertTransition`), the guest cancels from the same private link and route as a stay
+  (`cancelBookingAsGuest` tries the stay, then the seats), and housekeeping expires unpaid or unanswered seats
+  (`expireAllStaleSessionHolds`). Every change locks the session first.
+- **When it is too late.** Nobody answers a session that has started. A session's money is released to the host from
+  its day on, as a stay's from its check-in day (`sumHeldMoney`), so from that day seats can no longer be cancelled
+  and refunded (`sessionDayHasCome`).
+- **No overselling.** The `session_seats_guard` trigger locks the session and refuses selling too many seats
+  (23P01, shown as "Those seats were just taken"). If 20 guests race for the last 5 seats, exactly 5 get one.
+- **Money.** Paid online in full, like a stay: a `Payment` row has a `bookingId` or a `sessionBookingId`
+  (`PaidFor` in `payment-repository.ts`), and checkout, settling, refunds, the payouts page and the admin's refunds
+  to send by hand read both. Declined, cancelled or expired paid seats are refunded in full.
+- **Emails and push** are the stay's, with the words for seats: each notify job takes `kind: "session"`
+  ("Your seats at … are held", the session's time instead of dates). The bell and the guest's Activity page read the
+  same log entries, with `entity: "session_booking"`.
+- **Routes:** `GET`/`POST /api/workspaces/{businessId}/offerings`, `PATCH .../offerings/{offeringId}`,
+  `POST .../offerings/{offeringId}/sessions`, `DELETE .../sessions/{sessionId}`, `GET .../session-bookings`,
+  `POST .../session-bookings/{bookingId}/{action}`, and for guests `POST /api/public/experiences/{slug}/bookings`
+  (signed in, the stay requests' rate limit), then the stay's `/api/public/bookings/{token}/checkout` and `/cancel`.
 
-Code: `offering-service.ts`, `session-booking-service.ts`.
+Tests: `src/modules/offerings/tests/offerings.integration.test.ts`,
+`src/modules/bookings/tests/session-bookings.integration.test.ts` (the modes, the race for the last seats, payments
+and refunds, guest cancel, expiry, cancelling a session, isolation), the seats case in
+`booking-rollback.integration.test.ts`, the seat emails in `booking-notifications.integration.test.ts`, and
+`sessionHoldUntil` and `sessionDayHasCome` in `booking-policy.test.ts`.
 
 ### F. Favourites (F5)
 
