@@ -672,6 +672,31 @@ erDiagram
     String userId FK
     DateTime createdAt
   }
+  PartnerPlace {
+    String id PK
+    String name
+    PartnerKind kind
+    String region
+    String area
+    Float latitude
+    Float longitude
+    String photoUrl
+    String websiteUrl
+    String phone
+    Boolean isDeleted
+    DateTime createdAt
+    DateTime updatedAt
+  }
+  Sponsorship {
+    String id PK
+    String partnerPlaceId FK
+    String offeringId FK
+    DateTime startsOn
+    DateTime endsOn
+    String createdById FK
+    Boolean isDeleted
+    DateTime createdAt
+  }
   User ||--o{ AiChat : "user"
   Business |o--o{ AiChat : "business"
   AiChat ||--o{ AiChatMessage : "chat"
@@ -756,6 +781,9 @@ erDiagram
   OauthClient ||--o{ OauthConsent : "client"
   User |o--o{ OauthConsent : "user"
   User ||--o{ PushSubscription : "user"
+  PartnerPlace |o--o{ Sponsorship : "partnerPlace"
+  Offering |o--o{ Sponsorship : "offering"
+  User ||--o{ Sponsorship : "createdBy"
 ```
 
 ## Indexes
@@ -867,3 +895,7 @@ bookings.
 | OauthConsent        | `userId`                              | index  |
 | PushSubscription    | `endpoint`                            | unique |
 | PushSubscription    | `userId`                              | index  |
+| PartnerPlace        | `region`                              | index  |
+| Sponsorship         | `startsOn,endsOn`                     | index  |
+| Sponsorship         | `partnerPlaceId`                      | index  |
+| Sponsorship         | `offeringId`                          | index  |

@@ -78,10 +78,10 @@ climbing into another module, or the kernel importing a module fails `pnpm lint`
 | `audit`         | The audit log and each person's timeline (`recordAction`, `recordPersonAndBusiness`)                                                                                    |
 | `housekeeping`  | The scheduled tidy-up: expiring holds and plan months                                                                                                                   |
 | `admin`         | The platform admin area                                                                                                                                                 |
-| `partners`      | Partner businesses                                                                                                                                                      |
+| `partners`      | Featured partners (F23): partner places near guesthouses and their sponsorships; `listNearbyPartners` for the place page                                                |
 | `contact`       | Messages to the Mabeet team from the Contact page: the input check, the email job and the form                                                                          |
 
-`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping` and `contact` exist today, and `rooms` has begun (the reads a booking needs). The others are
+`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping`, `contact` and `partners` exist today, and `rooms` has begun (the reads a booking needs). The others are
 created by the first feature that needs them, in this shape.
 
 ## Where each kind of file goes
@@ -420,6 +420,12 @@ src/
           route.ts
         partners/
           [partnerId]/
+            restore/
+              route.ts
+            sponsorships/
+              [sponsorshipId]/
+                route.ts
+              route.ts
             route.ts
           route.ts
         payouts/
