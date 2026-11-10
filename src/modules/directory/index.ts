@@ -1,5 +1,6 @@
 // The door into this module for code that may also run in the browser: input checks, types, screens. Server
 // code lives behind ./server.ts.
+export { ActivityList } from "./components/activity-list";
 export { BookingView } from "./components/booking-view";
 export { ContactHostForm } from "./components/contact-host-form";
 export { FavoriteButton } from "./components/favorite-button";

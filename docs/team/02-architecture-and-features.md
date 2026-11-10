@@ -563,8 +563,18 @@ Every important action is recorded, through the `audit` module (`@/modules/audit
 - `recordPersonAndBusiness(tx, { userId, businessId, action, entity, entityId })` for something a person did that
   the business must hear about (a guest's request, someone joining the team): it goes on the person's own timeline
   (`ActivityLog`) and in the business's `AuditLog`.
+- `notePerson(tx, { userId, businessId, action, entity, entityId })` for what only the person's own timeline needs:
+  a host's decision on their booking, a request that ran out, a place saved or unsaved (`favorite.saved`,
+  `favorite.removed`, only when the heart really changes), a review written (`review.written`).
 - Something the system noticed (a sync, a payment callback) goes in `AuditLog` with no actor; the audit module
   exports a function for it with the first such event.
+
+The guest's Activity page (`/account/activity`) reads the timeline through `listMyActivity(userId)` (`directory`
+module, `activity-service.ts`): the newest 100 entries (`listPersonActivity` in `audit`), each with the place's
+name and where it leads (the booking's page for a stay, found through `listMyBookings`; the place's page
+otherwise, through `listPlacesByIds`). A place that has closed since keeps its line without a name or link. Only
+the kinds in `src/config/activity.ts` are shown; a new kind needs a line there, its icon and text key in
+`activity-list.tsx` and its text in the three message files. Test: `activity.integration.test.ts` (directory).
 
 The bell in the top bar shows the last five events of the business. "View all" opens the full list. Code:
 `audit.ts` (the feed reads `listFeed`, `countFeed`, `countFeedSince`), `notification-feed-service.ts` in

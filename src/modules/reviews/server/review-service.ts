@@ -1,8 +1,8 @@
-import { recordAction } from "@/modules/audit/server";
+import { notePerson, recordAction } from "@/modules/audit/server";
 import { getBookingForGuest } from "@/modules/bookings/server";
 import { requirePermission, type TenantContext } from "@/server/auth/tenant-context";
 import { duplicateAsConflict } from "@/server/db/constraint-errors";
-import { prisma } from "@/server/db/client";
+import { prisma, runInTransaction } from "@/server/db/client";
 import { forbidden, notFound } from "@/server/errors";
 import { toIsoDate, todayUtc } from "@/utils/dates";
 import { averageRating } from "../rating";
@@ -31,13 +31,22 @@ export async function writeReview(
     throw forbidden("You can write your review once your stay is over");
   }
   await duplicateAsConflict("You have already reviewed this stay", () =>
-    reviews.createReview(prisma, {
-      businessId: booking.businessId,
-      roomId: booking.roomId,
-      bookingId: booking.id,
-      authorId: guestUserId,
-      rating: input.rating,
-      comment: input.comment,
+    runInTransaction(async (tx) => {
+      await reviews.createReview(tx, {
+        businessId: booking.businessId,
+        roomId: booking.roomId,
+        bookingId: booking.id,
+        authorId: guestUserId,
+        rating: input.rating,
+        comment: input.comment,
+      });
+      await notePerson(tx, {
+        userId: guestUserId,
+        businessId: booking.businessId,
+        action: "review.written",
+        entity: "booking",
+        entityId: booking.id,
+      });
     }),
   );
 }

@@ -1,5 +1,6 @@
-import { prisma } from "@/server/db/client";
+import { notePerson } from "@/modules/audit/server";
 import { getPublicPlace } from "@/modules/workspaces/server";
+import { prisma, runInTransaction } from "@/server/db/client";
 import { notFound } from "@/server/errors";
 import type { PlaceCard } from "../types";
 import { listSavedPlaces } from "./directory-service";
@@ -10,13 +11,24 @@ import * as favorites from "./favorite-repository";
 
 /**
  * Saves a place for a guest, or takes it off their list. Asking twice for the same thing is not an error: the
- * heart on the page and the list in the account can be out of step, and the guest's last tap decides.
+ * heart on the page and the list in the account can be out of step, and the guest's last tap decides. Only a real
+ * change goes on the guest's timeline, so a second tap on a full heart adds nothing there.
  */
 export async function setFavorite(userId: string, slug: string, saved: boolean): Promise<void> {
   const place = await getPublicPlace(slug);
   if (!place) throw notFound("Place");
-  if (saved) await favorites.saveFavorite(prisma, userId, place.id);
-  else await favorites.removeFavorite(prisma, userId, place.id);
+  await runInTransaction(async (tx) => {
+    if ((await favorites.isFavorite(tx, userId, place.id)) === saved) return;
+    if (saved) await favorites.saveFavorite(tx, userId, place.id);
+    else await favorites.removeFavorite(tx, userId, place.id);
+    await notePerson(tx, {
+      userId,
+      businessId: place.id,
+      action: saved ? "favorite.saved" : "favorite.removed",
+      entity: "business",
+      entityId: place.id,
+    });
+  });
 }
 
 /** Whether this guest has this place saved, for the heart on its page. Unknown places are simply not saved. */
