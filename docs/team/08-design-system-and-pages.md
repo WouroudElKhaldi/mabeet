@@ -228,7 +228,8 @@ Tailwind 4: one step = `0.25rem` = 4 pixels. `p-4` = 16px, `gap-6` = 24px. We us
   area (`pb-[env(safe-area-inset-bottom)]`). The page gets `pb-24` so nothing hides behind it. A menu with no tab
   pages (all of someone's places) has no bar: the top bar's menu button opens the same drawer.
 - **Phone menu:** a drawer from the start side, `w-[86%] max-w-80`, over a `bg-ink/40` layer.
-- **Back button:** `BackLink` at the top of every page (`mb-4`). It goes to the parent page.
+- **Back button:** `BackLink` at the top of every page (`mb-4`). It returns to the previous page when that page is
+  ours in this tab (`PageTrail` in the root layout follows the tab's pages), and otherwise goes to the parent page.
 
 How a page uses the frame (`src/components/shell/app-shell.tsx`): the layout builds the menu, already filtered by the
 member's permissions (`can(ctx, ...)`) and already translated, and passes it in:

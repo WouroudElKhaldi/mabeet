@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ServiceWorker } from "@/components/pwa/service-worker";
+import { PageTrail } from "@/components/shell/back-link";
 import { AppearanceScript } from "@/components/theme/appearance-script";
 import { isArabic } from "@/config/appearance";
 import { BRAND } from "@/config/brand";
@@ -89,6 +90,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-dvh antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
         <ServiceWorker />
+        <PageTrail />
       </body>
     </html>
   );

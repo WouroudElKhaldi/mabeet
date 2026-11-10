@@ -1,5 +1,5 @@
-// Where each page's Back button goes: the page it belongs to, not the browser history, so it works the same
-// after a refresh, from a shared link or from a notification.
+// The page each page belongs to: where its Back button goes when the person did not come from another page of ours in
+// this tab (a shared link, a new tab, a notification). Otherwise Back returns to the page they came from.
 
 /** Pages with no parent: the home page and each area's own home. */
 const AREA_HOMES = [/^\/$/, /^\/dashboard$/, /^\/dashboard\/[^/]+$/, /^\/admin$/];
