@@ -841,7 +841,10 @@
       "hide": "Hide",
       "show": "Show again",
       "hideReason": "Why hide this review? Guests won't see it, and the reason is logged.",
-      "hiddenBecause": "Hidden: {reason}"
+      "hiddenBecause": "Hidden: {reason}",
+      "intro": "What guests wrote after their stays. Answer them in public, or hide one that breaks the rules.",
+      "hidden": "Hidden",
+      "replyHint": "Shown under the review on your place's page. Empty it to take it away."
     },
     "settings": {
       "title": "Settings",

@@ -3,5 +3,6 @@
 export { ReviewForm } from "./components/review-form";
 export { ReviewList } from "./components/review-list";
 export { RatingLine } from "./components/rating-stars";
-export { newReview } from "./schemas";
+export { TeamReviewList } from "./components/team-review-list";
+export { newReview, reviewParams, reviewReply, reviewVisibility } from "./schemas";
 export type { PlaceRating, PlaceReview } from "./types";
