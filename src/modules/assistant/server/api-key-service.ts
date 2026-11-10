@@ -25,7 +25,7 @@ const hashKey = (raw: string) => createHash("sha256").update(raw).digest("hex");
  */
 export async function createKey(
   ctx: TenantContext,
-  input: { name: string; expiresInDays: number | null },
+  input: { name: string; expiresInDays: number | null; canWrite?: boolean },
   now = new Date(),
 ) {
   requirePermission(ctx, "ai.use");
@@ -41,6 +41,7 @@ export async function createKey(
     prefix: raw.slice(0, VISIBLE_PREFIX_LENGTH),
     hash: hashKey(raw),
     expiresAt: input.expiresInDays ? addDays(now, input.expiresInDays) : null,
+    canWrite: input.canWrite ?? false,
   });
   await recordAction(ctx, "api_key.created", "api_key", key.id);
   return { ...key, secret: raw };

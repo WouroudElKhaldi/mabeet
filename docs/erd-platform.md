@@ -236,6 +236,16 @@ erDiagram
     String endpoint UK
     String userId FK
   }
+  PartnerPlace {
+    String id PK
+    PartnerKind kind
+  }
+  Sponsorship {
+    String id PK
+    String partnerPlaceId FK
+    String offeringId FK
+    String createdById FK
+  }
   User ||--o{ AiChat : "user"
   Business |o--o{ AiChat : "business"
   User ||--o{ HostProfile : "user"
@@ -313,6 +323,9 @@ erDiagram
   User |o--o{ OauthAccessToken : "user"
   User |o--o{ OauthConsent : "user"
   User ||--o{ PushSubscription : "user"
+  PartnerPlace |o--o{ Sponsorship : "partnerPlace"
+  Offering |o--o{ Sponsorship : "offering"
+  User ||--o{ Sponsorship : "createdBy"
 ```
 
 <details>
@@ -791,6 +804,31 @@ erDiagram
     String userId FK
     DateTime createdAt
   }
+  PartnerPlace {
+    String id PK
+    String name
+    PartnerKind kind
+    String region
+    String area
+    Float latitude
+    Float longitude
+    String photoUrl
+    String websiteUrl
+    String phone
+    Boolean isDeleted
+    DateTime createdAt
+    DateTime updatedAt
+  }
+  Sponsorship {
+    String id PK
+    String partnerPlaceId FK
+    String offeringId FK
+    DateTime startsOn
+    DateTime endsOn
+    String createdById FK
+    Boolean isDeleted
+    DateTime createdAt
+  }
   User ||--o{ AiChat : "user"
   Business |o--o{ AiChat : "business"
   User ||--o{ HostProfile : "user"
@@ -868,6 +906,9 @@ erDiagram
   User |o--o{ OauthAccessToken : "user"
   User |o--o{ OauthConsent : "user"
   User ||--o{ PushSubscription : "user"
+  PartnerPlace |o--o{ Sponsorship : "partnerPlace"
+  Offering |o--o{ Sponsorship : "offering"
+  User ||--o{ Sponsorship : "createdBy"
 ```
 
 </details>

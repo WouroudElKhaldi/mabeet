@@ -671,7 +671,7 @@ Route: `POST /api/mcp`.
 - **First version: read and report only.** Free rooms, bookings, revenue, the commission saved, and the numbers
   for a report over a period (`getBusinessReport`, the same figures as the analytics page). The person's AI app
   writes the report. Every key is read-only.
-- **Then: a few actions**, only what the person's role allows: `cancel_booking` (full automatic refund),
+- **Then: a few actions** (built, see below), only what the person's role allows: `cancel_booking` (full automatic refund),
   `close_dates` and `reopen_dates`, `confirm_booking` and `decline_booking`. Each calls the same service as the
   dashboard button. Keys can then have write access; read-only keys never see these tools. They are marked as
   changing data, so the AI app asks the person before running them. Marking a guest as arrived needs a new booking
@@ -692,8 +692,34 @@ the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_ro
 id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
 come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. `get_report`
 (`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give
-the same numbers as the analytics page. Not yet: the actions. Tests: `mcp-isolation.integration.test.ts` and
+the same numbers as the analytics page. Tests: `mcp-isolation.integration.test.ts` and
 `mcp-oauth.integration.test.ts` (assistant).
+
+**The actions** (`ACTION_TOOLS` in `team-tools.ts`, all `mutates: true`). A key is read only unless the member ticks
+"Allow changes" when making it (`keyInput.canWrite`, stored as `ApiKey.canWrite`); signing in with OAuth stays read
+only. A read-only key is never offered an action (`teamToolsFor`), and a member is offered only those their role
+allows there. Each takes the optional `place` like the reading tools:
+
+- `confirm_booking` (`bookings.decide`): `confirmBookingByReference`, the dashboard's confirm.
+- `decline_booking` and `cancel_booking` (`bookings.decide`): `endBookingByReference`
+  (`bookings/server/ai-booking-decisions.ts`). A booking nobody paid online for ends at once. One with an online
+  payment ends only after every check, in this order: the member is an owner; the stay starts more than two days
+  from now; the first call only answers what would happen (the refund, formatted) and the second must repeat that
+  exact refund as `confirmRefund`; the payment is in one currency and not refunded yet; what Mabeet holds for the
+  place, and for every place together, still covers the refund (`moneyFreeForRefunds` in `host-money-service.ts`:
+  payments net of refunds, minus payouts sent or asked for); for a card payment, Mabeet's Stripe balance in that
+  currency covers it too (`getStripeAvailableCents`, and a card refund is refused while it cannot be read); and at
+  most three such refunds a day per place (`enforceRateLimit`). A refusal is logged as
+  `booking.ai_refund_refused.<check>` and the member is only told to use the dashboard: the company's figures never
+  reach a host or an AI app. Then the dashboard's own decline or cancel runs, with its full refund.
+- `close_dates` and `reopen_dates` (`blocks.manage`): `addBlock` and `removeBlock`. Reopening only removes closed
+  dates lying wholly inside the days asked, and says which ones it left; bookings and platform stays are never
+  touched.
+- `set_room_open` (`rooms.manage`): `updateRoom` with `active`.
+- `sync_calendars` (`feeds.manage`): `syncFeedNow` for every connected calendar link of the place.
+
+A room is named by its id or (part of) its name; a name that fits several rooms is refused. Tests:
+`mcp-actions.integration.test.ts` (assistant).
 
 **OAuth sign-in** (for ChatGPT, Claude.ai and any app that connects without a key). Better Auth's `jwt` and
 `oauthProvider` plugins (`src/server/auth/better-auth.ts`) make Mabeet the app's sign-in server. The app finds it
@@ -1193,9 +1219,27 @@ Bonus (F23), built on "N. Near your stay".
 - **Sponsored listings:** an admin can sponsor a partner place, or an experience or service of the platform, for a
   set of dates (`partner-service.ts`; only platform admins). While sponsored, it comes first in "Near your stay" and
   always shows a "Sponsored" label. A guest never sees a sponsored item without that label.
-- Partners are soft-deleted like every business table, and every admin change is logged.
-- This needs tables that do not exist yet: the database keeper adds them first (`07`, "Waiting for the database
-  keeper").
+- Partners are soft-deleted like every business table (removed, then brought back with their sponsorships), and
+  every admin change is logged in the same transaction (`partner.created`, `.updated`, `.removed`, `.restored`,
+  `.sponsored`, `.sponsorship_ended`).
+- Module `partners` (`partner-service.ts`, `partner-repository.ts`); routes `/api/admin/partners` (list, add),
+  `/api/admin/partners/{partnerId}` (save every field, remove), `.../restore`, `.../sponsorships` (sponsor) and
+  `.../sponsorships/{sponsorshipId}` (end). Anyone but a platform admin gets 404, as everywhere in the admin area.
+- A partner's photo is a link (`https` only), never an upload: partners are not on the platform (`07`, section 5).
+- Guests: `getPlace` (directory) adds `nearby`, from `listNearbyPartners(place, now)`: the live partners of the
+  place's region, sponsored ones first (marked `sponsored`, only on the days their sponsorship covers), then the
+  nearest by map pin (`src/utils/geo.ts`), then by name, at most 12. A place with no region shows none.
+- Screens (`src/modules/partners/components/`): `/admin/partners` shows `PartnerManager`: each live partner is a
+  `DisclosurePanel` (its kind, or "Sponsored now", beside the name) holding `PartnerForm` (every field; the link can be
+  a website or a social page), `PartnerSponsorships` (first and last day; the form sends the day after the last) and
+  Remove; then "New partner"; then the removed ones with "Bring back". The
+  place page shows `NearbyPartners` under "Things to do near your stay" (between the amenities and Meet your host, as
+  the map is not built yet): cards in a `ScrollRail` with the photo (any https host, so not through the image
+  resizer), the kind, "Sponsored", the town and distance, the link (named Instagram, Facebook or TikTok for those
+  sites) and the phone. With no partners the section is not shown. The seed adds nine demo partners in the demo
+  places' regions, three sponsored for 60 days. Test: `tests/e2e/partners.spec.ts`.
+- Sponsoring an experience or service is built with experiences (F8): the table already takes it, and those
+  offerings then join the same list.
 
 ### H. Host profile (F7a)
 

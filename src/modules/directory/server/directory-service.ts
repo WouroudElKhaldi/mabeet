@@ -15,6 +15,7 @@ import {
   priceStay,
   priceStays,
 } from "@/modules/rooms/server";
+import { listNearbyPartners } from "@/modules/partners/server";
 import { findReviewedBookings, getPlaceRating, listPlaceReviews } from "@/modules/reviews/server";
 import {
   findBookablePlace,
@@ -76,13 +77,14 @@ export async function getPlace(slug: string, now: Date = new Date()): Promise<Pu
   const place = await getPublicPlace(slug);
   if (!place) return null;
   const whole = place.bookingUnit === "WHOLE_PLACE";
-  const [units, placePhotos, rooms, host, rating, reviews] = await Promise.all([
+  const [units, placePhotos, rooms, host, rating, reviews, nearby] = await Promise.all([
     listPublicUnits(place.id, BOOKABLE_ROOM_KIND[place.bookingUnit]),
     listPlacePhotos(place.id),
     whole ? listPublicUnits(place.id, "ROOM") : null,
     getPublicHost(place.id, now),
     getPlaceRating(place.id),
     listPlaceReviews(place.id),
+    listNearbyPartners(place, now),
   ]);
   return {
     slug: place.slug,
@@ -105,6 +107,7 @@ export async function getPlace(slug: string, now: Date = new Date()): Promise<Pu
     photos: placePhotos.length > 0 ? placePhotos : (rooms ?? units).flatMap((unit) => unit.photos),
     units,
     rooms: rooms ?? units,
+    nearby,
   };
 }
 

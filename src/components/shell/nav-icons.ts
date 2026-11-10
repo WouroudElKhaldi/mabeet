@@ -20,6 +20,7 @@ import {
   Settings,
   Sparkles,
   Star,
+  Store,
   Tag,
   Tags,
   User,
@@ -56,6 +57,7 @@ export const NAV_ICONS = {
   people: UserRound,
   money: Landmark,
   categories: Tags,
+  partners: Store,
   appearance: Palette,
   health: Activity,
 };

@@ -531,7 +531,9 @@ Experiences and services have no tab yet: they come with their module (F8).
 `PhotoGallery` (one large and four small photos, the large one alone on a phone or with fewer than five photos, "Show all photos" in a dialog, a drawn
 postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the rooms of a place booked whole shown
 without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
-`ThingsToKnow`, `MeetHost`, `PlaceMap`, `ReviewList` and `BookingBox`. Not built yet: "Near your stay".
+`ThingsToKnow`, `MeetHost`, `PlaceMap`, `ReviewList`, `BookingBox`, and the partners part of "Near your stay"
+(`NearbyPartners` from the partners module, the `nearby` section after "Where you'll be" and before `MeetHost`;
+shown without dates, as partners have no sessions). Not built yet: the experiences part of "Near your stay".
 
 The title row carries `ShareButton` (`src/components/site/share-button.tsx`, shared with any page that wants it) and
 `FavoriteButton` on the end side. Share opens the phone's own share sheet where there is one, otherwise it copies

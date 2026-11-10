@@ -1,6 +1,7 @@
 import type { BookingMode, BookingStatus, BookingUnit, HostContact, PhotoArea } from "@prisma/client";
 import type { PlaceRating, PlaceReview } from "@/modules/reviews";
 import type { StayIssue } from "@/config/booking-limits";
+import type { NearbyPartner } from "@/modules/partners";
 
 // What the public side shows and asks. Plain values only (money as whole cents, dates as ISO text), so a page can
 // hand them to a screen that runs in the browser.
@@ -98,6 +99,8 @@ export interface PublicPlace {
   units: PublicUnit[];
   /** The rooms, to show. At a place booked whole they are not bookable on their own. */
   rooms: PublicUnit[];
+  /** Partner places near the stay (F23): sponsored ones first, each marked so. */
+  nearby: NearbyPartner[];
 }
 
 /** One of a guest's stays, as their trips list shows it: no payment details, no guest contact, only what the list needs. */

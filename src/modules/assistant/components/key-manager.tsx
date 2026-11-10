@@ -27,6 +27,8 @@ interface McpKey {
   id: string;
   name: string;
   prefix: string;
+  /** May run the tools that change things; read only otherwise. */
+  canWrite: boolean;
   /** ISO time, or null when the key was never used. */
   lastUsedAt: string | null;
   expiresAt: string | null;
@@ -63,6 +65,7 @@ export function KeyManager({
       const key = await api.post<{ secret: string }>(`/api/workspaces/${businessId}/keys`, {
         name: data.get("name"),
         expiresInDays: Number(data.get("expires")) || null,
+        canWrite: data.get("canWrite") === "on",
       });
       setSecret(key.secret);
       form.reset();
@@ -113,6 +116,13 @@ export function KeyManager({
             ))}
           </select>
         </div>
+        <label className="flex items-start gap-3 rounded-lg bg-surface-2 p-4 text-sm">
+          <input type="checkbox" name="canWrite" className="mt-0.5 size-4 accent-accent" />
+          <span>
+            <span className="block font-semibold">{t("allowWrite")}</span>
+            <span className="block text-muted">{t("allowWriteHint")}</span>
+          </span>
+        </label>
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" disabled={pending}>
             {t("generate")}
@@ -184,7 +194,7 @@ export function KeyManager({
                   </p>
                   {/* In the viewer's own time zone, which the server cannot know. */}
                   <p className="text-sm text-muted" suppressHydrationWarning>
-                    {t("readOnly")} ·{" "}
+                    {key.canWrite ? t("readWrite") : t("readOnly")} ·{" "}
                     {key.lastUsedAt
                       ? t("lastUsed", { when: new Date(key.lastUsedAt).toLocaleString(locale) })
                       : t("neverUsed")}
