@@ -3,8 +3,16 @@ import { prisma, stay } from "@tests/integration/helpers";
 import { settleBackgroundWork } from "@/server/background";
 import type { Email } from "@/server/email/send";
 import { runHousekeeping } from "@/modules/housekeeping/server";
-import { addBlock, cancelStayAsGuest, confirmBooking, declineBooking, requestBooking } from "../server";
-import { importStay, placeWithRoom, requestFor } from "./fixtures";
+import {
+  addBlock,
+  cancelBookingAsGuest,
+  cancelStayAsGuest,
+  confirmBooking,
+  declineBooking,
+  requestBooking,
+  requestSessionBooking,
+} from "../server";
+import { importStay, placeWithRoom, placeWithSession, requestFor, seatsFor } from "./fixtures";
 
 // The booking emails, as the worker sends them (jobs run in the test process). The guest hears about every change;
 // the people who decide bookings hear about new requests, guest cancellations and platform clashes.
@@ -115,5 +123,24 @@ describe("booking emails", () => {
     );
     expect(clashes).toHaveLength(1);
     expect(clashes[0]?.text).toContain("Phone booking");
+  });
+});
+
+describe("emails about seats", () => {
+  it("speak of seats and the session's time, and the host hears when the guest cancels", async () => {
+    const place = await placeWithSession("OFFLINE");
+    const booking = await requestSessionBooking({ ...seatsFor(place, 2), guestEmail: GUEST_EMAIL });
+
+    const [receipt] = await emailsTo(GUEST_EMAIL);
+    expect(receipt?.text).toContain(`Your seats at ${place.business.name} are held`);
+    expect(receipt?.text).toContain("Wine tasting in the Bekaa");
+    const [request] = await emailsTo(place.owner.email);
+    expect(request?.text).toContain("The seats are held for the guest");
+
+    sent.length = 0;
+    await cancelBookingAsGuest(booking.publicToken, place.guest.id, "Change of plans");
+    const [cancelled] = await emailsTo(place.owner.email);
+    expect(cancelled?.subject).toMatch(/^Cancelled by the guest: Maya Haddad, /);
+    expect(cancelled?.text).toContain("The seats are free again.");
   });
 });

@@ -10,7 +10,12 @@ import { conflict, invalid, notFound } from "@/server/errors";
 import { countNights, type DateRange, todayUtc } from "@/utils/dates";
 import { maskEmail, maskPhone } from "@/utils/privacy";
 import { bookingReference, secureToken } from "@/utils/tokens";
-import { notifyBookingRequested, notifyBookingStatus, notifyGuestCancelled } from "./booking-notifications";
+import {
+  type BookingKind,
+  notifyBookingRequested,
+  notifyBookingStatus,
+  notifyGuestCancelled,
+} from "./booking-notifications";
 import { refundPayments, type RefundToSend, sendRefunds } from "./booking-payments";
 import { assertBookableStay, holdUntil, initialStatus } from "./booking-policy";
 import * as bookings from "./booking-repository";
@@ -177,7 +182,7 @@ async function decide(ctx: TenantContext, { bookingId, reason }: Decision, statu
       ? []
       : await refundPayments(
           tx,
-          bookingId,
+          { bookingId },
           status === "DECLINED" ? "Declined by the host" : "Cancelled by the host",
         );
     return { booking: updated, refunds: owed };
@@ -219,7 +224,7 @@ export async function listBookings(ctx: TenantContext, filters: bookings.Booking
 }
 
 /** Hides the guest's phone and email from team members without the guests.contact permission. */
-function presentForStaff<T extends { guestPhone: string; guestEmail: string | null }>(
+export function presentForStaff<T extends { guestPhone: string; guestEmail: string | null }>(
   ctx: TenantContext,
   booking: T,
 ): T {
@@ -260,7 +265,10 @@ export async function cancelStayAsGuest(
       entityId: current.id,
       note: { guest: current.guestName, reference: current.reference },
     });
-    return { booking: updated, refunds: await refundPayments(tx, current.id, "Cancelled by the guest") };
+    return {
+      booking: updated,
+      refunds: await refundPayments(tx, { bookingId: current.id }, "Cancelled by the guest"),
+    };
   });
   if (!result) return null;
   const { booking, refunds } = result;
@@ -283,11 +291,12 @@ export function listMyBookings(guestUserId: string) {
 
 /**
  * In the transaction that expired them: each hold that ran out goes on its guest's timeline, and a mode-2 booking
- * the owner never answered is refunded in full. Returns the refunds to send once it commits.
+ * the owner never answered is refunded in full. Returns the refunds to send once it commits. Stays and seats alike.
  */
-async function endExpired(
+export async function endExpired(
   tx: Tx,
   expired: ReadonlyArray<{ id: string; businessId: string; guestUserId: string }>,
+  kind: BookingKind = "stay",
 ): Promise<RefundToSend[]> {
   const refunds: RefundToSend[] = [];
   for (const booking of expired) {
@@ -295,10 +304,11 @@ async function endExpired(
       userId: booking.guestUserId,
       businessId: booking.businessId,
       action: "booking.expired",
-      entity: "booking",
+      entity: kind === "stay" ? "booking" : "session_booking",
       entityId: booking.id,
     });
-    refunds.push(...(await refundPayments(tx, booking.id, "The host did not answer in time")));
+    const paidFor = kind === "stay" ? { bookingId: booking.id } : { sessionBookingId: booking.id };
+    refunds.push(...(await refundPayments(tx, paidFor, "The host did not answer in time")));
   }
   return refunds;
 }

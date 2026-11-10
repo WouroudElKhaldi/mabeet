@@ -4,6 +4,8 @@ import {
   holdUntil,
   initialStatus,
   PAYMENT_WINDOW_MINUTES,
+  sessionDayHasCome,
+  sessionHoldUntil,
   statusWhenPaid,
 } from "../server/booking-policy";
 
@@ -45,5 +47,24 @@ describe("what is paid online", () => {
     expect(amountDueOnline("AUTOMATIC", 27_000)).toBe(27_000);
     expect(amountDueOnline("ONLINE_APPROVAL", 27_000)).toBe(27_000);
     expect(amountDueOnline("OFFLINE", 27_000)).toBeNull();
+  });
+});
+
+describe("seats in a session", () => {
+  const startsAt = new Date("2026-11-03T15:00:00.000Z");
+
+  it("wait as a stay does, but never past the moment the session starts", () => {
+    expect(sessionHoldUntil("AWAITING_PAYMENT", 24, startsAt, now)).toEqual(
+      new Date("2026-11-01T10:10:00.000Z"),
+    );
+    expect(sessionHoldUntil("HELD", 24, startsAt, now)).toEqual(new Date("2026-11-02T10:00:00.000Z"));
+    expect(sessionHoldUntil("HELD", 72, startsAt, now)).toEqual(startsAt);
+    expect(sessionHoldUntil("CONFIRMED", 72, startsAt, now)).toBeNull();
+  });
+
+  it("can no longer be cancelled from the session's day on", () => {
+    expect(sessionDayHasCome(startsAt, new Date("2026-11-02T23:59:00.000Z"))).toBe(false);
+    expect(sessionDayHasCome(startsAt, new Date("2026-11-03T00:00:00.000Z"))).toBe(true);
+    expect(sessionDayHasCome(startsAt, new Date("2026-11-04T09:00:00.000Z"))).toBe(true);
   });
 });

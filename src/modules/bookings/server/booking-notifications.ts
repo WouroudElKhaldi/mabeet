@@ -1,4 +1,4 @@
-import type { BookingStatus, FeedSource } from "@prisma/client";
+import type { BookingMode, BookingStatus, FeedSource } from "@prisma/client";
 import { isOnlineMode } from "@/config/enums";
 import { noticeAsPush, pushToPeople } from "@/modules/notifications/server";
 import { listPeopleWhoDecideBookings } from "@/modules/team/server";
@@ -9,13 +9,18 @@ import { type Message, render } from "@/server/email/templates";
 import { defineJob } from "@/server/jobs/queue";
 import { formatMoney, formatStayDates } from "@/utils/format";
 import { findBookingForNotice, findImportClashForNotice } from "./booking-repository";
+import { findSessionBookingForNotice } from "./session-booking-repository";
 
 // The booking engine's emails. Every notify* function puts a job on the "notify" queue and never throws: a mail
 // outage must not undo or slow down a booking, and the worker retries a failed delivery. Jobs carry only ids; the
 // worker loads the booking fresh and sends nothing when the news no longer holds. The guest gets the language they
-// booked in; each host gets their own account's language.
+// booked in; each host gets their own account's language. Seats in a session hear the same news as a stay, in the
+// words for seats.
 
 type Lang = NoticeLanguage;
+
+/** A stay, or seats in a session of an experience or service. Job data that names neither is a stay. */
+export type BookingKind = "stay" | "session";
 
 const LABELS = {
   en: {
@@ -25,6 +30,8 @@ const LABELS = {
     guests: "Guests",
     total: "Total",
     reference: "Reference",
+    offering: "Booked",
+    when: "When",
   },
   ar: {
     place: "المكان",
@@ -33,25 +40,83 @@ const LABELS = {
     guests: "الضيوف",
     total: "المجموع",
     reference: "رقم الحجز",
+    offering: "المحجوز",
+    when: "الموعد",
   },
 } as const;
 
+/** What a booking holds, as the emails name it: the guest's room, or their seats. */
+const HELD_WORDS = {
+  stay: {
+    en: { yours: "your room", the: "the room", is: "is", freed: "The nights are free again." },
+    ar: { yours: "غرفتك", the: "الغرفة", is: "", freed: "الليالي متاحة من جديد." },
+  },
+  session: {
+    en: { yours: "your seats", the: "the seats", is: "are", freed: "The seats are free again." },
+    ar: { yours: "مقاعدك", the: "المقاعد", is: "", freed: "المقاعد متاحة من جديد." },
+  },
+} as const;
+
+const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 type Letter = { subject: string; idempotencyKey: string; message: Message };
 
-/** A booking as the emails read it. */
-async function loadNotice(bookingId: string) {
+/** What a stay and seats in a session share, as their notice rows read. */
+interface NoticeRow {
+  id: string;
+  status: BookingStatus;
+  reference: string;
+  publicToken: string;
+  locale: string;
+  guestUserId: string;
+  guestName: string;
+  guestEmail: string | null;
+  guestNote: string | null;
+  bookingMode: BookingMode;
+  holdExpiresAt: Date | null;
+  cancelReason: string | null;
+  totalCents: number;
+  currency: string;
+  guestUser: { email: string; isDeleted: boolean };
+  business: { id: string; name: string; timezone: string; paymentInstructions: string | null };
+  payments: ReadonlyArray<{ id: string }>;
+}
+
+/** Times read in the place's own time zone, wherever the reader is. */
+const placeTime = (timeZone: string) => (date: Date, l: Lang) =>
+  new Intl.DateTimeFormat(l, { dateStyle: "medium", timeStyle: "short", timeZone }).format(date);
+
+/** A booking as the emails read it: a stay, or seats in a session. */
+async function loadNotice(bookingId: string, kind: BookingKind = "stay") {
+  if (kind === "session") {
+    const booking = await findSessionBookingForNotice(prisma, bookingId);
+    if (!booking) return null;
+    const when = (l: Lang) => placeTime(booking.business.timezone)(booking.session.startsAt, l);
+    return noticeOf(booking, kind, when, (l) => [
+      { label: LABELS[l].offering, value: booking.offering.title },
+      { label: LABELS[l].when, value: when(l) },
+      { label: LABELS[l].guests, value: String(booking.seats) },
+    ]);
+  }
   const booking = await findBookingForNotice(prisma, bookingId);
   if (!booking) return null;
   const when = (l: Lang) => formatStayDates(booking.checkIn, booking.checkOut, l);
-  // Deadlines read in the place's own time zone, wherever the reader is.
-  const time = (date: Date, l: Lang) =>
-    new Intl.DateTimeFormat(l, {
-      dateStyle: "medium",
-      timeStyle: "short",
-      timeZone: booking.business.timezone,
-    }).format(date);
+  return noticeOf(booking, kind, when, (l) => [
+    { label: LABELS[l].room, value: booking.room.name },
+    { label: LABELS[l].dates, value: when(l) },
+    { label: LABELS[l].guests, value: String(booking.guestCount) },
+  ]);
+}
+
+function noticeOf(
+  booking: NoticeRow,
+  kind: BookingKind,
+  when: (l: Lang) => string,
+  booked: (l: Lang) => Array<{ label: string; value: string }>,
+) {
   return {
     id: booking.id,
+    kind,
     status: booking.status,
     reference: booking.reference,
     publicToken: booking.publicToken,
@@ -68,14 +133,13 @@ async function loadNotice(bookingId: string) {
     paid: booking.payments.length > 0,
     holdExpiresAt: booking.holdExpiresAt,
     cancelReason: booking.cancelReason,
-    time,
+    time: placeTime(booking.business.timezone),
     total: (l: Lang) => formatMoney(booking.totalCents, booking.currency, l),
     when,
+    held: (l: Lang) => HELD_WORDS[kind][l],
     details: (l: Lang) => [
       { label: LABELS[l].place, value: booking.business.name },
-      { label: LABELS[l].room, value: booking.room.name },
-      { label: LABELS[l].dates, value: when(l) },
-      { label: LABELS[l].guests, value: String(booking.guestCount) },
+      ...booked(l),
       { label: LABELS[l].total, value: formatMoney(booking.totalCents, booking.currency, l) },
       { label: LABELS[l].reference, value: booking.reference },
     ],
@@ -125,28 +189,29 @@ async function tellGuest(notice: Notice, { subject, idempotencyKey, message }: L
  * A booking now waits for the owner: a new offline request, or (mode 2) a request the guest just paid for. The
  * guest gets a receipt, and the people who can decide get a nudge.
  */
-export function notifyBookingRequested(bookingId: string): void {
-  queueNotice(bookingRequested, { bookingId });
+export function notifyBookingRequested(bookingId: string, kind: BookingKind = "stay"): void {
+  queueNotice(bookingRequested, { bookingId, kind });
 }
 
 const bookingRequested = defineJob(
   "notify",
   "notify.booking-requested",
-  async ({ bookingId }: { bookingId: string }) => {
-    const notice = await loadNotice(bookingId);
+  async ({ bookingId, kind }: { bookingId: string; kind?: BookingKind }) => {
+    const notice = await loadNotice(bookingId, kind);
     // Decided, cancelled or expired before the worker got to it: the status email says so instead.
     if (notice?.status !== "HELD") return;
     const l = notice.locale;
     const until = notice.holdExpiresAt ? notice.time(notice.holdExpiresAt, l) : null;
     const total = notice.total(l);
+    const held = notice.held(l);
     const guestCopy =
       l === "ar"
         ? {
             subject: `طلبك لدى ${notice.businessName} (${notice.reference})`,
             kicker: "طلب حجز",
-            title: `غرفتك لدى ${notice.businessName} محجوزة لك`,
+            title: `${held.yours} لدى ${notice.businessName} محجوزة لك`,
             body: [
-              `مرحبًا ${firstName(notice.guestName)}، وصل طلبك إلى المضيف. لا يمكن لأحد آخر أخذ غرفتك ريثما يقرّر${until ? ` (حتى ${until})` : ""}.`,
+              `مرحبًا ${firstName(notice.guestName)}، وصل طلبك إلى المضيف. لا يمكن لأحد آخر أخذ ${held.yours} ريثما يقرّر${until ? ` (حتى ${until})` : ""}.`,
               notice.paid
                 ? `دفعت المبلغ كاملًا ${total}. إن رفض المضيف أو لم يردّ في الوقت المحدد، يُعاد إليك المبلغ كاملًا تلقائيًا.`
                 : `بعد أن يؤكّد المضيف، تدفع له المبلغ كاملًا ${total} مباشرةً. ${notice.paymentInstructions ?? "سيخبرك المضيف بطريقة الدفع."}`,
@@ -157,9 +222,9 @@ const bookingRequested = defineJob(
         : {
             subject: `Your request to ${notice.businessName} (${notice.reference})`,
             kicker: "Booking request",
-            title: `Your room at ${notice.businessName} is held`,
+            title: `${capitalized(held.yours)} at ${notice.businessName} ${held.is} held`,
             body: [
-              `Hi ${firstName(notice.guestName)}, the host has your request. Nobody else can take your room while they decide${until ? ` (until ${until})` : ""}.`,
+              `Hi ${firstName(notice.guestName)}, the host has your request. Nobody else can take ${held.yours} while they decide${until ? ` (until ${until})` : ""}.`,
               notice.paid
                 ? `You paid the full ${total}. If the host declines or doesn't answer in time, you get it all back automatically.`
                 : `Once the host confirms, you pay them the full ${total} directly. ${notice.paymentInstructions ?? "The host will tell you how to pay."}`,
@@ -182,6 +247,7 @@ const bookingRequested = defineJob(
       }),
       tellHosts(notice.businessId, (hl) => {
         const answerBy = notice.holdExpiresAt ? notice.time(notice.holdExpiresAt, hl) : null;
+        const hostHeld = notice.held(hl);
         return {
           subject:
             hl === "ar"
@@ -193,8 +259,8 @@ const bookingRequested = defineJob(
             title: hl === "ar" ? `${notice.guestName} يريد الحجز` : `${notice.guestName} wants to book`,
             body: [
               hl === "ar"
-                ? `الغرفة محجوزة للضيف إلى أن تؤكّد أو ترفض${answerBy ? `، حتى ${answerBy}` : ""}. إن لم تردّ، ينتهي الطلب وتعود الغرفة متاحة.`
-                : `The room is held for the guest until you confirm or decline${answerBy ? `, until ${answerBy}` : ""}. If you don't answer, the request ends and the room is free again.`,
+                ? `${hostHeld.the} محجوزة للضيف إلى أن تؤكّد أو ترفض${answerBy ? `، حتى ${answerBy}` : ""}. إن لم تردّ، ينتهي الطلب وتعود ${hostHeld.the} متاحة.`
+                : `${capitalized(hostHeld.the)} ${hostHeld.is} held for the guest until you confirm or decline${answerBy ? `, until ${answerBy}` : ""}. If you don't answer, the request ends and ${hostHeld.the} ${hostHeld.is} free again.`,
               notice.paid
                 ? hl === "ar"
                   ? `دفع الضيف المبلغ كاملًا ${notice.total(hl)} عبر الإنترنت. إن رفضت أو لم تردّ، يُعاد إليه كاملًا.`
@@ -224,6 +290,7 @@ type StatusCopy = { subject: string; title: string; body: string[] };
 
 function statusCopy(notice: Notice, l: Lang): StatusCopy | null {
   const total = notice.total(l);
+  const held = notice.held(l);
   const refund =
     l === "ar"
       ? `يُعاد إليك المبلغ الذي دفعته عبر الإنترنت (${total}) كاملًا وتلقائيًا.`
@@ -233,16 +300,16 @@ function statusCopy(notice: Notice, l: Lang): StatusCopy | null {
       return l === "ar"
         ? {
             subject: "ادفع لتثبيت حجزك",
-            title: "غرفتك محجوزة لك ريثما تدفع",
+            title: `${held.yours} محجوزة لك ريثما تدفع`,
             body: [
-              `ادفع المبلغ كاملًا ${total} عبر الإنترنت من صفحة حجزك، بـ Whish أو بالبطاقة${notice.holdExpiresAt ? `، قبل ${notice.time(notice.holdExpiresAt, l)}` : ""}. إن لم يصل الدفع في الوقت المحدد، تعود الغرفة متاحة.`,
+              `ادفع المبلغ كاملًا ${total} عبر الإنترنت من صفحة حجزك، بـ Whish أو بالبطاقة${notice.holdExpiresAt ? `، قبل ${notice.time(notice.holdExpiresAt, l)}` : ""}. إن لم يصل الدفع في الوقت المحدد، تعود ${held.the} متاحة.`,
             ],
           }
         : {
             subject: "Pay to secure your booking",
-            title: "Your room is held while you pay",
+            title: `${capitalized(held.yours)} ${held.is} held while you pay`,
             body: [
-              `Pay the full ${total} online from your booking page, with Whish or a card${notice.holdExpiresAt ? `, before ${notice.time(notice.holdExpiresAt, l)}` : ""}. If no payment arrives in time, the room is free again.`,
+              `Pay the full ${total} online from your booking page, with Whish or a card${notice.holdExpiresAt ? `, before ${notice.time(notice.holdExpiresAt, l)}` : ""}. If no payment arrives in time, ${held.the} ${held.is} free again.`,
             ],
           };
     case "CONFIRMED":
@@ -304,7 +371,7 @@ function statusCopy(notice: Notice, l: Lang): StatusCopy | null {
               subject: "انتهت مهلة الدفع",
               title: "انتهى الوقت المحدد للدفع",
               body: [
-                "لم يصل الدفع في الوقت المحدد، فعادت الغرفة متاحة ولم يُخصم منك أي مبلغ. يمكنك الحجز مجددًا.",
+                `لم يصل الدفع في الوقت المحدد، فعادت ${held.the} متاحة ولم يُخصم منك أي مبلغ. يمكنك الحجز مجددًا.`,
               ],
             }
           : {
@@ -321,7 +388,7 @@ function statusCopy(notice: Notice, l: Lang): StatusCopy | null {
             subject: "Payment time ran out",
             title: "The time to pay ran out",
             body: [
-              "No payment arrived in time, so the room is free again and you were not charged. You can book again.",
+              `No payment arrived in time, so ${held.the} ${held.is} free again and you were not charged. You can book again.`,
             ],
           }
         : {
@@ -339,8 +406,8 @@ function statusCopy(notice: Notice, l: Lang): StatusCopy | null {
 }
 
 /** Tells the guest their booking moved: waiting for payment, confirmed, declined, cancelled or expired. */
-export function notifyBookingStatus(bookingId: string): void {
-  queueNotice(bookingStatus, { bookingId });
+export function notifyBookingStatus(bookingId: string, kind: BookingKind = "stay"): void {
+  queueNotice(bookingStatus, { bookingId, kind });
 }
 
 const LIVE_STATUSES: readonly BookingStatus[] = ["AWAITING_PAYMENT", "CONFIRMED"];
@@ -348,8 +415,8 @@ const LIVE_STATUSES: readonly BookingStatus[] = ["AWAITING_PAYMENT", "CONFIRMED"
 const bookingStatus = defineJob(
   "notify",
   "notify.booking-status",
-  async ({ bookingId }: { bookingId: string }) => {
-    const notice = await loadNotice(bookingId);
+  async ({ bookingId, kind }: { bookingId: string; kind?: BookingKind }) => {
+    const notice = await loadNotice(bookingId, kind);
     if (!notice) return;
     const l = notice.locale;
     const copy = statusCopy(notice, l);
@@ -377,15 +444,15 @@ const bookingStatus = defineJob(
 // ---------- The guest cancelled ----------
 
 /** The guest cancelled from their booking page: the people who can decide bookings are told. */
-export function notifyGuestCancelled(bookingId: string): void {
-  queueNotice(guestCancelled, { bookingId });
+export function notifyGuestCancelled(bookingId: string, kind: BookingKind = "stay"): void {
+  queueNotice(guestCancelled, { bookingId, kind });
 }
 
 const guestCancelled = defineJob(
   "notify",
   "notify.guest-cancelled",
-  async ({ bookingId }: { bookingId: string }) => {
-    const notice = await loadNotice(bookingId);
+  async ({ bookingId, kind }: { bookingId: string; kind?: BookingKind }) => {
+    const notice = await loadNotice(bookingId, kind);
     if (notice?.status !== "CANCELLED") return;
     await tellHosts(notice.businessId, (l) => ({
       subject:
@@ -398,8 +465,8 @@ const guestCancelled = defineJob(
         title: l === "ar" ? `ألغى ${notice.guestName} الحجز` : `${notice.guestName} cancelled`,
         body: [
           l === "ar"
-            ? "ألغى الضيف من صفحة حجزه. الليالي متاحة من جديد."
-            : "The guest cancelled from their booking page. The nights are free again.",
+            ? `ألغى الضيف من صفحة حجزه. ${notice.held(l).freed}`
+            : `The guest cancelled from their booking page. ${notice.held(l).freed}`,
           ...(notice.paid
             ? [
                 l === "ar"
@@ -424,15 +491,15 @@ const guestCancelled = defineJob(
 // ---------- Paid online ----------
 
 /** Mode 1: the guest paid and the booking confirmed itself. Nobody has to answer, but the hosts should know. */
-export function notifyHostsNewBooking(bookingId: string): void {
-  queueNotice(hostsNewBooking, { bookingId });
+export function notifyHostsNewBooking(bookingId: string, kind: BookingKind = "stay"): void {
+  queueNotice(hostsNewBooking, { bookingId, kind });
 }
 
 const hostsNewBooking = defineJob(
   "notify",
   "notify.hosts-new-booking",
-  async ({ bookingId }: { bookingId: string }) => {
-    const notice = await loadNotice(bookingId);
+  async ({ bookingId, kind }: { bookingId: string; kind?: BookingKind }) => {
+    const notice = await loadNotice(bookingId, kind);
     if (notice?.status !== "CONFIRMED") return;
     await tellHosts(notice.businessId, (l) => ({
       subject:
@@ -459,15 +526,19 @@ const hostsNewBooking = defineJob(
 );
 
 /** A payment arrived after the booking had ended, or on a booking already paid: the guest gets it all back. */
-export function notifyLatePaymentRefunded(bookingId: string, paymentId: string): void {
-  queueNotice(latePaymentRefunded, { bookingId, paymentId });
+export function notifyLatePaymentRefunded(
+  bookingId: string,
+  paymentId: string,
+  kind: BookingKind = "stay",
+): void {
+  queueNotice(latePaymentRefunded, { bookingId, paymentId, kind });
 }
 
 const latePaymentRefunded = defineJob(
   "notify",
   "notify.late-payment-refunded",
-  async ({ bookingId, paymentId }: { bookingId: string; paymentId: string }) => {
-    const notice = await loadNotice(bookingId);
+  async ({ bookingId, paymentId, kind }: { bookingId: string; paymentId: string; kind?: BookingKind }) => {
+    const notice = await loadNotice(bookingId, kind);
     if (!notice) return;
     const l = notice.locale;
     await tellGuest(notice, {

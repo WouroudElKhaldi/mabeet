@@ -1,4 +1,5 @@
 import type {
+  ActivityLevel,
   BookingMode,
   BookingStatus,
   BookingUnit,
@@ -8,6 +9,8 @@ import type {
   HostContact,
   PayoutMethod,
   PhotoArea,
+  PriceUnit,
+  SkillLevel,
 } from "@prisma/client";
 
 // Value lists shared by validation, the AI tools and the screens. `satisfies` checks them against the
@@ -75,6 +78,21 @@ export const BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies read
 
 /** What a browse category is for: places, experiences or services. */
 export const LISTING_KINDS = ["HOME", "EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
+
+/** What a host sells by the session rather than by the night. */
+export const OFFERING_KINDS = ["EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
+export type OfferingKind = (typeof OFFERING_KINDS)[number];
+
+/** A session's price is for each guest, or once for the whole group. */
+export const PRICE_UNITS = ["PER_PERSON", "PER_GROUP"] as const satisfies readonly PriceUnit[];
+
+/** How hard an experience is, and how much the guest needs to know already. */
+export const ACTIVITY_LEVELS = [
+  "LIGHT",
+  "MODERATE",
+  "CHALLENGING",
+] as const satisfies readonly ActivityLevel[];
+export const SKILL_LEVELS = ["BEGINNER", "INTERMEDIATE", "ADVANCED"] as const satisfies readonly SkillLevel[];
 
 /** How guests may reach a host: WhatsApp and the Contact host page, or only one of them. */
 export const HOST_CONTACT_OPTIONS = ["BOTH", "WHATSAPP", "MESSAGE"] as const satisfies readonly HostContact[];

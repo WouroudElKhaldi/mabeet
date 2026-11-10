@@ -557,7 +557,7 @@
       "post": {
         "tags": ["Guests"],
         "summary": "Request seats in an experience or service session (rate limited)",
-        "description": "Signed-in user.",
+        "description": "Signed-in user. The seats are held at once, as a stay's nights are: waiting 10 minutes for the online payment, or (offline) for the host, never past the session's start. 409 when the seats were just taken; 404 for an unknown, paused or started session. Shares the stay requests' limit of 10 every 10 minutes.",
         "security": [
           {
             "session": []
@@ -748,7 +748,7 @@
       "post": {
         "tags": ["Guests"],
         "summary": "The signed-in guest cancels their own booking before check-in or the session (rate limited)",
-        "description": "Signed-in user, and only their own booking (someone else's is 404). Allowed while the booking waits for payment or for the host, or once confirmed, and before the check-in day (409 after). Anything paid online is refunded in full. A reason is optional.",
+        "description": "Signed-in user, and only their own booking (someone else's is 404): a stay, or seats in a session. Allowed while the booking waits for payment or for the host, or once confirmed, and before the check-in day or the session's day (409 after). Anything paid online is refunded in full. A reason is optional.",
         "security": [
           {
             "session": []
@@ -3794,11 +3794,106 @@
         }
       }
     },
+    "/api/workspaces/{businessId}/session-bookings": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "Seats booked in sessions",
+        "description": "Signed-in member of the workspace with bookings.read; non-members get 404. Seats in the business's sessions of experiences and services, by when the session starts. Guests' contacts are masked without guests.contact.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["HELD", "AWAITING_PAYMENT", "CONFIRMED", "DECLINED", "EXPIRED", "CANCELLED"]
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
     "/api/workspaces/{businessId}/session-bookings/{bookingId}/{action}": {
       "post": {
         "tags": ["Bookings"],
         "summary": "Confirm, decline or cancel a session booking",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace with bookings.decide; non-members get 404. The same answers as for a stay: confirm or decline seats waiting for the host (409 while they wait for the guest's online payment, or once the request ran out), or cancel them before the session's day. Declined or cancelled seats are refunded in full. Refused (409) once the session has started.",
         "security": [
           {
             "session": []
@@ -3898,7 +3993,7 @@
       "get": {
         "tags": ["Experiences"],
         "summary": "Experiences and services",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace with offerings.manage; non-members get 404. Each with its photos and upcoming sessions, newest first.",
         "security": [
           {
             "session": []
@@ -3963,7 +4058,7 @@
       "post": {
         "tags": ["Experiences"],
         "summary": "Create an experience or service",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace with offerings.manage; non-members get 404. Refused (403) past the plan's limit of experiences and services. A category must be one of the admin's categories for the same type. The region follows the town when none is picked.",
         "security": [
           {
             "session": []
@@ -4252,7 +4347,7 @@
       "patch": {
         "tags": ["Experiences"],
         "summary": "Update an experience or service",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace with offerings.manage; non-members get 404. Only the fields sent change; `active: false` takes it off the site without removing it.",
         "security": [
           {
             "session": []
@@ -4426,7 +4521,6 @@
                     ]
                   },
                   "included": {
-                    "default": [],
                     "maxItems": 12,
                     "type": "array",
                     "items": {
@@ -4436,7 +4530,6 @@
                     }
                   },
                   "notIncluded": {
-                    "default": [],
                     "maxItems": 12,
                     "type": "array",
                     "items": {
@@ -4446,7 +4539,6 @@
                     }
                   },
                   "accessibility": {
-                    "default": [],
                     "maxItems": 6,
                     "type": "array",
                     "items": {
@@ -4462,7 +4554,6 @@
                     }
                   },
                   "languages": {
-                    "default": [],
                     "maxItems": 3,
                     "type": "array",
                     "items": {
@@ -4471,7 +4562,6 @@
                     }
                   },
                   "tags": {
-                    "default": [],
                     "maxItems": 12,
                     "type": "array",
                     "items": {
@@ -4551,7 +4641,7 @@
       "post": {
         "tags": ["Experiences"],
         "summary": "Schedule sessions on dates at one local time",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace with offerings.manage; non-members get 404. One session on each date, all at `time` where the business is (its time zone), each lasting the offering's duration. Every session must start in the future. Returns the sessions made.",
         "security": [
           {
             "session": []
@@ -4659,7 +4749,7 @@
       "delete": {
         "tags": ["Experiences"],
         "summary": "Cancel a session with nobody booked",
-        "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
+        "description": "Signed-in member of the workspace with offerings.manage; non-members get 404. Refused (409) while guests hold seats in it (waiting for payment, for the host, or confirmed): decline or cancel their bookings first.",
         "security": [
           {
             "session": []
@@ -8264,7 +8354,7 @@
       "post": {
         "tags": ["Payments"],
         "summary": "The guest pays a booking that waits for payment, with Whish or a card; returns the payment page",
-        "description": "Signed-in user.",
+        "description": "Signed-in user, and only their own booking: a stay, or seats in a session, waiting for its online payment. Returns the Whish or Stripe page to send them to.",
         "security": [
           {
             "session": []
