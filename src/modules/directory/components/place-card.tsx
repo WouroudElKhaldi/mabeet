@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PlaceArt } from "@/components/brand/place-art";
 import type { Locale } from "@/config/appearance";
@@ -16,6 +17,7 @@ export async function PlaceCard({
   categoryLabel,
   query = "",
   index = 0,
+  action,
 }: {
   place: PlaceCardData;
   /** The place's first category, in the reader's language, shown on the photo. */
@@ -23,6 +25,8 @@ export async function PlaceCard({
   /** Carried into the place page, so the dates and guests searched are already picked there. */
   query?: string;
   index?: number;
+  /** A control in the photo's far corner, outside the link: the heart on a guest's saved places. */
+  action?: ReactNode;
 }) {
   const [t, locale] = await Promise.all([getTranslations("place"), getLocale()]);
   const money = (cents: number) => formatMoney(cents, place.currency, locale as Locale);
@@ -69,6 +73,8 @@ export async function PlaceCard({
           </p>
         </div>
       </Link>
+      {/* After the link, so it takes the tap in its own corner instead of opening the place. */}
+      {action ? <div className="absolute end-1 top-1">{action}</div> : null}
     </article>
   );
 }

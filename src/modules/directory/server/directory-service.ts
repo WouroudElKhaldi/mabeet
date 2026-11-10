@@ -16,14 +16,16 @@ import {
   priceStays,
 } from "@/modules/rooms/server";
 import { listNearbyPartners } from "@/modules/partners/server";
+import { findReviewedBookings, getPlaceRating, listPlaceReviews } from "@/modules/reviews/server";
 import {
   findBookablePlace,
   getHostSection,
   getPublicPlace,
   listListedPlaces,
+  listPlacesByIds,
 } from "@/modules/workspaces/server";
 import { notFound } from "@/server/errors";
-import { addDays, countNights, type DateRange, toIsoDate } from "@/utils/dates";
+import { addDays, countNights, type DateRange, toIsoDate, todayUtc } from "@/utils/dates";
 import { MIN_REQUESTS_FOR_RESPONSE, RESPONSE_WINDOW_DAYS } from "../host";
 import type { PlaceSearch } from "../search-query";
 import type {
@@ -31,6 +33,7 @@ import type {
   PlaceAvailability,
   PlaceCard,
   PublicHost,
+  PublicPhoto,
   PublicPlace,
   RoomAvailability,
   RoomQuote,
@@ -74,11 +77,13 @@ export async function getPlace(slug: string, now: Date = new Date()): Promise<Pu
   const place = await getPublicPlace(slug);
   if (!place) return null;
   const whole = place.bookingUnit === "WHOLE_PLACE";
-  const [units, placePhotos, rooms, host, nearby] = await Promise.all([
+  const [units, placePhotos, rooms, host, rating, reviews, nearby] = await Promise.all([
     listPublicUnits(place.id, BOOKABLE_ROOM_KIND[place.bookingUnit]),
     listPlacePhotos(place.id),
     whole ? listPublicUnits(place.id, "ROOM") : null,
     getPublicHost(place.id, now),
+    getPlaceRating(place.id),
+    listPlaceReviews(place.id),
     listNearbyPartners(place, now),
   ]);
   return {
@@ -94,7 +99,11 @@ export async function getPlace(slug: string, now: Date = new Date()): Promise<Pu
     bookingUnit: place.bookingUnit,
     bookingMode: place.bookingMode,
     whatsapp: place.whatsapp,
+    latitude: place.latitude,
+    longitude: place.longitude,
     host,
+    rating,
+    reviews,
     photos: placePhotos.length > 0 ? placePhotos : (rooms ?? units).flatMap((unit) => unit.photos),
     units,
     rooms: rooms ?? units,
@@ -138,8 +147,12 @@ export async function getRoomAvailability(
 }
 
 /** The signed-in guest's stays, newest first, as the trips list shows them. */
-export async function listMyTrips(guestUserId: string): Promise<GuestTrip[]> {
+export async function listMyTrips(guestUserId: string, now: Date = new Date()): Promise<GuestTrip[]> {
   const bookings = await listMyBookings(guestUserId);
+  const over = bookings.filter(
+    (booking) => booking.status === "CONFIRMED" && toIsoDate(booking.checkOut) <= toIsoDate(todayUtc(now)),
+  );
+  const reviewed = await findReviewedBookings(over.map((booking) => booking.id));
   return bookings.map((booking) => ({
     publicToken: booking.publicToken,
     reference: booking.reference,
@@ -152,6 +165,7 @@ export async function listMyTrips(guestUserId: string): Promise<GuestTrip[]> {
     currency: booking.currency,
     place: { name: booking.business.name, slug: booking.business.slug },
     roomName: booking.room.name,
+    canReview: over.includes(booking) && !reviewed.has(booking.id),
   }));
 }
 
@@ -170,6 +184,10 @@ async function freeRoomsAmong(roomIds: string[], range: DateRange, now: Date): P
 }
 
 const cheapest = (values: number[]) => Math.min(...values);
+
+/** A place as the card reads come back: search's and a guest's saved places give the same fields. */
+type PlaceRow = Awaited<ReturnType<typeof listPlacesByIds>>[number];
+type SearchUnit = Awaited<ReturnType<typeof findSearchUnits>>[number];
 
 /**
  * Listed places that have a unit fitting the search, cheapest night first within each place. Without dates every
@@ -207,9 +225,24 @@ export async function searchPlaces(search: PlaceSearch, now: Date = new Date()):
     prices = quotes;
   }
 
+  return buildCards(places, fitting, covers, prices, search.limit);
+}
+
+/**
+ * The cards for places whose units are already known: its cheapest unit sets the price, and its own first photo
+ * the picture, falling back to a unit's. A place with no unit left after the filters is not a result at all.
+ * `prices` is empty without dates, and then a card shows a night's price instead of a stay's.
+ */
+function buildCards(
+  places: ReadonlyArray<PlaceRow>,
+  units: ReadonlyArray<SearchUnit>,
+  covers: ReadonlyMap<string, PublicPhoto>,
+  prices: ReadonlyMap<string, { nights: { rateCents: number }[]; totalCents: number }>,
+  limit: number,
+): PlaceCard[] {
   const cards: PlaceCard[] = [];
   for (const place of places) {
-    const placeUnits = fitting.filter((unit) => unit.businessId === place.id);
+    const placeUnits = units.filter((unit) => unit.businessId === place.id);
     if (placeUnits.length === 0) continue;
     const offers: SearchOffer[] = placeUnits.map((unit) => {
       const quote = prices.get(unit.id);
@@ -238,9 +271,29 @@ export async function searchPlaces(search: PlaceSearch, now: Date = new Date()):
       stayTotalFromCents: totals.length > 0 ? cheapest(totals) : null,
       offers,
     });
-    if (cards.length === search.limit) break;
+    if (cards.length === limit) break;
   }
   return cards;
+}
+
+/**
+ * The cards of the places a guest saved, newest first, with a night's price and no stay in mind. A place saved
+ * before its owner paused it simply drops off the list.
+ */
+export async function listSavedPlaces(businessIds: readonly string[]): Promise<PlaceCard[]> {
+  if (businessIds.length === 0) return [];
+  const places = await listPlacesByIds(businessIds);
+  const [units, covers] = await Promise.all([
+    findSearchUnits(
+      places.map((place) => ({ businessId: place.id, kind: BOOKABLE_ROOM_KIND[place.bookingUnit] })),
+      // Saved places are shown as they are, for nobody in particular: every unit counts, at its own price.
+      { guests: 1 },
+    ),
+    findPlaceCovers(places.map((place) => place.id)),
+  ]);
+  const order = new Map(businessIds.map((id, position) => [id, position]));
+  const saved = [...places].sort((first, second) => (order.get(first.id) ?? 0) - (order.get(second.id) ?? 0));
+  return buildCards(saved, units, covers, new Map(), saved.length);
 }
 
 /**

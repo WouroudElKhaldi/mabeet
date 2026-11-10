@@ -81,7 +81,7 @@ climbing into another module, or the kernel importing a module fails `pnpm lint`
 | `partners`      | Featured partners (F23): partner places near guesthouses and their sponsorships; `listNearbyPartners` for the place page; screens `PartnerManager` and `NearbyPartners` |
 | `contact`       | Messages to the Mabeet team from the Contact page: the input check, the email job and the form                                                                          |
 
-`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping`, `contact` and `partners` exist today, and `rooms` has begun (the reads a booking needs). The others are
+`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping`, `contact`, `directory`, `reviews` and `partners` exist today, and `rooms` has begun (the reads a booking needs). The others are
 created by the first feature that needs them, in this shape.
 
 ## Where each kind of file goes

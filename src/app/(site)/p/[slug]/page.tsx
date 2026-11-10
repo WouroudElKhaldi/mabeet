@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { placeParams } from "@/modules/bookings";
 import { initialStay, PlaceView } from "@/modules/directory";
-import { loadPlace } from "@/modules/directory/server";
+import { isPlaceSaved, loadPlace } from "@/modules/directory/server";
+import { getCurrentUser } from "@/server/http/session";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -28,7 +29,15 @@ export async function generateMetadata({ params }: Pick<PageProps, "params">): P
  * link; whatever does not fit is dropped.
  */
 export default async function PlacePage({ params, searchParams }: PageProps) {
-  const place = await loadPlace(placeParams.parse(await params).slug);
+  const { slug } = placeParams.parse(await params);
+  const [place, user] = await Promise.all([loadPlace(slug), getCurrentUser()]);
   if (!place) notFound();
-  return <PlaceView place={place} initial={initialStay(await searchParams)} />;
+  return (
+    <PlaceView
+      place={place}
+      initial={initialStay(await searchParams)}
+      saved={user ? await isPlaceSaved(user.id, slug) : false}
+      signedIn={user !== null}
+    />
+  );
 }

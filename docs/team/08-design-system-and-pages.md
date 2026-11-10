@@ -531,9 +531,31 @@ Experiences and services have no tab yet: they come with their module (F8).
 `PhotoGallery` (one large and four small photos, the large one alone on a phone or with fewer than five photos, "Show all photos" in a dialog, a drawn
 postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the rooms of a place booked whole shown
 without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
-`ThingsToKnow`, `MeetHost` and `BookingBox`, and the partners part of "Near your stay" (`NearbyPartners` from the
-partners module, before `MeetHost` while the map is missing; shown without dates, as partners have no sessions).
-Not built yet: reviews, the map, the photo tour, share and favourite, and the experiences part of "Near your stay".
+`ThingsToKnow`, `MeetHost`, `PlaceMap`, `ReviewList`, `BookingBox`, and the partners part of "Near your stay"
+(`NearbyPartners` from the partners module, the `nearby` section after "Where you'll be" and before `MeetHost`;
+shown without dates, as partners have no sessions). Not built yet: the experiences part of "Near your stay".
+
+The title row carries `ShareButton` (`src/components/site/share-button.tsx`, shared with any page that wants it) and
+`FavoriteButton` on the end side. Share opens the phone's own share sheet where there is one, otherwise it copies
+the link and says "Copied"; both can be refused — the guest closes the sheet, the browser keeps the clipboard shut
+— and then it claims nothing. The heart fills the moment it is tapped and tells the server after (`useOptimistic`),
+because nobody should wait on a heart; if the server refuses, the page's own answer comes back. A visitor who is
+not signed in is sent to sign in and returns to the place they were looking at.
+
+`PlaceMap` (the `where` section, "Where you'll be", between the amenities and the host) is the area's name and a
+Google Maps embed centred on the place's coordinates, with no pin on a door: the coordinates are the host's own and
+are often no more than their town, so the page says the area is approximate and the exact address comes with the
+booking. The embed needs no key, and `frame-src` in `next.config.ts` already allows `maps.google.com` and nothing
+else. A place whose host gave no coordinates shows no section at all, not an empty map.
+
+`RatingLine` (from `reviews`) sits under the title's area line: the stars, the average to one decimal, and how
+many guests gave it. A place nobody has reviewed says "No reviews yet" there instead of showing five empty stars.
+The `reviews` section (between the amenities and "Where you'll be") is `ReviewList`: the four newest in two
+columns, each with its stars, the guest's name ("A guest" once they have closed their account), the month, the
+comment, and the host's reply indented under it when there is one; then "Show all N reviews" in a `ShowAllDialog`.
+
+The gallery's "Show all 11 photos" is a link to the photo tour (it was a dialog of the place's own photos; the tour
+shows the rooms' photos too, grouped, which is what the guest wanted).
 
 `MeetHost` (the `host` section, between the amenities and the things to know) is who hosts this place: the arch
 avatar with their first letter and their name (the place's name while their profile is hidden, so no line is empty),
@@ -557,6 +579,14 @@ On a phone a bar held at the bottom shows the "from" price and leads to the box 
 #### `/p/[slug]/photos` Photo tour (F2)
 
 Photos grouped by area and room, with a Back button to the place.
+
+**Built so far** (`src/app/(site)/p/[slug]/photos/`, with its `loading.tsx`): under the layout's own back link, the
+place's name and "Photo tour", then `PhotoTour` (`src/modules/directory/components/`). `groupPhotos`
+(`photo-groups.ts`, a pure function) puts the place's own photos first, under the part of the house they show, in
+the order of `PHOTO_AREAS`, with the ones the host never placed last under "Additional photos" (`OTHER`); then each
+room that has photos, under its name. A group is never empty and a photo is never in two groups, so the count in
+the gallery's link is exactly what the page holds. A place with no photos at all gets the drawn postcard and "No
+photos yet."
 
 #### `/p/[slug]/book` Book (F4)
 
@@ -738,8 +768,16 @@ All use `AuthPage` (a narrow centred card, `max-w-md`) with `AuthForm`:
 Tabs at the top (`AccountTabs`):
 
 - `/account`: your trips (upcoming and past), and a review form after check-out (one overall star rating and a
-  comment; no separate cleanliness, location or value ratings).
-- `/account/favorites`: a `PlaceGrid` of saved places.
+  comment; no separate cleanliness, location or value ratings). **Built**: a stay that is over, went ahead and has
+  no review yet carries a "Write a review" button under its card (outside the card's link, which goes to the
+  booking). It opens `ReviewForm` in a compact `SheetDialog`: five stars as real radio buttons (so a keyboard
+  moves between them and a screen reader reads "4 out of 5"; the drawn star is their label), the scale line, and
+  the comment. Once it is in, the button gives way to a thank-you rather than inviting a second one.
+- `/account/favorites`: a grid of saved places. **Built** (`src/app/(site)/account/favorites/`, with its
+  `loading.tsx`): the account's own header and tabs, then `ResultsGrid` of `PlaceCard`s, newest first, each with a
+  filled `FavoriteButton` in the photo's far corner (on its own light disc, or a pale photo swallows it) so one tap
+  takes a place off again. Prices are a night's, never a stay's: a place is saved for later, when the dates are not
+  decided. With nothing saved: "Nothing saved yet", the line about the heart, and a button to the search page.
 - `/account/activity`: what you did, newest first.
 - `/account/notifications`: notifications on this device (`PhoneAlerts`).
 - `/account/privacy`: download or delete your data (`PrivacyControls`).
@@ -756,7 +794,7 @@ cannot be (blocked in the browser, not supported, or on iPhone not yet on the Ho
 push keys it says updates still come by email. `/account/privacy` is
 `PrivacyControls`: "Download my data" (`GET /api/me/export`, a JSON file) and "Delete my account", behind a
 confirmation where the guest types their email (`POST /api/me/delete`), then signed out to the home page; an only owner
-of a place is told to add another owner first. Favourites, activity and the review form are not built yet.
+of a place is told to add another owner first. Activity is not built yet.
 
 ### 8.4 Host dashboard (`AppShell`, every page starts with `PageHeader`)
 

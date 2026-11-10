@@ -1,4 +1,5 @@
 import type { BookingMode, BookingStatus, BookingUnit, HostContact, PhotoArea } from "@prisma/client";
+import type { PlaceRating, PlaceReview } from "@/modules/reviews";
 import type { StayIssue } from "@/config/booking-limits";
 import type { NearbyPartner } from "@/modules/partners";
 
@@ -85,7 +86,13 @@ export interface PublicPlace {
   bookingMode: BookingMode;
   /** The place's own WhatsApp number, the only one guests are given; never the host's personal number. */
   whatsapp: string | null;
+  /** Where the map is centred, as the host gave it (often only their town), or null when they gave nothing. */
+  latitude: number | null;
+  longitude: number | null;
   host: PublicHost;
+  /** What guests who stayed said, newest first, and what their ratings add up to. */
+  rating: PlaceRating;
+  reviews: PlaceReview[];
   /** The photos of the place as a whole, first one largest. */
   photos: PublicPhoto[];
   /** What a guest can book: the rooms, or the one whole-place unit. */
@@ -110,6 +117,8 @@ export interface GuestTrip {
   currency: string;
   place: { name: string; slug: string };
   roomName: string;
+  /** Their stay is over and went ahead, and they have not reviewed it yet. */
+  canReview: boolean;
 }
 
 /** A unit a search found for the guest: free on their dates (when they gave dates) and fitting what they asked. */

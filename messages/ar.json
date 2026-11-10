@@ -202,6 +202,9 @@
       "pets": "الحيوانات الأليفة مرحّب بها",
       "generator": "كهرباء ٢٤/٧"
     },
+    "whereYoullBe": "أين ستقيم",
+    "mapOf": "خريطة المنطقة حول {place}",
+    "approximate": "المنطقة تقريبية، وليست العنوان بالضبط. يرسل لك المضيف العنوان الكامل مع حجزك.",
     "houseRules": "قواعد المكان",
     "cancellation": "الإلغاء",
     "reviews": "ماذا يقول الضيوف",
@@ -211,7 +214,6 @@
     "noRooms": "هذا المكان لا يستقبل حجوزات الآن.",
     "bedrooms": "{count, plural, zero {بلا غرف نوم} one {غرفة نوم واحدة} two {غرفتا نوم} few {# غرف نوم} many {# غرفة نوم} other {# غرفة نوم}}",
     "baths": "{count, plural, zero {بلا حمّام} one {حمّام واحد} two {حمّامان} few {# حمّامات} many {# حمّامًا} other {# حمّام}}",
-    "showAllPhotos": "عرض كل الصور",
     "whereYoullSleep": "أين ستنام",
     "wholePlaceIntro": "تحجز المكان كاملًا، لما يصل إلى {guests} ضيوف. هذه غرفه.",
     "wholeHomeIn": "منزل كامل في {area}",
@@ -221,6 +223,15 @@
     "guestsCount": "{count, plural, one {ضيف واحد} two {ضيفان} few {# ضيوف} many {# ضيفًا} other {# ضيف}}",
     "showAllReviews": "اعرض كل التقييمات ({count})",
     "showAllAmenities": "اعرض كل المرافق ({count})"
+  },
+  "reviews": {
+    "none": "لا توجد تقييمات بعد",
+    "count": "{count, plural, zero {لا تقييمات} one {تقييم واحد} two {تقييمان} few {# تقييمات} many {# تقييمًا} other {# تقييم}}",
+    "anonymous": "أحد الضيوف",
+    "hostReply": "ردّ المضيف",
+    "write": "اكتب تقييمًا",
+    "sending": "جارٍ النشر…",
+    "done": "شكرًا لك. تقييمك منشور الآن."
   },
   "booking": {
     "perNight": "لليلة",
@@ -2087,9 +2098,8 @@
   },
   "photoTour": {
     "title": "جولة بالصور",
-    "showAll": "عرض كل الصور",
+    "showAll": "عرض كل الصور ({count})",
     "none": "لا صور بعد.",
-    "photos": "{count, plural, zero {لا صور} one {صورة واحدة} two {صورتان} few {# صور} many {# صورة} other {# صورة}}",
     "areas": {
       "LIVING_ROOM": "غرفة الجلوس",
       "KITCHEN": "المطبخ",
@@ -2106,14 +2116,7 @@
   },
   "share": {
     "button": "مشاركة",
-    "title": "شارك هذا المكان",
-    "close": "إغلاق",
-    "copyLink": "انسخ الرابط",
-    "copied": "تم النسخ",
-    "email": "البريد",
-    "messages": "الرسائل",
-    "embed": "تضمين",
-    "more": "خيارات أخرى"
+    "copied": "تم النسخ"
   },
   "overviewAll": {
     "title": "كل أماكني",

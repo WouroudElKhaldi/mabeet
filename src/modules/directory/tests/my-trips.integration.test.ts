@@ -3,7 +3,9 @@ import * as myBookings from "@/app/api/me/bookings/route";
 import { addRoom, createPlace, stay } from "@tests/integration/helpers";
 import { call, signUp } from "@tests/integration/http";
 import { cancelStayAsGuest, requestBooking } from "@/modules/bookings/server";
-import { toIsoDate } from "@/utils/dates";
+import { writeReview } from "@/modules/reviews/server";
+import { prisma } from "@tests/integration/helpers";
+import { addDays, toIsoDate, todayUtc } from "@/utils/dates";
 import { listMyTrips } from "../server";
 
 // The guest's trips list on the real database: their own stays, newest first, and only what the list needs.
@@ -52,7 +54,46 @@ describe("a guest's trips", () => {
       currency: "USD",
       place: { name: first.place.business.name, slug: first.place.business.slug },
       roomName: first.unit.name,
+      // Still to come, and not confirmed: there is nothing to review yet.
+      canReview: false,
     });
+  });
+
+  it("offers the review form only on a stay that went ahead, is over, and has no review", async () => {
+    const guest = await signUp("Maya");
+    const upcoming = await book(guest, 10);
+    const over = await book(guest, 10);
+    const cancelled = await book(guest, 12);
+
+    // Put two of them in the past, and let one of those go ahead: only that one can be reviewed.
+    const ended = addDays(todayUtc(), -3);
+    for (const trip of [over, cancelled]) {
+      await prisma.booking.update({
+        where: { id: trip.booking.id },
+        data: { checkIn: addDays(ended, -2), checkOut: ended },
+      });
+    }
+    await prisma.booking.update({ where: { id: over.booking.id }, data: { status: "CONFIRMED" } });
+    await prisma.booking.update({ where: { id: cancelled.booking.id }, data: { status: "CANCELLED" } });
+
+    const canReview = async () =>
+      new Map((await listMyTrips(guest.userId)).map((trip) => [trip.publicToken, trip.canReview]));
+
+    expect(await canReview()).toEqual(
+      new Map([
+        [upcoming.booking.publicToken, false],
+        [over.booking.publicToken, true],
+        [cancelled.booking.publicToken, false],
+      ]),
+    );
+
+    await writeReview(guest.userId, over.booking.publicToken, {
+      rating: 5,
+      comment: "The bread at breakfast alone is worth the drive.",
+    });
+
+    // Written: the form has nothing left to offer on that stay.
+    expect((await canReview()).get(over.booking.publicToken)).toBe(false);
   });
 
   it("never lists someone else's stay", async () => {

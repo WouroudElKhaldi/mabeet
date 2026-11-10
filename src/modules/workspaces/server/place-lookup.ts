@@ -34,6 +34,18 @@ export function findPlacesForReports(businessIds: readonly string[]) {
 }
 
 /**
+ * The places a guest saved, by id, with their categories as slugs: the same card fields as search. Unlisted places
+ * are kept (their page still works and the guest chose them); paused and deleted ones are not.
+ */
+export async function listPlacesByIds(businessIds: readonly string[]) {
+  const places = await businesses.findBusinessesByIds(prisma, businessIds);
+  return places.map(({ categories, ...place }) => ({
+    ...place,
+    categories: categories.map((category) => category.categorySlug),
+  }));
+}
+
+/**
  * For search: the listed places matching `filters`, at most `take`, with their categories as slugs. A place the owner
  * has not listed keeps its page but is never found here.
  */
