@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LOCALES } from "@/config/appearance";
-import { formatDate, formatMoney } from "@/utils/format";
+import { formatDate, formatMoney, formatStayDates } from "@/utils/format";
 
 const arabicIndicDigits = /[٠-٩]/;
 
@@ -39,5 +39,15 @@ describe("formatDate", () => {
   it("names the month the way each language says it: Lebanese Arabic uses the Levantine names", () => {
     expect(formatDate("2026-11-14", "ar")).toContain("نوفمبر");
     expect(formatDate("2026-11-14", "ar-LB")).toContain("تشرين الثاني");
+  });
+});
+
+describe("formatStayDates", () => {
+  it("writes plain spaces only, as the browser does, so a page reads the same on the server and in the browser", () => {
+    for (const locale of LOCALES) {
+      const range = formatStayDates(new Date("2026-11-10"), new Date("2027-01-08"), locale);
+      expect(range).not.toMatch(new RegExp(`[${String.fromCodePoint(0x2009, 0x202f)}]`));
+    }
+    expect(formatStayDates(new Date("2026-11-10"), new Date("2026-11-16"), "en")).toBe("Nov 10 – 16");
   });
 });

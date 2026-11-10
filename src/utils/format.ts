@@ -30,6 +30,18 @@ export function formatMoney(
 }
 
 /**
+ * The same text on the server and in the browser. Their date libraries differ in one thing: the server's puts thin
+ * spaces around a range's dash ("10 – 16"), and narrow ones before "AM", where the browser's puts plain spaces. A page
+ * the server wrote and the browser then takes over must read the same in both, or React reports a mismatch. Those two
+ * are the thin space (U+2009) and the narrow no-break space (U+202F).
+ */
+const narrowSpaces = new RegExp(`[${String.fromCodePoint(0x2009, 0x202f)}]`, "g");
+
+function plainSpaces(text: string): string {
+  return text.replace(narrowSpaces, " ");
+}
+
+/**
  * A calendar date given as an ISO date ("2026-11-14"), shown as "Sat, Nov 14" by default. It is a day, not a moment,
  * so it is read in UTC: no time zone can move a night to the day before.
  */
@@ -38,16 +50,20 @@ export function formatDate(
   locale: Locale,
   options: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" },
 ): string {
-  return new Intl.DateTimeFormat(dateLocale(locale), { ...options, timeZone: "UTC" }).format(
-    parseIsoDate(isoDate),
+  return plainSpaces(
+    new Intl.DateTimeFormat(dateLocale(locale), { ...options, timeZone: "UTC" }).format(
+      parseIsoDate(isoDate),
+    ),
   );
 }
 
 /** A stay's check-in and check-out as one short range, "12 – 15 Nov", read in UTC like every night. */
 export function formatStayDates(checkIn: Date, checkOut: Date, locale: Locale): string {
-  return new Intl.DateTimeFormat(dateLocale(locale), {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).formatRange(checkIn, checkOut);
+  return plainSpaces(
+    new Intl.DateTimeFormat(dateLocale(locale), {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    }).formatRange(checkIn, checkOut),
+  );
 }

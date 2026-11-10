@@ -1291,6 +1291,47 @@
       "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first",
       "slug": "Slug"
     },
+    "partners": {
+      "title": "Partners",
+      "hint": "Restaurants, cafés, parks and other places near our guesthouses. Guests see the ones in their stay's region under \"Things to do near your stay\". Sponsored ones come first, always marked \"Sponsored\".",
+      "new": "New partner",
+      "add": "Add partner",
+      "save": "Save",
+      "name": "Name",
+      "kind": "Type",
+      "region": "Region",
+      "area": "Town or area",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "pinHint": "Optional. With the guesthouse's pin, guests see how far it is.",
+      "photoUrl": "Photo link",
+      "websiteUrl": "Website or social page",
+      "phone": "Phone",
+      "linkHint": "A full link starting with https://",
+      "remove": "Remove",
+      "removeTitle": "Remove «{name}»?",
+      "removeBody": "Guests stop seeing it. You can bring it back later, with its sponsored days.",
+      "restore": "Bring back",
+      "removedTitle": "Removed partners",
+      "sponsoredNow": "Sponsored now",
+      "empty": "No partners yet. Add the first one below.",
+      "sponsorships": "Sponsored days",
+      "sponsorshipsHint": "On these days it comes first near every stay in its region, marked \"Sponsored\".",
+      "noSponsorships": "Not sponsored.",
+      "firstDay": "First day",
+      "lastDay": "Last day",
+      "sponsor": "Sponsor",
+      "endSponsorship": "End sponsorship",
+      "endTitle": "End this sponsorship of «{name}»?",
+      "errors": {
+        "name": "Write a name of 2 to 80 letters.",
+        "pin": "Give both numbers of the map pin, or leave both empty.",
+        "link": "Use a full link that starts with https://",
+        "phone": "Write a phone number, like +961 70 123 456.",
+        "lastDay": "The last day must be on or after the first."
+      },
+      "socialHint": "A full link starting with https://, such as their Instagram page."
+    },
     "ai": {
       "title": "AI this month",
       "ofBudget": "{spent} of the {budget} monthly budget. Admins get an email at 80%; at 100% the assistants pause until the 1st.",
@@ -1349,6 +1390,7 @@
       "users": "Users",
       "money": "Money",
       "categories": "Categories",
+      "partners": "Partners",
       "appearance": "Appearance",
       "health": "Health",
       "groups": {
@@ -2396,6 +2438,27 @@
         "email": "Please enter a valid email address.",
         "message": "Please write at least a few words."
       }
+    }
+  },
+  "partners": {
+    "nearby": {
+      "title": "Things to do near your stay",
+      "intro": "Places to eat, shop and explore around this place.",
+      "sponsored": "Sponsored",
+      "distance": "{km} km away",
+      "website": "Website",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "kinds": {
+      "RESTAURANT": "Restaurant",
+      "CAFE": "Café",
+      "SUPERMARKET": "Supermarket",
+      "PARK": "Park",
+      "MUSEUM": "Museum",
+      "BEACH": "Beach",
+      "WINERY": "Winery",
+      "OTHER": "Other"
     }
   }
 }

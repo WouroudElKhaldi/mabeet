@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { ButtonLink } from "@/components/ui/button";
 import { Section } from "@/components/site/section";
 import type { Locale } from "@/config/appearance";
+import { NearbyPartners } from "@/modules/partners";
 import { formatMoney } from "@/utils/format";
 import { lowestRateCents } from "../summary";
 import type { PublicPlace } from "../types";
@@ -28,11 +29,12 @@ export async function PlaceView({
   initial?: { roomId?: string; checkIn?: string; checkOut?: string; guests?: number };
 }) {
   const [t, locale] = await Promise.all([getTranslations("placePage"), getLocale()]);
-  const [booking, known, card, host] = await Promise.all([
+  const [booking, known, card, host, nearby] = await Promise.all([
     getTranslations("booking"),
     getTranslations("thingsToKnow"),
     getTranslations("place"),
     getTranslations("meetHost"),
+    getTranslations("partners.nearby"),
   ]);
   const whole = place.bookingUnit === "WHOLE_PLACE";
   const fromRate = lowestRateCents(place.units);
@@ -62,6 +64,11 @@ export async function PlaceView({
           <Section id="amenities" title={t("amenities")}>
             <AmenityList units={allUnits} />
           </Section>
+          {place.nearby.length > 0 ? (
+            <Section id="nearby" title={nearby("title")} intro={nearby("intro")}>
+              <NearbyPartners partners={place.nearby} />
+            </Section>
+          ) : null}
           <Section id="host" title={host("title")}>
             <MeetHost place={place} />
           </Section>
