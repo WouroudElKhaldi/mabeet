@@ -1,3 +1,4 @@
+import type { ReviewStatus } from "@prisma/client";
 import type { Db } from "@/server/db/client";
 
 // The reviews table. Only this file reads or writes it.
@@ -50,4 +51,38 @@ export async function findReviewedBookingIds(db: Db, bookingIds: readonly string
     select: { bookingId: true },
   });
   return new Set(reviews.flatMap((review) => (review.bookingId ? [review.bookingId] : [])));
+}
+
+/** Every review of a place for its team, hidden ones included, newest first, with the stay it was about. */
+export function listBusinessReviews(db: Db, businessId: string) {
+  return db.review.findMany({
+    where: { businessId, isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      ownerReply: true,
+      status: true,
+      hiddenReason: true,
+      createdAt: true,
+      author: { select: { name: true, isDeleted: true } },
+      room: { select: { name: true } },
+      booking: { select: { reference: true } },
+    },
+  });
+}
+
+/** Changes what a place's team may change on one of its reviews; false when the review is not theirs. */
+export async function updateBusinessReview(
+  db: Db,
+  businessId: string,
+  reviewId: string,
+  data: { ownerReply?: string | null; status?: ReviewStatus; hiddenReason?: string | null },
+): Promise<boolean> {
+  const { count } = await db.review.updateMany({
+    where: { id: reviewId, businessId, isDeleted: false },
+    data,
+  });
+  return count === 1;
 }
