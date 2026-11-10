@@ -78,7 +78,7 @@ climbing into another module, or the kernel importing a module fails `pnpm lint`
 | `audit`         | The audit log and each person's timeline (`recordAction`, `recordPersonAndBusiness`)                                                                                    |
 | `housekeeping`  | The scheduled tidy-up: expiring holds and plan months                                                                                                                   |
 | `admin`         | The platform admin area                                                                                                                                                 |
-| `partners`      | Featured partners (F23): partner places near guesthouses and their sponsorships; `listNearbyPartners` for the place page                                                |
+| `partners`      | Featured partners (F23): partner places near guesthouses and their sponsorships; `listNearbyPartners` for the place page; screens `PartnerManager` and `NearbyPartners` |
 | `contact`       | Messages to the Mabeet team from the Contact page: the input check, the email job and the form                                                                          |
 
 `accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping`, `contact` and `partners` exist today, and `rooms` has begun (the reads a booking needs). The others are

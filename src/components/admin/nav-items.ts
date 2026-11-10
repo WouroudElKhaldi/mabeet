@@ -22,6 +22,7 @@ const ADMIN_PAGES = {
   users: { group: "platform", path: "users", icon: "people" },
   money: { group: "money", path: "money", icon: "money", tab: true },
   categories: { group: "content", path: "categories", icon: "categories" },
+  partners: { group: "content", path: "partners", icon: "partners" },
   appearance: { group: "content", path: "appearance", icon: "appearance" },
   health: { group: "operations", path: "health", icon: "health", tab: true },
   profile: { group: "account", path: "profile", icon: "profile" },

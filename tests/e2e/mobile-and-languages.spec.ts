@@ -58,6 +58,7 @@ const ADMIN_PAGES = [
   "/admin/users",
   "/admin/money",
   "/admin/categories",
+  "/admin/partners",
   "/admin/appearance",
   "/admin/health",
   "/admin/notifications",

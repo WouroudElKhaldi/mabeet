@@ -1185,6 +1185,16 @@ Bonus (F23), built on "N. Near your stay".
 - Guests: `getPlace` (directory) adds `nearby`, from `listNearbyPartners(place, now)`: the live partners of the
   place's region, sponsored ones first (marked `sponsored`, only on the days their sponsorship covers), then the
   nearest by map pin (`src/utils/geo.ts`), then by name, at most 12. A place with no region shows none.
+- Screens (`src/modules/partners/components/`): `/admin/partners` shows `PartnerManager`: each live partner is a
+  `DisclosurePanel` (its kind, or "Sponsored now", beside the name) holding `PartnerForm` (every field; the link can be
+  a website or a social page), `PartnerSponsorships` (first and last day; the form sends the day after the last) and
+  Remove; then "New partner"; then the removed ones with "Bring back". The page writes each sponsorship's dates as text
+  on the server, because the browser's date library spaces a range differently and React would see two texts. The
+  place page shows `NearbyPartners` under "Things to do near your stay" (between the amenities and Meet your host, as
+  the map is not built yet): cards in a `ScrollRail` with the photo (any https host, so not through the image
+  resizer), the kind, "Sponsored", the town and distance, the link (named Instagram, Facebook or TikTok for those
+  sites) and the phone. With no partners the section is not shown. The seed adds nine demo partners in the demo
+  places' regions, three sponsored for 60 days. Test: `tests/e2e/partners.spec.ts`.
 - Sponsoring an experience or service is built with experiences (F8): the table already takes it, and those
   offerings then join the same list.
 

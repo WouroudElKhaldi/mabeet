@@ -6,7 +6,8 @@
  * It makes the platform categories, four demo accounts (host, front-desk staff, guest, admin; password SEED_PASSWORD),
  * and five places that show every way to take bookings: online with the host's approval (the one shown on stage),
  * automatic, offline, and one booked as a whole. The offline place starts with a request waiting for the host and a
- * confirmed stay, so the bookings screen has something to show.
+ * confirmed stay, so the bookings screen has something to show. Nine partner places sit in the demo places' regions,
+ * three of them sponsored, for "Things to do near your stay".
  */
 import { config } from "dotenv";
 import type { AMENITIES } from "../src/config/amenities";
@@ -216,6 +217,107 @@ const PHOTO_AREAS = ["EXTERIOR", "BEDROOM", "VIEW", "LIVING_ROOM", "TERRACE"] as
 const stockPhotoUrl = (id: string) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1600&q=75`;
 
+interface DemoPartner {
+  name: string;
+  kind: "RESTAURANT" | "CAFE" | "SUPERMARKET" | "PARK" | "MUSEUM" | "BEACH" | "WINERY" | "OTHER";
+  region: "north" | "mount-lebanon" | "bekaa";
+  area: string;
+  latitude: number;
+  longitude: number;
+  /** An Unsplash photo id: a stock picture, not the real place. */
+  photo: string;
+  /** Sponsored for the next 60 days, to show the "Sponsored" mark. */
+  sponsored?: boolean;
+}
+
+/** Fictional partner places near the demo places (F23), in the same regions, so "Things to do near your stay" has something to show. */
+const PARTNERS: DemoPartner[] = [
+  {
+    name: "Old Souk Café (demo)",
+    kind: "CAFE",
+    region: "north",
+    area: "Batroun",
+    latitude: 34.2553,
+    longitude: 35.6581,
+    photo: "1495474472287-4d71bcdd2085",
+    sponsored: true,
+  },
+  {
+    name: "Harbour Fish Grill (demo)",
+    kind: "RESTAURANT",
+    region: "north",
+    area: "Batroun",
+    latitude: 34.2571,
+    longitude: 35.6565,
+    photo: "1517248135467-4c7edcad34c4",
+  },
+  {
+    name: "Sandy Cove Beach (demo)",
+    kind: "BEACH",
+    region: "north",
+    area: "Batroun",
+    latitude: 34.2489,
+    longitude: 35.6512,
+    photo: "1507525428034-b723cf961d3e",
+  },
+  {
+    name: "Cedar Forest Trail (demo)",
+    kind: "PARK",
+    region: "mount-lebanon",
+    area: "Chouf",
+    latitude: 33.6875,
+    longitude: 35.7089,
+    photo: "1441974231531-c6227db76b6e",
+    sponsored: true,
+  },
+  {
+    name: "Stone Bakery (demo)",
+    kind: "OTHER",
+    region: "mount-lebanon",
+    area: "Chouf",
+    latitude: 33.6971,
+    longitude: 35.5626,
+    photo: "1509440159596-0249088772ff",
+  },
+  {
+    name: "Village Grocer (demo)",
+    kind: "SUPERMARKET",
+    region: "mount-lebanon",
+    area: "Chouf",
+    latitude: 33.6993,
+    longitude: 35.5649,
+    photo: "1542838132-92c53300491e",
+  },
+  {
+    name: "Mountain Heritage Museum (demo)",
+    kind: "MUSEUM",
+    region: "mount-lebanon",
+    area: "Chouf",
+    latitude: 33.6942,
+    longitude: 35.5603,
+    photo: "1566127444979-b3d2b654e3d7",
+  },
+  {
+    name: "Valley Winery (demo)",
+    kind: "WINERY",
+    region: "bekaa",
+    area: "West Bekaa",
+    latitude: 33.5521,
+    longitude: 35.7465,
+    photo: "1510812431401-41d2bd2722f3",
+    sponsored: true,
+  },
+  {
+    name: "Lakeside Kitchen (demo)",
+    kind: "RESTAURANT",
+    region: "bekaa",
+    area: "West Bekaa",
+    latitude: 33.5488,
+    longitude: 35.7392,
+    photo: "1517248135467-4c7edcad34c4",
+  },
+];
+
 async function main() {
   config({ quiet: true });
   // Loaded after .env, because the server's settings are checked as soon as it is imported.
@@ -312,7 +414,7 @@ async function main() {
     ),
   );
 
-  await ensurePlatformAdmin({ name: "Demo Admin", email: "admin@mabeet.test", password });
+  const admin = await ensurePlatformAdmin({ name: "Demo Admin", email: "admin@mabeet.test", password });
   const host = await demoAccount("host@mabeet.test", "Demo Host");
   const staff = await demoAccount("staff@mabeet.test", "Demo Front Desk");
   const guest = await demoAccount("guest@mabeet.test", "Demo Guest");
@@ -362,8 +464,28 @@ async function main() {
     }
   }
 
+  // The demo partners, each made once. A sponsored one is sponsored from the day it is made, for 60 days, by the
+  // demo admin.
+  let partnersMade = 0;
+  for (const partner of PARTNERS) {
+    if (await prisma.partnerPlace.findFirst({ where: { name: partner.name } })) continue;
+    const { photo, sponsored, ...fields } = partner;
+    const today = todayUtc();
+    await prisma.partnerPlace.create({
+      data: {
+        ...fields,
+        photoUrl: stockPhotoUrl(photo),
+        phone: "+96170000000",
+        sponsorships: sponsored
+          ? { create: { startsOn: today, endsOn: addDays(today, 60), createdById: admin.userId } }
+          : undefined,
+      },
+    });
+    partnersMade++;
+  }
+
   console.log(
-    `Seeded ${CATEGORIES.length} categories and ${created.length} new demo places (${PLACES.length - created.length} were already there).`,
+    `Seeded ${CATEGORIES.length} categories and ${created.length} new demo places (${PLACES.length - created.length} were already there), and ${partnersMade} new demo partners.`,
   );
   console.log(
     "Sign in as host@, staff@, guest@ or admin@mabeet.test with the SEED_PASSWORD (demo-password-123 if empty).",

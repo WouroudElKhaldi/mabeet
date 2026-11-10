@@ -531,8 +531,9 @@ Experiences and services have no tab yet: they come with their module (F8).
 `PhotoGallery` (one large and four small photos, the large one alone on a phone or with fewer than five photos, "Show all photos" in a dialog, a drawn
 postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the rooms of a place booked whole shown
 without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
-`ThingsToKnow`, `MeetHost` and `BookingBox`. Not built yet: reviews, the map, the photo tour, share and
-favourite, and "Near your stay".
+`ThingsToKnow`, `MeetHost` and `BookingBox`, and the partners part of "Near your stay" (`NearbyPartners` from the
+partners module, before `MeetHost` while the map is missing; shown without dates, as partners have no sessions).
+Not built yet: reviews, the map, the photo tour, share and favourite, and the experiences part of "Near your stay".
 
 `MeetHost` (the `host` section, between the amenities and the things to know) is who hosts this place: the arch
 avatar with their first letter and their name (the place's name while their profile is hidden, so no line is empty),
