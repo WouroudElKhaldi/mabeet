@@ -1175,9 +1175,18 @@ Bonus (F23), built on "N. Near your stay".
 - **Sponsored listings:** an admin can sponsor a partner place, or an experience or service of the platform, for a
   set of dates (`partner-service.ts`; only platform admins). While sponsored, it comes first in "Near your stay" and
   always shows a "Sponsored" label. A guest never sees a sponsored item without that label.
-- Partners are soft-deleted like every business table, and every admin change is logged.
-- This needs tables that do not exist yet: the database keeper adds them first (`07`, "Waiting for the database
-  keeper").
+- Partners are soft-deleted like every business table (removed, then brought back with their sponsorships), and
+  every admin change is logged in the same transaction (`partner.created`, `.updated`, `.removed`, `.restored`,
+  `.sponsored`, `.sponsorship_ended`).
+- Module `partners` (`partner-service.ts`, `partner-repository.ts`); routes `/api/admin/partners` (list, add),
+  `/api/admin/partners/{partnerId}` (save every field, remove), `.../restore`, `.../sponsorships` (sponsor) and
+  `.../sponsorships/{sponsorshipId}` (end). Anyone but a platform admin gets 404, as everywhere in the admin area.
+- A partner's photo is a link (`https` only), never an upload: partners are not on the platform (`07`, section 5).
+- Guests: `getPlace` (directory) adds `nearby`, from `listNearbyPartners(place, now)`: the live partners of the
+  place's region, sponsored ones first (marked `sponsored`, only on the days their sponsorship covers), then the
+  nearest by map pin (`src/utils/geo.ts`), then by name, at most 12. A place with no region shows none.
+- Sponsoring an experience or service is built with experiences (F8): the table already takes it, and those
+  offerings then join the same list.
 
 ### H. Host profile (F7a)
 

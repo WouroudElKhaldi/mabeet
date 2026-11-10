@@ -256,6 +256,23 @@ One overall star rating and a comment. The owner can reply, and an admin can hid
 - It _may_ belong to a room, a booking, an offering, a session booking and an author (user).
 - One booking or one session booking has **one review at most**.
 
+### 28a. PartnerPlace
+
+A place near guesthouses that is **not on the platform**: a restaurant, a supermarket, a park, a museum. Guests
+staying in its region see it under "Things to do near your stay". It is never booked through us.
+
+- It belongs to **no business**: only platform admins add, change and remove it.
+- Its photo is a link to a picture elsewhere, never an upload.
+
+### 28b. Sponsorship
+
+"From this day to that day, this partner (or this experience) is sponsored." While it lasts, it comes first near
+guests' stays and is always marked "Sponsored".
+
+- It belongs to **one partner place** _or_ **one offering**, never both and never neither.
+- `endsOn` is the day after the last sponsored day, like a check-out.
+- It remembers the admin who made it.
+
 ---
 
 ## 🔧 System tables
