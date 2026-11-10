@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { bookingTokenParams } from "@/modules/bookings";
 import { getBookingForGuest, onlinePaymentMethods, refreshGuestPayments } from "@/modules/bookings/server";
 import { BookingView } from "@/modules/directory";
+import { listNearStay } from "@/modules/directory/server";
+import { pushPublicKey } from "@/modules/notifications/server";
 import { requirePageUser } from "@/server/http/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -29,5 +31,13 @@ export default async function BookingPage({ params }: { params: Promise<{ token:
     await refreshGuestPayments(token, user.id);
     booking = (await getBookingForGuest(token, user.id)) ?? booking;
   }
-  return <BookingView token={token} booking={booking} methods={onlinePaymentMethods(booking.currency)} />;
+  return (
+    <BookingView
+      token={token}
+      booking={booking}
+      methods={onlinePaymentMethods(booking.currency)}
+      nearby={await listNearStay(booking.business.slug)}
+      pushKey={pushPublicKey()}
+    />
+  );
 }

@@ -15,6 +15,7 @@ import {
   priceStay,
   priceStays,
 } from "@/modules/rooms/server";
+import type { NearbyPartner } from "@/modules/partners";
 import { listNearbyPartners } from "@/modules/partners/server";
 import { findReviewedBookings, getPlaceRating, listPlaceReviews } from "@/modules/reviews/server";
 import {
@@ -336,4 +337,13 @@ export async function checkPlaceAvailability(
       totalCents: prices.get(unit.id)?.totalCents ?? null,
     })),
   };
+}
+
+/**
+ * What is worth doing near a booked stay, for the guest's booking page: the same partners as the place's page. A
+ * place that has closed since, or has no region, shows none.
+ */
+export async function listNearStay(slug: string, now: Date = new Date()): Promise<NearbyPartner[]> {
+  const place = await getPublicPlace(slug);
+  return place ? listNearbyPartners(place, now) : [];
 }

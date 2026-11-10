@@ -650,8 +650,10 @@ time counting down, and offline how to pay the host (their instructions, or a fa
 (asks first; the wording promises a refund only for online payments; hidden from the check-in day on, as the engine
 refuses), and the boarding pass with a postmark once confirmed. The countdown starts from the seconds the server says
 are left, so a phone with the wrong clock is right. `BookingWatcher` asks the server again every 4 s while paying and
-every 15 or 30 s while the host decides, only while the tab is in view, and stops when nothing more can change. Not built
-yet: phone alerts (`PhoneAlerts`) and "Near your stay".
+every 15 or 30 s while the host decides, only while the tab is in view, and stops when nothing more can change. While
+the booking is alive, under "keep this link": `PhoneAlerts` with `forBooking` ("Follow this booking"; shown only when
+the server has push keys), then "Near your stay" (`NearbyPartners`, from `listNearStay`: the partners of the place's
+region, as on its page). Not built yet: the experiences part of "Near your stay".
 
 #### `/o/[slug]` Experience or service (F8, bonus)
 

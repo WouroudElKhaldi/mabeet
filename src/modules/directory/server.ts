@@ -11,6 +11,7 @@ export {
   getPlace,
   getRoomAvailability,
   listMyTrips,
+  listNearStay,
   quoteRoom,
   searchPlaces,
 } from "./server/directory-service";
