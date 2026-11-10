@@ -1,11 +1,12 @@
 import type { z } from "zod";
 import { recordPlatformAction } from "@/modules/audit/server";
+import { listPlacesByIds } from "@/modules/workspaces/server";
 import { type PlatformActor, requirePlatformAdmin } from "@/server/auth/tenant-context";
 import { type Db, prisma, runInTransaction } from "@/server/db/client";
 import { invalid, notFound } from "@/server/errors";
 import { parseIsoDate, todayUtc, toIsoDate } from "@/utils/dates";
 import { distanceKm, mapPin } from "@/utils/geo";
-import type { partnerInput, sponsorshipInput } from "../schemas";
+import type { featureInput, partnerInput, sponsorshipInput } from "../schemas";
 import * as partners from "./partner-repository";
 
 // Featured partners and sponsored listings (F23). Only platform admins add, change, remove and sponsor partners, and
@@ -75,7 +76,14 @@ export async function restorePartner(actor: PlatformActor, partnerId: string) {
   });
 }
 
-/** Sponsors a live partner for a set of days. Days that are all over already would sponsor nothing, so they are refused. */
+/** Days that are all over already would sponsor nothing, so they are refused. */
+function refusePastDays(input: z.infer<typeof sponsorshipInput>, now: Date) {
+  if (input.endsOn <= toIsoDate(todayUtc(now))) {
+    throw invalid("These days are already over. Pick days from today on.");
+  }
+}
+
+/** Sponsors a live partner for a set of days. */
 export async function sponsorPartner(
   actor: PlatformActor,
   partnerId: string,
@@ -83,9 +91,7 @@ export async function sponsorPartner(
   now = new Date(),
 ) {
   requirePlatformAdmin(actor);
-  if (input.endsOn <= toIsoDate(todayUtc(now))) {
-    throw invalid("These days are already over. Pick days from today on.");
-  }
+  refusePastDays(input, now);
   return runInTransaction(async (tx) => {
     if (!(await partners.findLivePartner(tx, partnerId))) throw notFound("Partner");
     const id = await partners.createSponsorship(tx, {
@@ -130,4 +136,75 @@ export async function listNearbyPartners(
         a.name.localeCompare(b.name),
     )
     .slice(0, NEARBY_LIMIT);
+}
+
+/**
+ * The guesthouses featured from today on, for the admin: each with its place's name, soonest first. A place that has
+ * closed since keeps its line, named by nobody, so the admin can still end it.
+ */
+export async function listFeaturedPlacesForAdmin(actor: PlatformActor, now = new Date()) {
+  requirePlatformAdmin(actor);
+  const rows = await partners.listPlaceSponsorships(prisma, todayUtc(now));
+  const places = new Map(
+    (await listPlacesByIds(rows.flatMap((row) => (row.businessId ? [row.businessId] : [])))).map((place) => [
+      place.id,
+      place,
+    ]),
+  );
+  return rows.map((row) => {
+    const place = row.businessId ? places.get(row.businessId) : undefined;
+    return {
+      id: row.id,
+      placeName: place?.name ?? null,
+      placeSlug: place?.slug ?? null,
+      startsOn: toIsoDate(row.startsOn),
+      endsOn: toIsoDate(row.endsOn),
+    };
+  });
+}
+
+/**
+ * Features a guesthouse for a set of days: it comes first in search and on the home page, marked "Featured". This is
+ * paid for outside the platform, like a sponsored partner. Only an open place can be featured.
+ */
+export async function featurePlace(
+  actor: PlatformActor,
+  input: z.infer<typeof featureInput>,
+  now = new Date(),
+) {
+  requirePlatformAdmin(actor);
+  refusePastDays(input, now);
+  if ((await listPlacesByIds([input.businessId])).length === 0) throw notFound("Place");
+  return runInTransaction(async (tx) => {
+    const id = await partners.createSponsorship(tx, {
+      businessId: input.businessId,
+      startsOn: parseIsoDate(input.startsOn),
+      endsOn: parseIsoDate(input.endsOn),
+      createdById: actor.userId,
+    });
+    await recordPlatformAction(
+      actor,
+      { businessId: input.businessId, action: "place.featured", entity: "sponsorship", entityId: id },
+      tx,
+    );
+    return { id };
+  });
+}
+
+/** Ends a guesthouse's featured days at once. */
+export async function endPlaceFeature(actor: PlatformActor, sponsorshipId: string) {
+  requirePlatformAdmin(actor);
+  await runInTransaction(async (tx) => {
+    if (!(await partners.removePlaceSponsorship(tx, sponsorshipId))) throw notFound("Featured days");
+    await recordPlatformAction(
+      actor,
+      { businessId: null, action: "place.feature_ended", entity: "sponsorship", entityId: sponsorshipId },
+      tx,
+    );
+  });
+}
+
+/** The guesthouses featured today, for search and the home page to put first. */
+export async function listFeaturedPlaceIds(now = new Date()): Promise<Set<string>> {
+  return new Set(await partners.findFeaturedBusinessIds(prisma, todayUtc(now)));
 }

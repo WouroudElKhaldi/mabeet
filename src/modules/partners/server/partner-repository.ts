@@ -1,8 +1,9 @@
 import type { Prisma } from "@prisma/client";
 import type { Db } from "@/server/db/client";
 
-// Featured partners (F23): places near guesthouses that are not on the platform, and the dates they are sponsored.
-// They belong to no business, so these queries filter by region or id, never by a business.
+// Featured partners (F23): places near guesthouses that are not on the platform, and the dates they are sponsored;
+// and the dates guesthouses on the platform are featured. Partners belong to no business, so their queries filter
+// by region or id; a featured guesthouse's sponsorship is found by its business.
 
 const PARTNER = {
   id: true,
@@ -85,4 +86,32 @@ export async function listPartnersInRegion(db: Db, region: string, today: Date) 
     select: { ...PARTNER, sponsorships: { where: sponsoredOn(today), select: { id: true }, take: 1 } },
   });
   return partners.map(({ sponsorships, ...partner }) => ({ ...partner, sponsored: sponsorships.length > 0 }));
+}
+
+/** The days guesthouses are featured that are not over yet, soonest first. */
+export function listPlaceSponsorships(db: Db, today: Date) {
+  return db.sponsorship.findMany({
+    where: { businessId: { not: null }, isDeleted: false, endsOn: { gt: today } },
+    orderBy: { startsOn: "asc" },
+    select: { id: true, businessId: true, startsOn: true, endsOn: true },
+  });
+}
+
+/** Ends a guesthouse's featured days. False when there is no such live one. */
+export async function removePlaceSponsorship(db: Db, sponsorshipId: string) {
+  const { count } = await db.sponsorship.updateMany({
+    where: { id: sponsorshipId, businessId: { not: null }, isDeleted: false },
+    data: { isDeleted: true },
+  });
+  return count > 0;
+}
+
+/** The guesthouses featured on `today`. */
+export async function findFeaturedBusinessIds(db: Db, today: Date): Promise<string[]> {
+  const rows = await db.sponsorship.findMany({
+    where: { ...sponsoredOn(today), businessId: { not: null } },
+    select: { businessId: true },
+    distinct: ["businessId"],
+  });
+  return rows.flatMap((row) => (row.businessId ? [row.businessId] : []));
 }

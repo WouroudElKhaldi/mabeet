@@ -322,6 +322,8 @@ model Business {
   rateOverrides   RateOverride[]
   invitations     Invitation[]
   auditLogs       AuditLog[]
+  /// The dates the platform features this place in search and on the home page (F23).
+  sponsorships    Sponsorship[]
 
   @@index([region])
   @@index([tags], type: Gin)
@@ -1324,15 +1326,18 @@ model PartnerPlace {
   @@index([region])
 }
 
-/// The dates during which a partner place, or an experience or service of the platform, is sponsored: it comes
-/// first near guests' stays and is always marked "Sponsored". Exactly one of the two is set (a CHECK in the
-/// migration). The last day is endsOn - 1, like a check-out.
+/// The dates during which a partner place, an experience or service of the platform, or a guesthouse is sponsored.
+/// A partner or an experience comes first near guests' stays, marked "Sponsored"; a guesthouse comes first in search
+/// and on the home page, marked "Featured". Exactly one of the three is set (a CHECK in the migration). The last day
+/// is endsOn - 1, like a check-out.
 model Sponsorship {
   id             String        @id @default(cuid())
   partnerPlaceId String?
   partnerPlace   PartnerPlace? @relation(fields: [partnerPlaceId], references: [id], onDelete: Restrict)
   offeringId     String?
   offering       Offering?     @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  businessId     String?
+  business       Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
   startsOn       DateTime      @db.Date
   endsOn         DateTime      @db.Date
   createdById    String
@@ -1343,4 +1348,5 @@ model Sponsorship {
   @@index([startsOn, endsOn])
   @@index([partnerPlaceId])
   @@index([offeringId])
+  @@index([businessId])
 }

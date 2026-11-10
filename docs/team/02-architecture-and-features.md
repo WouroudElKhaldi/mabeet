@@ -1250,6 +1250,16 @@ Bonus (F23), built on "N. Near your stay".
   places' regions, three sponsored for 60 days. Test: `tests/e2e/partners.spec.ts`.
 - Sponsoring an experience or service is built with experiences (F8): the table already takes it, and those
   offerings then join the same list.
+- **Featured guesthouses:** `featurePlace(actor, { businessId, startsOn, endsOn })`, `endPlaceFeature(actor,
+sponsorshipId)` and `listFeaturedPlacesForAdmin(actor)` (`partner-service.ts`; only platform admins, an open place
+  only, days already over refused; logged as `place.featured` in the place's own log and `place.feature_ended`).
+  Routes `/api/admin/featured-places` (list, feature) and `/api/admin/featured-places/{sponsorshipId}` (end).
+  `searchPlaces` (directory) asks `listFeaturedPlaceIds(now)` and reads the featured places that match the search on
+  their own (`PlaceFilters.ids`), so one is never left out of a page because others came first in the database; they
+  come first, and each card carries `featured`, which `PlaceCard` shows as a "Featured" label on the photo. The home
+  page and the guest MCP use the same search, so they agree. The admin features a place in the "Featured
+  guesthouses" panel at the top of `/admin/partners` (`FeaturedPlaces`: the place, first and last day, and End on
+  each). Test: `featured-places.integration.test.ts` (partners).
 
 ### H. Host profile (F7a)
 

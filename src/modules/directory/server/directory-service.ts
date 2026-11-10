@@ -15,7 +15,7 @@ import {
   priceStay,
   priceStays,
 } from "@/modules/rooms/server";
-import { listNearbyPartners } from "@/modules/partners/server";
+import { listFeaturedPlaceIds, listNearbyPartners } from "@/modules/partners/server";
 import { findReviewedBookings, getPlaceRating, listPlaceReviews } from "@/modules/reviews/server";
 import {
   findBookablePlace,
@@ -197,7 +197,7 @@ type SearchUnit = Awaited<ReturnType<typeof findSearchUnits>>[number];
  * The website, the guest's AI and the guest MCP all call this, so they always agree.
  */
 export async function searchPlaces(search: PlaceSearch, now: Date = new Date()): Promise<PlaceCard[]> {
-  const places = await listListedPlaces(search, search.limit * PLACES_READ_PER_RESULT);
+  const places = await featuredFirst(search, now);
   const [units, covers] = await Promise.all([
     findSearchUnits(
       places.map((place) => ({ businessId: place.id, kind: BOOKABLE_ROOM_KIND[place.bookingUnit] })),
@@ -229,12 +229,29 @@ export async function searchPlaces(search: PlaceSearch, now: Date = new Date()):
 }
 
 /**
+ * The places a search reads, the featured ones first. Those that match are read on their own, so a featured place is
+ * never left out of a page because others came before it in the database. Each comes back with `featured`, so its
+ * card is always marked: a paid place first is never a hidden ad.
+ */
+async function featuredFirst(search: PlaceSearch, now: Date) {
+  const featuredIds = await listFeaturedPlaceIds(now);
+  const [featured, others] = await Promise.all([
+    featuredIds.size > 0 ? listListedPlaces({ ...search, ids: [...featuredIds] }, featuredIds.size) : [],
+    listListedPlaces(search, search.limit * PLACES_READ_PER_RESULT),
+  ]);
+  return [
+    ...featured.map((place) => ({ ...place, featured: true })),
+    ...others.filter((place) => !featuredIds.has(place.id)).map((place) => ({ ...place, featured: false })),
+  ];
+}
+
+/**
  * The cards for places whose units are already known: its cheapest unit sets the price, and its own first photo
  * the picture, falling back to a unit's. A place with no unit left after the filters is not a result at all.
  * `prices` is empty without dates, and then a card shows a night's price instead of a stay's.
  */
 function buildCards(
-  places: ReadonlyArray<PlaceRow>,
+  places: ReadonlyArray<PlaceRow & { featured?: boolean }>,
   units: ReadonlyArray<SearchUnit>,
   covers: ReadonlyMap<string, PublicPhoto>,
   prices: ReadonlyMap<string, { nights: { rateCents: number }[]; totalCents: number }>,
@@ -270,6 +287,7 @@ function buildCards(
       nightlyFromCents: cheapest(offers.map((offer) => offer.nightlyFromCents)),
       stayTotalFromCents: totals.length > 0 ? cheapest(totals) : null,
       offers,
+      featured: place.featured ?? false,
     });
     if (cards.length === limit) break;
   }

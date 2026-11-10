@@ -181,7 +181,9 @@ submission (Friday 13 November).
 - **F23. Featured partners and sponsored listings (bonus).** Admins add partner places that are not on the platform
   (restaurants, supermarkets, parks, museums and the like) with their region and map pin, and can sponsor a partner
   or an experience or service of the platform for a set of dates. Guests see them in "Things to do near your stay"
-  (F22): sponsored ones first, always marked "Sponsored". Every change is logged.
+  (F22): sponsored ones first, always marked "Sponsored". Admins can also feature a guesthouse on the platform for a
+  set of dates (approved by Sami on 10 November): it comes first in search and on the home page, always marked
+  "Featured". Every change is logged.
 - **F16a. Run the money.** What the platform earned from plans (all time, this month, by month, card or Whish),
   what it holds for each host, payout requests to send and mark as sent, and refunds that failed and must be sent by
   hand. Plans are paid instantly, so there are no plan payments to approve.

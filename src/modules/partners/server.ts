@@ -2,7 +2,11 @@
 // private to the module.
 export {
   createPartner,
+  endPlaceFeature,
   endSponsorship,
+  featurePlace,
+  listFeaturedPlaceIds,
+  listFeaturedPlacesForAdmin,
   listNearbyPartners,
   listPartnersForAdmin,
   removePartner,

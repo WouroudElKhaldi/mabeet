@@ -101,7 +101,8 @@
     },
     "saved": "Saved.",
     "unitTitle": "The whole place",
-    "unitIntro": "Its price per night, how many guests, beds and minimum stay, as guests book it."
+    "unitIntro": "Its price per night, how many guests, beds and minimum stay, as guests book it.",
+    "featured": "Featured"
   },
   "home": {
     "eyebrow": "No platform fees. Ever.",
@@ -1338,7 +1339,16 @@
         "phone": "Write a phone number, like +961 70 123 456.",
         "lastDay": "The last day must be on or after the first."
       },
-      "socialHint": "A full link starting with https://, such as their Instagram page."
+      "socialHint": "A full link starting with https://, such as their Instagram page.",
+      "featuredTitle": "Featured guesthouses",
+      "featuredHint": "A featured guesthouse comes first in search and on the home page, marked \"Featured\", on the days you pick. It is paid for outside Mabeet, like a sponsored partner.",
+      "featuredPlace": "Guesthouse",
+      "pickPlace": "Pick a guesthouse",
+      "feature": "Feature",
+      "noFeatured": "No guesthouse is featured from today on.",
+      "endFeature": "End",
+      "endFeatureTitle": "Stop featuring {name}?",
+      "closedPlace": "A place that has closed"
     },
     "ai": {
       "title": "AI this month",

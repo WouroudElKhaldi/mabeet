@@ -52,6 +52,11 @@ export async function PlaceCard({
               {categoryLabel}
             </span>
           ) : null}
+          {place.featured ? (
+            <span className="absolute start-2.5 bottom-2.5 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-ink ring-1 ring-accent-line">
+              {t("featured")}
+            </span>
+          ) : null}
         </div>
         <div className="mt-2.5 grid text-sm leading-snug">
           <h3 className="truncate font-semibold tracking-normal">{place.name}</h3>
