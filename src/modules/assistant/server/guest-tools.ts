@@ -3,6 +3,15 @@ import { z } from "zod";
 import { AMENITIES } from "@/config/amenities";
 import { ACCESSIBILITY, TAGS } from "@/config/listing";
 import { REGION_KEYS } from "@/config/regions";
+import {
+  acceptsMessages,
+  hostDisplayName,
+  offersWhatsapp,
+  type PublicPlace,
+  type ResponseSpeed,
+  responseSpeed,
+  yearsHosting,
+} from "@/modules/directory";
 import { checkPlaceAvailability, getPlace, searchPlaces } from "@/modules/directory/server";
 import { env } from "@/server/env";
 import { notFound } from "@/server/errors";
@@ -14,7 +23,11 @@ import { defineTool } from "./tool";
 // through the link each answer gives.
 
 const isoDate = z.iso.date().describe("YYYY-MM-DD");
-const MAX_RESULTS = 5;
+/**
+ * Enough for a whole region at once. One more is read to say whether others match, so the guest's AI narrows the
+ * search instead of calling it over and over to guess the rest.
+ */
+const MAX_RESULTS = 20;
 
 const slug = z.string().min(1).max(80).describe("The place's slug, from search_places");
 const atLeast = (what: string) =>
@@ -46,11 +59,42 @@ function howToBook(mode: BookingMode, holdHours: number): string {
 
 const REFUNDS = "A booking paid online and then cancelled is always refunded in full.";
 
+/** How quickly the host usually answers, in the words the place's page uses. */
+const ANSWERS_WITHIN: Record<ResponseSpeed, string> = {
+  withinHour: "within an hour",
+  withinDay: "within a day",
+  withinDays: "within a few days",
+};
+
+/**
+ * The host as the place's Meet your host section shows them: their own details only when they turned their profile
+ * on, and only the ways to reach them they offer. The WhatsApp number is the place's, never the host's own.
+ */
+function publicHost(place: PublicPlace) {
+  const { profile, response, contactBy } = place.host;
+  return {
+    name: hostDisplayName(place),
+    about: profile?.bio ?? null,
+    city: profile?.city ?? null,
+    languages: profile?.languages ?? [],
+    yearsHosting: yearsHosting(profile?.hostingSince ?? null),
+    responseRate: response === null ? null : `${Math.round(response.rate * 100)}%`,
+    usuallyAnswers:
+      response === null || response.medianMinutes === null
+        ? null
+        : ANSWERS_WITHIN[responseSpeed(response.medianMinutes)],
+    whatsapp: offersWhatsapp(contactBy) ? place.whatsapp : null,
+    contactPage: acceptsMessages(contactBy, place.whatsapp)
+      ? new URL(`/p/${place.slug}/contact`, env.BETTER_AUTH_URL).toString()
+      : null,
+  };
+}
+
 export const GUEST_TOOLS = [
   defineTool({
     name: "search_places",
     description:
-      "Find guesthouses and homes in Lebanon. With dates, only places with a room free on every night are returned, priced for the stay. Turn every part of the guest's wish into a filter: area (a town, or a region such as North Lebanon), categories (mountain, beach, countryside, old-town, guesthouse, cabin, vineyard, ski), bedrooms, bathrooms and beds, amenities (jacuzzi, pool, fireplace…), tags, accessibility and a budget per night. Use free words only for what no filter covers. Each result lists its matching rooms with their layout and amenities. An empty list means nothing matches: say so rather than suggest something else.",
+      "Find guesthouses and homes in Lebanon. With dates, only places with a room free on every night are returned, priced for the stay. Turn every part of the guest's wish into a filter: area (a town, or a region such as North Lebanon), categories (mountain, beach, countryside, old-town, guesthouse, cabin, vineyard, ski), bedrooms, bathrooms and beds, amenities (jacuzzi, pool, fireplace…), tags, accessibility and a budget per night. Use free words only for what no filter covers. Each result lists its matching rooms with their layout and amenities. Returns up to 20 places; when moreMatch is true, more places match than were returned, so narrow the search (area, dates, budget) to see the others. An empty list means nothing matches: say so rather than suggest something else.",
     input: z.object({
       checkIn: isoDate.optional(),
       checkOut: isoDate.optional().describe("The morning the guest leaves"),
@@ -96,9 +140,9 @@ export const GUEST_TOOLS = [
         minBathrooms: input.minBathrooms,
         minBeds: input.minBeds,
         range,
-        limit: MAX_RESULTS,
+        limit: MAX_RESULTS + 1,
       });
-      return places.map((place) => ({
+      const cards = places.slice(0, MAX_RESULTS).map((place) => ({
         slug: place.slug,
         name: place.name,
         area: place.area,
@@ -119,6 +163,7 @@ export const GUEST_TOOLS = [
           stayTotalCents: offer.stayTotalCents,
         })),
       }));
+      return { places: cards, moreMatch: places.length > MAX_RESULTS };
     },
   }),
   defineTool({
@@ -151,7 +196,7 @@ export const GUEST_TOOLS = [
   defineTool({
     name: "get_place",
     description:
-      "The public page of one place: its description, town, rooms with their layout, price and amenities, check-in and check-out times, house rules, whether it is booked room by room or as a whole, and how booking and paying work.",
+      "The public page of one place: its description, town, rooms with their layout, price and amenities, check-in and check-out times, house rules, whether it is booked room by room or as a whole, how booking and paying work, and its host: who they are, how quickly they answer, and how to reach them (the place's WhatsApp and its Contact host page, as the host chose).",
     input: z.object({ slug }),
     mutates: false,
     run: async ({ slug: placeSlug }) => {
@@ -181,6 +226,7 @@ export const GUEST_TOOLS = [
           amenities: unit.amenities,
         })),
         roomsInside: whole ? place.rooms.map((room) => ({ name: room.name, beds: room.beds })) : [],
+        host: publicHost(place),
         bookingLink: bookingLink(place.slug),
       };
     },

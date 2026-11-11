@@ -38,9 +38,8 @@ async function callTool(name: string, args: object, address = "203.0.113.7") {
   };
 }
 
-async function listedPlace() {
-  const word = randomUUID().slice(0, 8);
-  const place = await createPlace(`Beit ${word}`);
+async function listedPlace(word = randomUUID().slice(0, 8)) {
+  const place = await createPlace(`Beit ${word} ${randomUUID().slice(0, 4)}`);
   await prisma.business.update({
     where: { id: place.business.id },
     data: {
@@ -72,19 +71,34 @@ describe("the guest MCP", () => {
       guests: 2,
     });
     expect(found.isError).toBe(false);
-    expect(found.payload).toEqual([
-      expect.objectContaining({
-        slug: business.slug,
-        area: "Ehden",
-        stayTotalFrom: "$240.00",
-        bookingLink: expect.stringContaining(
-          `/p/${business.slug}?checkIn=${checkIn}&checkOut=${checkOut}&guests=2`,
-        ),
-        rooms: [expect.objectContaining({ sleeps: 2 })],
-      }),
-    ]);
+    expect(found.payload).toEqual({
+      moreMatch: false,
+      places: [
+        expect.objectContaining({
+          slug: business.slug,
+          area: "Ehden",
+          stayTotalFrom: "$240.00",
+          bookingLink: expect.stringContaining(
+            `/p/${business.slug}?checkIn=${checkIn}&checkOut=${checkOut}&guests=2`,
+          ),
+          rooms: [expect.objectContaining({ sleeps: 2 })],
+        }),
+      ],
+    });
 
-    expect((await callTool("search_places", { text: word, guests: 3 })).payload).toEqual([]);
+    expect((await callTool("search_places", { text: word, guests: 3 })).payload).toEqual({
+      moreMatch: false,
+      places: [],
+    });
+  });
+
+  it("gives up to 20 places at once, and says when more match", async () => {
+    const word = randomUUID().slice(0, 8);
+    for (let made = 0; made < 21; made++) await listedPlace(word);
+
+    const found = await callTool("search_places", { text: word });
+    expect(found.payload).toMatchObject({ moreMatch: true });
+    expect((found.payload as { places: unknown[] }).places).toHaveLength(20);
   });
 
   it("checks one place's dates: free or taken, priced, and why a stay does not fit", async () => {
@@ -117,14 +131,42 @@ describe("the guest MCP", () => {
     expect(backwards.isError).toBe(true);
   });
 
-  it("reads a place's public page, and nothing only its host may see", async () => {
-    const { business, room } = await listedPlace();
+  it("reads a place's public page with its host, and nothing only its host may see", async () => {
+    const { business, owner, room } = await listedPlace();
+    await prisma.business.update({ where: { id: business.id }, data: { whatsapp: "+96170123456" } });
+    await prisma.hostProfile.create({
+      data: {
+        userId: owner.id,
+        displayName: "Rania",
+        bio: "I grew up in this house.",
+        languages: ["en", "ar"],
+        hostingSince: 2019,
+        showOnListings: true,
+      },
+    });
     const place = await callTool("get_place", { slug: business.slug });
-    expect(place.payload).toMatchObject({ slug: business.slug, bookedAs: "room by room" });
+    expect(place.payload).toMatchObject({
+      slug: business.slug,
+      bookedAs: "room by room",
+      host: {
+        name: "Rania",
+        about: "I grew up in this house.",
+        languages: ["en", "ar"],
+        yearsHosting: new Date().getUTCFullYear() - 2019,
+        whatsapp: "+96170123456",
+        contactPage: expect.stringContaining(`/p/${business.slug}/contact`),
+      },
+    });
     const text = JSON.stringify(place.payload);
     for (const secret of ["Whish 03 123 456", "commission", "exportToken", room.exportToken, business.id]) {
       expect(text).not.toContain(secret);
     }
+
+    // A host who takes WhatsApp only is not offered the Contact host page, as on the place's page.
+    await prisma.hostProfile.update({ where: { userId: owner.id }, data: { contactBy: "WHATSAPP" } });
+    expect((await callTool("get_place", { slug: business.slug })).payload).toMatchObject({
+      host: { whatsapp: "+96170123456", contactPage: null },
+    });
 
     expect(await callTool("get_place", { slug: "no-such-place" })).toMatchObject({
       isError: true,
