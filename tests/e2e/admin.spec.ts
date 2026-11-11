@@ -1,5 +1,14 @@
-import { expect, test } from "@playwright/test";
-import { expectNoSidewaysScroll, newHost, PLACES, signedIn, startingWith, watchForErrors } from "./helpers";
+import { expect } from "@playwright/test";
+import {
+  expectNoSidewaysScroll,
+  newContext,
+  newHost,
+  PLACES,
+  signedIn,
+  startingWith,
+  test,
+  watchForErrors,
+} from "./helpers";
 
 // The platform admin's pages, control by control, on a phone. Whatever a test changes (a business suspended, the
 // site's colours, a category) it puts back, so the demo looks the same after the run.
@@ -31,7 +40,7 @@ test("overview: the numbers and each 'needs your attention' line", async ({ page
   await expect(page.getByRole("heading", { level: 1, name: "Hosts" })).toBeVisible();
 });
 
-test("the phone menu: the tabs and More", async ({ page }) => {
+test("the phone menu: the tabs and More", { tag: "@phone" }, async ({ page }) => {
   await page.goto("/admin");
   const tabs = page.getByRole("navigation", { name: "Main pages" });
   for (const [tab, title] of [
@@ -68,7 +77,7 @@ test("hosts: a host's page, opening a business, and suspending then reactivating
   await page.goto("/admin/hosts");
   const business = host.getByRole("listitem").filter({ hasText: PLACES.wholePlace.name });
   const reactivate = business.getByRole("button", { name: "Reactivate" });
-  const visitor = await browser.newContext();
+  const visitor = await newContext(browser);
   const guestPage = await visitor.newPage();
   const placeTitle = guestPage.getByRole("heading", { level: 1, name: PLACES.wholePlace.name });
   // A run stopped half-way can leave it suspended: start from listed.
@@ -101,7 +110,7 @@ test("a host's own page: suspending their place from there, and reactivating it"
   browser,
 }) => {
   // A new host and place, so the demo places stay listed whatever happens.
-  const newcomer = await browser.newContext();
+  const newcomer = await newContext(browser);
   const hostPage = await newcomer.newPage();
   const name = `Sana Bitar ${Date.now() % 100_000}`;
   await newHost(hostPage, name);

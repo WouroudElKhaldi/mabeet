@@ -1,12 +1,14 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import {
   expectNoSidewaysScroll,
+  newContext,
   newEmail,
   newHost,
   pickFreeStay,
   placeDashboard,
   PLACES,
   signedIn,
+  test,
   watchForErrors,
 } from "./helpers";
 
@@ -47,7 +49,7 @@ async function guestRequests(page: Page, guestName: string): Promise<string> {
 
 test("bookings: declining a request, and cancelling a confirmed stay", async ({ page, browser }) => {
   base ||= await placeDashboard(page, place.name);
-  const guest = await browser.newContext({ storageState: signedIn("guest") });
+  const guest = await newContext(browser, { storageState: signedIn("guest") });
   const guestPage = await guest.newPage();
   const declined = `Hadi Mansour ${Date.now() % 100_000}`;
   const cancelled = `Yara Azar ${Date.now() % 100_000}`;
@@ -85,7 +87,7 @@ test("rooms: add a room, change its price, take it off the site, and the plan's 
   browser,
 }) => {
   // A new place of its own: rooms are never deleted, so the demo places would fill up run after run.
-  const context = await browser.newContext();
+  const context = await newContext(browser);
   const page = await context.newPage();
   const ownProblems = watchForErrors(page);
   const dashboard = await newHost(page, "Karim Daher");
@@ -187,7 +189,7 @@ async function samplePhoto(page: Page): Promise<Buffer> {
 
 test("settings: switching how guests book, with the payment policy, and back", async ({ browser }) => {
   // A place of its own, so a run stopped half-way never leaves a demo place in another mode.
-  const context = await browser.newContext();
+  const context = await newContext(browser);
   const page = await context.newPage();
   const ownProblems = watchForErrors(page);
   const dashboard = await newHost(page, "Maya Sfeir");
@@ -262,7 +264,7 @@ test.describe("a front-desk member", () => {
 
 test("calendar: closing nights for real, and opening them again", async ({ browser }) => {
   // A place of its own with one room, so closed nights never block another test's booking.
-  const context = await browser.newContext();
+  const context = await newContext(browser);
   const page = await context.newPage();
   const ownProblems = watchForErrors(page);
   const dashboard = await newHost(page, "Rana Khalil");

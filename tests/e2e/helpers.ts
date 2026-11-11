@@ -1,4 +1,11 @@
-import { expect, type Page } from "@playwright/test";
+import {
+  type Browser,
+  type BrowserContext,
+  type BrowserContextOptions,
+  test as base,
+  expect,
+  type Page,
+} from "@playwright/test";
 
 // What the browser tests share: the demo accounts the seed makes (prisma/seed.ts), where each one's sign-in is kept
 // between tests, and the checks every page must pass.
@@ -16,6 +23,39 @@ export type AccountName = keyof typeof ACCOUNTS;
 
 /** Where the sign-in step keeps an account's cookies, for tests that start signed in (`test.use({ storageState })`). */
 export const signedIn = (account: AccountName) => `test-results/.auth/${account}.json`;
+
+// The demo places' stock photos come from images.unsplash.com. On a slow connection they take longer than the image
+// optimizer waits (it answers 500), and a place's page never finishes loading, so the tests would measure the photo
+// site, not our app. The browser answers them with one small picture instead; our own uploaded photos still go the
+// whole way through.
+const STOCK_PHOTO = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4sP8EAATJAkrt3ZsDAAAAAElFTkSuQmCC",
+  "base64",
+);
+
+function isStockPhoto(url: URL): boolean {
+  const source = url.pathname === "/_next/image" ? url.searchParams.get("url") : url.href;
+  return source?.startsWith("https://images.unsplash.com/") ?? false;
+}
+
+async function withoutStockPhotos(context: BrowserContext): Promise<BrowserContext> {
+  await context.route(isStockPhoto, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: STOCK_PHOTO }),
+  );
+  return context;
+}
+
+/** Playwright's `test`, with the stock photos answered in the browser. Every spec imports this one. */
+export const test = base.extend({
+  context: async ({ context }, provide) => {
+    await provide(await withoutStockPhotos(context));
+  },
+});
+
+/** A second window (another person, or a visitor), with the stock photos answered like the first. */
+export async function newContext(browser: Browser, options?: BrowserContextOptions) {
+  return withoutStockPhotos(await browser.newContext(options));
+}
 
 /** The demo places, by booking mode (prisma/seed.ts). */
 export const PLACES = {
@@ -114,18 +154,22 @@ function isoDaysAfter(isoDate: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** The page is no wider than the phone: nothing makes the visitor scroll sideways. */
+/**
+ * The page is no wider than the window: nothing makes the visitor scroll sideways. It looks again for a moment,
+ * because while the theme changes the page briefly counts the scrollbar as width, then settles.
+ */
 export async function expectNoSidewaysScroll(page: Page) {
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow, `${page.url()} scrolls sideways by ${overflow}px`).toBeLessThanOrEqual(0);
+  await expect
+    .poll(
+      () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth),
+      { message: `${page.url()} scrolls sideways`, timeout: 3_000 },
+    )
+    .toBeLessThanOrEqual(0);
 }
 
 /**
  * Collects what went wrong in the browser while a test ran: uncaught errors and our server's 5xx answers. A refusal
- * the test asked for is checked by the test itself, so 4xx answers are left out, and so is the image optimizer timing
- * out on a demo place's stock photo, which is the photo site being slow, not our app.
+ * the test asked for is checked by the test itself, so 4xx answers are left out.
  */
 export function watchForErrors(page: Page) {
   const problems: string[] = [];
@@ -133,7 +177,6 @@ export function watchForErrors(page: Page) {
   page.on("response", (response) => {
     const url = new URL(response.url());
     if (url.origin !== new URL(page.url()).origin || response.status() < 500) return;
-    if (response.status() === 504 && url.pathname === "/_next/image") return;
     problems.push(`${response.status()} ${response.request().method()} ${url.pathname}`);
   });
   return problems;

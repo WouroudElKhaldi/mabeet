@@ -132,7 +132,16 @@ const eslintConfig = [
   kernelNeverImportsModules,
   ...repositoriesKeepTheirDoors,
   {
-    ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "coverage/**", "next-env.d.ts"],
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "out/**",
+      "build/**",
+      "coverage/**",
+      "test-results/**",
+      "playwright-report/**",
+      "next-env.d.ts",
+    ],
   },
 ];
 

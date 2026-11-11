@@ -1,6 +1,7 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import {
   expectNoSidewaysScroll,
+  newContext,
   newEmail,
   newHost,
   PASSWORD,
@@ -8,6 +9,7 @@ import {
   PLACES,
   signedIn,
   signUp,
+  test,
   watchForErrors,
 } from "./helpers";
 
@@ -73,7 +75,7 @@ async function startBooking(page: Page, slug: string, next: string) {
 test("a place that confirms at once: pay with Whish, find it in trips, cancel for a full refund", async ({
   browser,
 }) => {
-  const context = await browser.newContext({ storageState: signedIn("guest") });
+  const context = await newContext(browser, { storageState: signedIn("guest") });
   const page = await context.newPage();
   const pageProblems = watchForErrors(page);
   const place = PLACES.automatic;
