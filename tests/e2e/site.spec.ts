@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { expectNoSidewaysScroll, PLACES, startingWith, watchForErrors } from "./helpers";
+import { expect } from "@playwright/test";
+import { expectNoSidewaysScroll, PLACES, startingWith, test, watchForErrors } from "./helpers";
 
 // The public site, control by control, for a visitor on a phone who is not signed in: searching, the categories and
 // filters, a place's page, the sign-in and sign-up forms, and every link in the footer.
@@ -63,10 +63,12 @@ test("search: guests and dates in the search bar", async ({ page }) => {
 
 test("a place: photos, guests, the host and booking needs an account", async ({ page }) => {
   await page.goto(`/p/${PLACES.approval.slug}`);
-  await page.getByRole("button", { name: "Show all photos" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
+  // Every photo is on its own page, and the place is one step back.
+  await page.getByRole("link", { name: /^Show all \d+ photos$/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/p/${PLACES.approval.slug}/photos$`));
+  await expect(page.getByRole("heading", { level: 1, name: PLACES.approval.name })).toBeVisible();
+  await expectNoSidewaysScroll(page);
+  await page.goBack();
 
   const box = page.getByRole("complementary");
   await box.getByRole("combobox", { name: "Room" }).selectOption({ label: "Family loft" });
@@ -108,7 +110,7 @@ test("sign in and sign up: what a wrong entry says", async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-up/);
 });
 
-test("the header: dark mode and language, for a visitor", async ({ page }) => {
+test("the header on a phone: dark mode and language, for a visitor", { tag: "@phone" }, async ({ page }) => {
   await page.goto("/");
   // On a phone they sit in the site's menu.
   await page.getByRole("button", { name: "Open menu" }).click();

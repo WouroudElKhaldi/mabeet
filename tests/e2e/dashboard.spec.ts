@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { expectNoSidewaysScroll, placeDashboard, PLACES, signedIn, watchForErrors } from "./helpers";
+import { expect } from "@playwright/test";
+import { expectNoSidewaysScroll, placeDashboard, PLACES, signedIn, test, watchForErrors } from "./helpers";
 
 // The owner's dashboard, control by control, on a phone: the shell (menu, More, bell, theme, language) and every
 // page's buttons, tabs, filters and forms. Saves write back what was there, so the demo place stays as it was.
@@ -18,7 +18,7 @@ test.afterEach(() => {
   expect(problems).toEqual([]);
 });
 
-test("the shell: side menu, More, bell, dark mode and language", async ({ page }) => {
+test("the shell: side menu, More, bell, dark mode and language", { tag: "@phone" }, async ({ page }) => {
   await page.goto(base);
 
   await page.getByRole("button", { name: "Open menu" }).click();

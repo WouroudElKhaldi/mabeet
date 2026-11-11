@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { expectNoSidewaysScroll, PLACES, signedIn, watchForErrors } from "./helpers";
+import { expect } from "@playwright/test";
+import { expectNoSidewaysScroll, newContext, PLACES, signedIn, test, watchForErrors } from "./helpers";
 
 // Featured partners (F23), from both sides: the admin adds a partner, sponsors it and takes it off; a guest sees the
 // partners of the place's region under "Things to do near your stay", sponsored ones first and marked. The partner a
@@ -44,7 +44,8 @@ test.describe("as the admin", () => {
     await expect(panel.locator("summary")).toContainText("Sponsored now");
 
     // A guest staying in the north sees it, marked.
-    const guest = await browser.newPage();
+    const visitor = await newContext(browser);
+    const guest = await visitor.newPage();
     await guest.goto(`/p/${PLACES.automatic.slug}`);
     const nearby = guest.getByRole("region", { name: "Things to do near your stay" });
     const card = nearby.getByRole("article").filter({ hasText: name });
@@ -75,7 +76,7 @@ test.describe("as the admin", () => {
     await page.getByRole("dialog").getByRole("button", { name: "Remove" }).click();
     await expect(removed).toBeVisible();
     await expectNoSidewaysScroll(page);
-    await guest.close();
+    await visitor.close();
   });
 });
 

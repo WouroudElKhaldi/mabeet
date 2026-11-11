@@ -1,5 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
-import { pickFreeStay, pickStay, PLACES, signedIn } from "./helpers";
+import { expect, type Page } from "@playwright/test";
+import { newContext, pickFreeStay, pickStay, PLACES, signedIn, test } from "./helpers";
 
 // The "never double-booked" moment: two people, in two browsers, ask for the same nights at the same moment. One
 // gets the booking; the other is told the dates were just taken, and nothing is booked twice.
@@ -24,8 +24,8 @@ async function readyToSend(page: Page, guestName: string, stay?: { checkIn: stri
 
 test("two guests asking for the same nights at once: one booking, one calm refusal", async ({ browser }) => {
   // Any account can book; the front-desk account is a second person here, booking at a place they don't work in.
-  const first = await browser.newContext({ storageState: signedIn("guest") });
-  const second = await browser.newContext({ storageState: signedIn("staff") });
+  const first = await newContext(browser, { storageState: signedIn("guest") });
+  const second = await newContext(browser, { storageState: signedIn("staff") });
   const [one, two] = await Promise.all([first.newPage(), second.newPage()]);
   const stay = await readyToSend(one, "Maya Khoury");
   await readyToSend(two, "Nadim Aoun", stay);
