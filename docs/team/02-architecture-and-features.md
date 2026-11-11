@@ -600,7 +600,7 @@ new kind of bell entry (all four steps, or it shows a raw key or nothing):
 ### A. Admin area
 
 `/admin`, for platform admins: businesses (suspend or reactivate), hosts, AI spending against the budget, calendar
-sync health, payouts and refunds to send by hand, categories, and the
+sync health, payouts and refunds to send by hand, plan offers, categories, and the
 site's colour palette. Code: `src/app/admin/**`.
 
 - Each admin read and change lives in the module that owns its table, never in `admin`: `workspaces` lists the
@@ -608,8 +608,16 @@ site's colour palette. Code: `src/app/admin/**`.
   `payments` keeps the payout queue, `bookings` what each host is owed and the refunds to send by hand. `admin` keeps
   only its own tables: the categories and the site's palette. So `workspaces` can keep calling `admin` with no circle.
 - Every one takes a `PlatformActor`, calls `requirePlatformAdmin` first, and logs its change with
-  `recordPlatformAction` (`business.suspended`, `business.reactivated`, `category.created`, `category.updated`,
-  `category.deleted`, `site.palette_changed`).
+  `recordPlatformAction` (`business.suspended`, `business.reactivated`, `business.plan_changed`, `category.created`,
+  `category.updated`, `category.deleted`, `site.palette_changed`).
+- **The admin's long lists** are read a page at a time by the module that owns the table, filtered in the query:
+  `listPlatformHosts` (workspaces: name, email, phone or place; place status; plan), `listPlatformPeople` and
+  `getPlatformPerson` (accounts: guest, team member, host or admin), `listPersonTripsForAdmin` (bookings: a
+  person's latest stays), `listCategoryPage` (admin), `listOffersForAdmin` (billing) and `listPartnerPage`
+  (partners). Each returns `{ total, page, pages }` from `pageOf` (`src/utils/paging.ts`, 20 a page).
+- **Setting a plan by hand:** `setPlanAsAdmin` (billing, `PATCH /api/admin/businesses/{businessId}/plan`) sets a
+  plan until a last day (housekeeping ends it like a Whish month) or with no end. A place paying by card is refused:
+  its plan follows Stripe, and the next webhook would undo the change.
 - Suspending writes only `Business.status`: every public read and `resolveContext` already ask for `ACTIVE`, so the
   page, the listing and the team's access go at once, and come back with `ACTIVE`.
 - A category's slug is its key: creating a deleted slug brings the row back. A category still used is never
@@ -620,7 +628,7 @@ site's colour palette. Code: `src/app/admin/**`.
   `BusinessStatusToggle` and "Open dashboard"), one host (`/admin/hosts/{userId}`: their contacts, their host
   profile even while private, and each business with its size, "Open dashboard", its public page and the toggle;
   `getPlatformHost` in `workspaces`), people, money (`PayoutDecision`, what each host is owed,
-  `RefundSent`, plan revenue by month), categories (`CategoryManager`), appearance (`SitePalettePicker`) and health: the calendar links
+  `RefundSent`, plan revenue by month), plan offers (`OfferManager`, "Plans and billing"), categories (`CategoryManager`), appearance (`SitePalettePicker`) and health: the calendar links
   that need a look across the platform (`getSyncHealth` in `calendar-sync`). A link needs a look when its last read
   failed or nothing was read for an hour (`feedNeedsLook`, `src/modules/calendar-sync/feed-health.ts`); the host's
   Channels page uses the same rule. Each
@@ -722,9 +730,10 @@ allows there. Each takes the optional `place` like the reading tools:
   most three such refunds a day per place (`enforceRateLimit`). A refusal is logged as
   `booking.ai_refund_refused.<check>` and the member is only told to use the dashboard: the company's figures never
   reach a host or an AI app. Then the dashboard's own decline or cancel runs, with its full refund.
-- `close_dates` and `reopen_dates` (`blocks.manage`): `addBlock` and `removeBlock`. Reopening only removes closed
-  dates lying wholly inside the days asked, and says which ones it left; bookings and platform stays are never
-  touched.
+- `close_dates` and `reopen_dates` (`blocks.manage`): `addBlock` and `reopenNights`. Reopening frees every closed
+  night in the days asked, even part of a longer block: a block reopened at one end is trimmed, one reopened in the
+  middle is split in two, and the tool says what it reopened and what stays closed beside it. Bookings and platform
+  stays are never touched.
 - `set_room_open` (`rooms.manage`): `updateRoom` with `active`.
 - `sync_calendars` (`feeds.manage`): `syncFeedNow` for every connected calendar link of the place.
 
@@ -760,15 +769,18 @@ an AI is cut.
 
 **What exists today** (`src/modules/assistant/server/`): `tool.ts`, `run-tool.ts` and `mcp-server.ts` as above, and
 `guest-tools.ts` with `search_places` (`searchPlaces`: every part of the wish as a filter, the matching rooms with
-their layout, and a booking link with the stay already picked), `check_availability`
+their layout, and a booking link with the stay already picked; up to 20 places, with `moreMatch` true when more match,
+so the guest's AI narrows the search instead of calling it again and again), `check_availability`
 (`checkPlaceAvailability(slug, { range, guests })` in `directory`: each unit the place is booked by, free or not, the
 stay's price, and the `stayIssue` code when the stay does not fit it) and `get_place` (`getPlace`: public fields,
-the units, how booking and paying work in the place's mode, and the full refund rule). The experience tools come with
+the units, how booking and paying work in the place's mode, the full refund rule, and the host as the place's Meet your
+host section shows them: their name, about, languages, years hosting and how quickly they answer only when they show
+their profile, and only the ways to reach them they offer, the place's WhatsApp and its Contact host page). The experience tools come with
 experiences (F8). `answerGuestMcp(request)` (`guest-mcp.ts`, the module's `server.ts`) serves them at
 `POST /api/mcp/guest`: no sign-in, 30 calls a minute from one address, `GET` and `DELETE` answer 405 (stateless).
 Links are absolute (`BETTER_AUTH_URL`), so the guest's AI app can show them. Tests: `mcp-server.test.ts` (marks,
-context, safe errors, money formatted) and `guest-mcp.integration.test.ts` (search, dates, a place, nothing private,
-the rate limit).
+context, safe errors, money formatted) and `guest-mcp.integration.test.ts` (search, 20 at a time and `moreMatch`, dates, a place and its host, nothing
+private, the rate limit).
 
 The place cards under a reply are built from the tool results, not from the model's words. So the model cannot
 invent a place.
@@ -919,6 +931,9 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
 - **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
+- **Another place, from the dashboard:** "Add a place" in the place switcher and on "All my places" opens
+  `NewPlaceForm` in a pop-up (name and town only). It creates the place on Free and goes straight into it; the plan
+  pitch of `/host` is for new hosts only. Each place has its own plan.
 - **Choosing a plan before there is a business:** `/pricing` sends a paid plan to `/host?plan=PRO` (checked with
   `paidPlan`), where it can be changed in place (each plan is its own address). A signed-out visitor keeps it
   through sign-up or sign-in (`?next=`). `CreateWorkspaceForm` creates
@@ -935,6 +950,24 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   us ask Whish for the real status; once paid, 30 days are added (following on from what is left of the same plan),
   once. Housekeeping re-checks pending Whish plan payments from the last day whose callback never came, and puts a
   business whose Whish month ran out back on Free.
+- **Plan offers:** a platform admin gives hosts a paid plan free (`FREE`) or a share off its price (`PERCENT_OFF`,
+  1 to 99 %), for every place or one place, either for each place's first months (1 to 24, counted from the day it
+  joined) or between two dates (both days included; `endsAt` is the day after the last one). Code: `offer-service.ts`
+  and `src/modules/billing/offers.ts` (`offerWindow`, `offerMonthlyCents`, pure, so the billing page shows the price
+  the checkout charges). Admin routes `GET`/`POST /api/admin/offers` and `DELETE /api/admin/offers/{offerId}` (ends
+  it, logged `plan_offer.created` and `plan_offer.ended`); page `/admin/offers` (`OfferManager`). `getBilling`
+  returns the offers open to the place now, shown above the plans (`PlanOffers`).
+  - A **free** offer is taken by an owner (`POST .../billing/offers/{offerId}/claim`, `claimFreeOffer`): one
+    transaction locks the business money, writes a `PlanOfferClaim` (unique per offer and place, so a second claim is
+    409), and sets the plan until the offer ends for the place, the way a paid Whish month does, so the same
+    housekeeping puts it back on Free afterwards. Months already paid on the same plan past that date are kept. A
+    place paying by card, or on a bigger plan that is still running, is refused (409).
+  - A **percent-off** offer needs nothing from the host: the Whish checkout charges the lower price and stores
+    `PlanPayment.offerId`; the card checkout first creates a one-use Stripe coupon (`createPlanCoupon`, repeating for
+    the months the offer has left, rounded up) and passes it as `discounts[0][coupon]`. With two offers on the same
+    plan, the larger share wins.
+  - Ending an offer hides it at once. What it already gave stays: a free plan taken runs to its end, a discounted
+    payment is paid.
 - **Simulator:** with `WHISH_MODE=simulator` the Whish client talks to `/api/whish-simulator/*` inside the app
   (Whish v1.4.4). Phone 96170123456 and code 111111 pay; any other code is a failed attempt. Its API (create,
   status, refund) answers only this server's own client: the `secret` header must be `simulatorSecret()`, made from
@@ -1047,8 +1080,10 @@ same nights as `getCalendar`, under `calendar.read` alone, so a member who may s
 
 ### C. Closed dates (blocks)
 
-`addBlock` and `removeBlock` in `src/modules/bookings/server/closed-dates-service.ts` (no moving by drag and drop),
-under the same room lock as bookings. A block is a `MANUAL` occupancy, so the database
+`addBlock`, `removeBlock` and `reopenNights` in `src/modules/bookings/server/closed-dates-service.ts` (no moving by
+drag and drop), under the same room lock as bookings. `reopenNights` frees a range of nights in one room whatever
+blocks they belong to: each block it touches is kept inactive and the nights outside the range come back as new
+blocks with the same note (closed 12 to 15 and reopened 14 to 15 leaves 12 to 14 closed; the middle leaves two). A block is a `MANUAL` occupancy, so the database
 refuses it on taken nights (409 "Those nights are already booked or blocked"). Hosts also use blocks for bookings
 taken by phone.
 
@@ -1898,6 +1933,7 @@ getCalendar(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string
 getCalendarBoard(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read: { rooms, occupancy }
 addBlock(ctx: TenantContext, input: { roomId: string; range: DateRange; note: string | null }, now?: Date)   // blocks.manage
 removeBlock(ctx: TenantContext, blockId: string, now?: Date)   // blocks.manage
+reopenNights(ctx: TenantContext, roomId: string, range: DateRange, now?: Date)   // blocks.manage: { reopened, leftClosed }, trims or splits blocks
 // Closing taken nights gives 409 "Those nights are already booked or closed."
 
 // The input checks for these routes are in `@/modules/bookings` (bookingRequestInput, decisionInput,

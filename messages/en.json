@@ -83,7 +83,7 @@
     "perNight": "night",
     "total": "total",
     "title": "Your place",
-    "intro": "What guests read about the place, its photos, and how they book it.",
+    "intro": "What guests read about your place, one part at a time. Each card shows what is saved; press Edit to change that part.",
     "viewPage": "View my page",
     "description": "Description",
     "descriptionPlaceholder": "A restored stone house under oak trees, ten minutes from the cedar reserve…",
@@ -99,9 +99,22 @@
         "body": "One price for the whole place. Rooms are shown, never booked one by one."
       }
     },
-    "saved": "Saved.",
     "unitTitle": "The whole place",
-    "unitIntro": "Its price per night, how many guests, beds and minimum stay, as guests book it."
+    "unitIntro": "Its price per night, how many guests, beds and minimum stay, as guests book it.",
+    "edit": "Edit",
+    "notSet": "Not added yet",
+    "aboutTitle": "About your place",
+    "photosTitle": "Photos",
+    "photosCount": "{count, plural, =0 {No photos yet} one {# photo} other {# photos}}",
+    "managePhotos": "Manage photos",
+    "noPhotos": "Add at least five photos of the whole place: guests look at them first.",
+    "pricePerNight": "Price per night",
+    "size": "Size",
+    "sizeValue": "{guests} guests · {bedrooms} bedrooms · {beds} beds · {bathrooms} bathrooms",
+    "specialPrices": "Special prices",
+    "specialPricesCount": "{count, plural, =0 {None} one {# period} other {# periods}}",
+    "mapPin": "Map pin",
+    "checkInOut": "Check-in – check-out"
   },
   "home": {
     "eyebrow": "No platform fees. Ever.",
@@ -487,7 +500,9 @@
       "place": "Your place",
       "pay": "Pay",
       "rooms": "Add rooms"
-    }
+    },
+    "addPlace": "Add the place",
+    "newPlaceNote": "It starts on Free. Each place has its own plan, which you can change from its Billing page."
   },
   "permissions": {
     "rooms": {
@@ -761,7 +776,17 @@
       "showOnlyHint": "Your place is booked as a whole, so rooms are shown but not booked one by one.",
       "wholePlaceNote": "Your place is booked as a whole: rooms here are shown to guests, not booked one by one.",
       "wholePlaceLink": "Change it on Your place",
-      "shown": "Shown"
+      "shown": "Shown",
+      "count": "{count, plural, =0 {No rooms yet} one {# room} other {# rooms}}",
+      "empty": "No rooms yet. Use “Add a room” at the top to add the first one.",
+      "room": "Room",
+      "size": "Size",
+      "sizeValue": "{guests} guests · {beds} beds",
+      "status": "Status",
+      "actions": "Actions",
+      "edit": "Edit",
+      "view": "View",
+      "photosCount": "{count, plural, =0 {Photos} one {# photo} other {# photos}}"
     },
     "channels": {
       "title": "Channels",
@@ -785,7 +810,9 @@
       "noRooms": "Add a room first: each room gets its own calendar link.",
       "noFeeds": "No platform calendar connected to this room yet.",
       "roomOff": "Switched off: guests can't book it, but its nights stay in step.",
-      "stale": "Not read for over an hour. Press Sync now, or check the link on the platform."
+      "stale": "Not read for over an hour. Press Sync now, or check the link on the platform.",
+      "addTitle": "Add a calendar to {room}",
+      "addIntro": "Paste the room's calendar link from Airbnb, Booking.com or another site. We read it at once, then every few minutes."
     },
     "team": {
       "title": "Team",
@@ -822,14 +849,19 @@
       },
       "intro": "Invite the people who run your place with you, and choose what each one can do.",
       "phoneHint": "With country code, e.g. +961 71 123 456",
-      "noInvitations": "No invitations yet. Use the form above to invite someone.",
+      "noInvitations": "No invitations yet. Use “Invite someone” at the top to invite someone.",
       "noRoleToGive": "There is no role you can give yet: you can only give a role when you have all of its permissions yourself.",
       "ownerRole": "Owners can do everything here, including money and plans. This role can't be changed or deleted.",
       "roleLocked": "This role has permissions you don't have, so only someone who has them all can change it.",
       "nameError": "Write their full name (2 to 80 letters).",
       "emailError": "Check the email address.",
       "phoneError": "Use the international format, e.g. +96171123456.",
-      "roleNameError": "Give the role a name of 2 to 40 letters."
+      "roleNameError": "Give the role a name of 2 to 40 letters.",
+      "invite": "Invite someone",
+      "member": "Member",
+      "invitee": "Invited",
+      "status": "Status",
+      "sent": "Sent"
     },
     "reviews": {
       "title": "Reviews",
@@ -1258,8 +1290,6 @@
     "listed": "Listed",
     "suspend": "Suspend",
     "reactivate": "Reactivate",
-    "recentUsers": "Newest people",
-    "userCounts": "{places} places · {trips} trips",
     "theme": {
       "title": "Website colours",
       "hint": "One palette for the whole website. Visitors can still switch between light and dark.",
@@ -1297,7 +1327,16 @@
       "delete": "Delete category",
       "deleteTitle": "Delete “{name}”?",
       "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first",
-      "slug": "Slug"
+      "slug": "Slug",
+      "filters": "Find categories",
+      "searchPlaceholder": "Name or slug",
+      "empty": "No categories match. Try other words or clear the filters.",
+      "name": "Category",
+      "used": "Used by",
+      "actions": "Actions",
+      "edit": "Edit",
+      "editTitle": "Edit “{name}”",
+      "slugHint": "Lowercase letters, numbers and dashes. It can't change later."
     },
     "partners": {
       "title": "Partners",
@@ -1320,9 +1359,8 @@
       "removeTitle": "Remove «{name}»?",
       "removeBody": "Guests stop seeing it. You can bring it back later, with its sponsored days.",
       "restore": "Bring back",
-      "removedTitle": "Removed partners",
       "sponsoredNow": "Sponsored now",
-      "empty": "No partners yet. Add the first one below.",
+      "empty": "No partners yet. Use “New partner” at the top to add one.",
       "sponsorships": "Sponsored days",
       "sponsorshipsHint": "On these days it comes first near every stay in its region, marked \"Sponsored\".",
       "noSponsorships": "Not sponsored.",
@@ -1338,7 +1376,21 @@
         "phone": "Write a phone number, like +961 70 123 456.",
         "lastDay": "The last day must be on or after the first."
       },
-      "socialHint": "A full link starting with https://, such as their Instagram page."
+      "socialHint": "A full link starting with https://, such as their Instagram page.",
+      "filters": "Find partners",
+      "searchPlaceholder": "Name or town",
+      "shown": "Show",
+      "shownStates": {
+        "live": "Live",
+        "removed": "Removed"
+      },
+      "noMatch": "No partners match. Try other words or clear the filters.",
+      "partner": "Partner",
+      "sponsored": "Sponsored",
+      "sponsoredLater": "Later",
+      "actions": "Actions",
+      "edit": "Edit",
+      "editTitle": "Edit “{name}”"
     },
     "ai": {
       "title": "AI this month",
@@ -1409,11 +1461,11 @@
         "account": "Account"
       },
       "hosts": "Hosts",
-      "profile": "My profile"
+      "profile": "My profile",
+      "offers": "Plan offers"
     },
     "overviewIntro": "The platform at a glance, and what needs you today.",
     "businessesIntro": "Every business on Mabeet. Suspending one hides it everywhere at once.",
-    "usersIntro": "The newest accounts: guests, hosts and staff.",
     "healthIntro": "What runs on its own: the calendar links each room reads from Airbnb and Booking.com.",
     "newestBusinesses": "Newest businesses",
     "seeAll": "See all",
@@ -1425,14 +1477,12 @@
     },
     "hosts": {
       "title": "Hosts",
-      "intro": "{count, plural, one {# host} other {# hosts}}, each listed once with all their businesses. Open one for their profile, contacts and businesses.",
+      "intro": "Everyone who owns a place. Open a host for their contacts, profile and places, to open a dashboard, suspend a place or change its plan.",
       "host": "Host",
       "phone": "Phone",
       "businesses": "Businesses",
       "bookings": "Bookings",
       "since": "Joined",
-      "suspended": "{count} suspended",
-      "open": "Open {name}",
       "profile": "Host profile",
       "shown": "Shown to guests",
       "hidden": "Private",
@@ -1445,7 +1495,118 @@
       "theirBusinesses": "{count, plural, one {# business} other {# businesses}}",
       "counts": "{rooms} rooms · {offerings} experiences · {bookings} bookings · {team} in the team",
       "openDashboard": "Open dashboard",
-      "openPage": "Public page"
+      "openPage": "Public page",
+      "filters": "Find hosts",
+      "searchPlaceholder": "Name, email, phone or place",
+      "status": "Place status",
+      "plan": "Plan",
+      "statuses": {
+        "ACTIVE": "Active",
+        "SUSPENDED": "Suspended"
+      },
+      "empty": "No hosts match. Try other words or clear the filters.",
+      "details": "Details",
+      "openHost": "Open"
+    },
+    "offers": {
+      "title": "Plan offers",
+      "intro": "Give hosts a plan free, or a share off its price, for every place or one, for a time.",
+      "newTitle": "New offer",
+      "newIntro": "Hosts see it on their billing page while it runs. A free offer is taken in one click.",
+      "name": "Name hosts see",
+      "namePlaceholder": "Welcome months",
+      "plan": "Plan",
+      "gives": "What it gives",
+      "kinds": {
+        "FREE": "The plan free",
+        "PERCENT_OFF": "A share off"
+      },
+      "percentOff": "Percent off",
+      "percentSuffix": "% off",
+      "when": "When",
+      "timings": {
+        "firstMonths": "A place's first months",
+        "dates": "Between two dates"
+      },
+      "firstMonths": "Months from the day the place joined",
+      "startsOn": "First day",
+      "lastDay": "Last day",
+      "for": "For",
+      "forEveryPlace": "Every place",
+      "forPlace": "For {name}",
+      "create": "Add offer",
+      "listTitle": "Offers",
+      "empty": "No offers yet. Use “New offer” at the top to add one.",
+      "givesFree": "{plan} free",
+      "givesPercent": "{plan} at {percent}% off",
+      "whenFirstMonths": "{count, plural, one {First month} other {First # months}}",
+      "whenDates": "{from} to {to}",
+      "claims": "{count, plural, =0 {Not taken yet} one {Taken by # place} other {Taken by # places}}",
+      "payments": "{count, plural, =0 {No payments yet} one {# payment} other {# payments}}",
+      "states": {
+        "running": "Running",
+        "upcoming": "Upcoming",
+        "over": "Over",
+        "ended": "Ended"
+      },
+      "end": "End offer",
+      "endTitle": "End “{name}”?",
+      "endBody": "Hosts stop seeing it now. A free plan already taken runs to its end.",
+      "filters": "Find offers",
+      "searchPlaceholder": "Offer or place name",
+      "noMatch": "No offers match. Try other words or clear the filters.",
+      "offer": "Offer",
+      "used": "Used"
+    },
+    "people": {
+      "title": "People",
+      "intro": "Everyone with an account: guests, hosts and their teams, and platform admins. Open someone for their account, places and stays.",
+      "filters": "Find people",
+      "searchPlaceholder": "Name, email or phone",
+      "kind": "Kind",
+      "kinds": {
+        "guest": "Guest",
+        "team": "Team member",
+        "host": "Host",
+        "admin": "Platform admin"
+      },
+      "empty": "Nobody matches. Try other words or clear the filters.",
+      "person": "Person",
+      "places": "Places",
+      "trips": "Stays",
+      "reviews": "Reviews",
+      "joined": "Joined",
+      "details": "Details",
+      "open": "Open",
+      "account": "Account",
+      "email": "Email",
+      "phone": "Phone",
+      "emailVerified": "Email confirmed",
+      "yes": "Yes",
+      "no": "No",
+      "hostPage": "Host page",
+      "placesTitle": "Places they work in",
+      "noPlaces": "Not on any place's team.",
+      "since": "since {date}",
+      "openDashboard": "Open dashboard",
+      "tripsTitle": "Latest stays",
+      "noTrips": "No stays booked yet.",
+      "place": "Place",
+      "dates": "Dates",
+      "status": "Status",
+      "total": "Total"
+    },
+    "plan": {
+      "change": "Change plan",
+      "title": "Plan for {name}",
+      "intro": "Set this place's plan by hand. A paid plan runs to the end of its last day, then the place goes back to Free. With no last day, it stays until you change it.",
+      "plan": "Plan",
+      "lastDay": "Last day",
+      "lastDayHint": "Leave empty for no end.",
+      "save": "Save plan",
+      "byCard": "Pays by card: change the plan in Stripe",
+      "current": "{plan} until {date}",
+      "currentNoEnd": "{plan}, no end date"
     }
   },
   "errors": {
@@ -1914,7 +2075,14 @@
     "payWhish": "Pay a month with Whish",
     "whishPending": "We're waiting for Whish to confirm your payment. Refresh in a minute.",
     "cardOff": "Paying by card isn't set up yet. You can pay a month at a time with Whish.",
-    "whishFailed": "Whish didn't take the payment, so nothing was charged. You can try again."
+    "whishFailed": "Whish didn't take the payment, so nothing was charged. You can try again.",
+    "offers": {
+      "title": "Offers for your place",
+      "intro": "Offers from Mabeet open to your place right now.",
+      "free": "{plan} free until {date}. Nothing to pay.",
+      "percent": "{plan} at {percent}% off: {price} a month until {date}. Taken off at checkout, nothing to do.",
+      "claim": "Get {plan} free"
+    }
   },
   "oauth": {
     "kicker": "Connect an AI app",
@@ -1990,7 +2158,12 @@
     "askAi": "Ask AI",
     "adminVisiting": "You're viewing this business as platform admin. Back to hosts",
     "profile": "My profile",
-    "notificationsUnread": "{count} new notifications"
+    "notificationsUnread": "{count} new notifications",
+    "currentPlace": "Place",
+    "switchPlace": "{name}: switch to another place",
+    "otherPlaces": "Your other places",
+    "allPlaces": "All my places",
+    "addPlace": "Add a place"
   },
   "hostProfile": {
     "title": "My host profile",
@@ -2134,7 +2307,9 @@
     "label": "Pages",
     "newer": "Newer",
     "older": "Older",
-    "of": "Page {page} of {pages}"
+    "of": "Page {page} of {pages}",
+    "previous": "Previous",
+    "next": "Next"
   },
   "analytics": {
     "title": "Analytics",
@@ -2460,5 +2635,48 @@
       "WINERY": "Winery",
       "OTHER": "Other"
     }
+  },
+  "setup": {
+    "title": "Get your place ready for guests",
+    "intro": "{done} of {total} done. Each step ticks itself once it is saved.",
+    "progress": "Setup progress",
+    "done": "done",
+    "go": "Do it",
+    "publish": "Publish",
+    "publishLater": "Publish becomes available once the steps above are done.",
+    "steps": {
+      "describe": {
+        "title": "Describe your place",
+        "body": "A few lines guests will read, and the town it is in."
+      },
+      "photos": {
+        "title": "Add photos",
+        "body": "{count} of {needed}: the place's page shows five, one large and four small."
+      },
+      "rooms": {
+        "title": "Add what guests book, with its price",
+        "body": "A room and its price per night, or the whole place if guests book it all."
+      },
+      "booking": {
+        "title": "Choose how guests book and pay",
+        "body": "Instantly, as a request you confirm, or paid to you directly with your payment details."
+      },
+      "contact": {
+        "title": "Add a phone or WhatsApp",
+        "body": "The number guests reach your place on."
+      },
+      "publish": {
+        "title": "Publish",
+        "body": "Your place appears in search and guests can book it."
+      }
+    }
+  },
+  "lists": {
+    "search": "Search",
+    "all": "All",
+    "apply": "Apply",
+    "clear": "Clear",
+    "count": "{count, plural, one {# in all} other {# in all}}",
+    "matching": "{count, plural, =0 {Nothing matches} one {# matches} other {# match}}"
   }
 }
