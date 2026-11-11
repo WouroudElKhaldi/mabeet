@@ -6,6 +6,7 @@ import {
   expect,
   type Page,
 } from "@playwright/test";
+import { confirmEmail } from "./mailbox";
 
 // What the browser tests share: the demo accounts the seed makes (prisma/seed.ts), where each one's sign-in is kept
 // between tests, and the checks every page must pass.
@@ -211,7 +212,14 @@ export async function signUp(page: Page, name: string): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).not.toHaveURL(/\/sign-up/, { timeout: 15_000 });
+  // No one is signed in before confirming their email: the account waits for its link.
+  await expect(page.getByText("Check your inbox")).toBeVisible({ timeout: 15_000 });
+  await confirmEmail(email);
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).not.toHaveURL(/\/sign-in/, { timeout: 15_000 });
   return email;
 }
 
@@ -228,8 +236,9 @@ export async function newHost(page: Page, name: string): Promise<string> {
     .fill(`${name.split(" ")[0] ?? "New"}'s guesthouse ${Date.now() % 100_000}`);
   await create.getByLabel("Town or area").fill("Batroun");
   await create.getByRole("button", { name: "Create workspace" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/[^/]+$/, { timeout: 20_000 });
-  return new URL(page.url()).pathname;
+  // A new place on Free opens on its guided setup; the place's home is the address above it.
+  await expect(page).toHaveURL(/\/dashboard\/[^/]+\/setup$/, { timeout: 20_000 });
+  return new URL(page.url()).pathname.replace(/\/setup$/, "");
 }
 
 /**

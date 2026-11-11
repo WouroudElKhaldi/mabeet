@@ -288,7 +288,7 @@
       "post": {
         "tags": ["Guests"],
         "summary": "Request a stay: holds the room at once (rate limited)",
-        "description": "Signed-in user. Who the guest is comes from the session, never the body. The room is held at once; what happens next depends on the place's mode. Only the link to the booking and where it stands are returned.",
+        "description": "Signed-in user whose email is confirmed (403 until it is). Who the guest is comes from the session, never the body. The room is held at once; what happens next depends on the place's mode. Only the link to the booking and where it stands are returned.",
         "security": [
           {
             "session": []
@@ -557,7 +557,7 @@
       "post": {
         "tags": ["Guests"],
         "summary": "Request seats in an experience or service session (rate limited)",
-        "description": "Signed-in user. The seats are held at once, as a stay's nights are: waiting 10 minutes for the online payment, or (offline) for the host, never past the session's start. 409 when the seats were just taken; 404 for an unknown, paused or started session. Shares the stay requests' limit of 10 every 10 minutes.",
+        "description": "Signed-in user whose email is confirmed (403 until it is). The seats are held at once, as a stay's nights are: waiting 10 minutes for the online payment, or (offline) for the host, never past the session's start. 409 when the seats were just taken; 404 for an unknown, paused or started session. Shares the stay requests' limit of 10 every 10 minutes.",
         "security": [
           {
             "session": []
@@ -1664,7 +1664,7 @@
       "post": {
         "tags": ["Workspaces"],
         "summary": "Create a business; the caller becomes its owner",
-        "description": "Signed-in user.",
+        "description": "Signed-in user whose email is confirmed (403 until it is).",
         "security": [
           {
             "session": []
@@ -8354,7 +8354,7 @@
       "post": {
         "tags": ["Payments"],
         "summary": "The guest pays a booking that waits for payment, with Whish or a card; returns the payment page",
-        "description": "Signed-in user, and only their own booking: a stay, or seats in a session, waiting for its online payment. Returns the Whish or Stripe page to send them to.",
+        "description": "Signed-in user whose email is confirmed (403 until it is), and only their own booking: a stay, or seats in a session, waiting for its online payment. Returns the Whish or Stripe page to send them to.",
         "security": [
           {
             "session": []

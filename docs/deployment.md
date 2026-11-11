@@ -185,23 +185,23 @@ your own `.env`. No value may contain a single quote (`'`).
 **When we have them** (each one empty turns its feature off, exactly as on your computer; `.env.example` explains
 each):
 
-| Name                                         | Kind     | Notes                                                                                   |
-| -------------------------------------------- | -------- | --------------------------------------------------------------------------------------- |
-| `RESEND_API_KEY`                             | Secret   | Without it, emails are only written to the worker's log                                 |
-| `EMAIL_FROM`                                 | Variable | `Mabeet <hello@our-domain>`, once the domain is verified on Resend                      |
-| `R2_ACCOUNT_ID`, `R2_PUBLIC_BUCKET`          | Variable | The photo bucket. Without R2, photos are kept in Postgres                               |
-| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`   | Secret   | An R2 API token with "Object Read & Write" on that bucket only                          |
-| `R2_PUBLIC_URL`                              | Variable | The bucket's public address. It is built into the image, so a change needs a new deploy |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Secret   | Stripe test mode. The webhook address is `<site>/api/webhooks/stripe`                   |
-| `STRIPE_PRICE_PRO`, `STRIPE_PRICE_BUSINESS`  | Variable | The two monthly price ids                                                               |
-| `WHISH_MODE`                                 | Variable | Empty or `simulator` until Whish gives us keys; then `sandbox` or `production`          |
-| `WHISH_CHANNEL`, `WHISH_SECRET`              | Secret   | From Whish                                                                              |
-| `WHISH_WEBSITE_URL`                          | Variable | From Whish                                                                              |
-| `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`          | Variable | Push notifications (`pnpm exec web-push generate-vapid-keys` makes the pair)            |
-| `VAPID_PRIVATE_KEY`                          | Secret   | The private half of that pair                                                           |
-| `CONTACT_EMAIL`, `CONTACT_WHATSAPP`          | Variable | How people reach us from `/contact`                                                     |
-| `DEEPSEEK_API_KEY`                           | Secret   | The AI bonus only                                                                       |
-| `AI_MONTHLY_BUDGET_USD`                      | Variable | Empty means $50                                                                         |
+| Name                                         | Kind     | Notes                                                                                                                                  |
+| -------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `RESEND_API_KEY`                             | Secret   | Without it, emails are only written to the worker's log                                                                                |
+| `EMAIL_FROM`                                 | Variable | `Mabeet <hello@our-domain>`, once the domain is verified on Resend; new accounts confirm their email, so without it no one can sign up |
+| `R2_ACCOUNT_ID`, `R2_PUBLIC_BUCKET`          | Variable | The photo bucket. Without R2, photos are kept in Postgres                                                                              |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`   | Secret   | An R2 API token with "Object Read & Write" on that bucket only                                                                         |
+| `R2_PUBLIC_URL`                              | Variable | The bucket's public address. It is built into the image, so a change needs a new deploy                                                |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Secret   | Stripe test mode. The webhook address is `<site>/api/webhooks/stripe`                                                                  |
+| `STRIPE_PRICE_PRO`, `STRIPE_PRICE_BUSINESS`  | Variable | The two monthly price ids                                                                                                              |
+| `WHISH_MODE`                                 | Variable | Empty or `simulator` until Whish gives us keys; then `sandbox` or `production`                                                         |
+| `WHISH_CHANNEL`, `WHISH_SECRET`              | Secret   | From Whish                                                                                                                             |
+| `WHISH_WEBSITE_URL`                          | Variable | From Whish                                                                                                                             |
+| `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`          | Variable | Push notifications (`pnpm exec web-push generate-vapid-keys` makes the pair)                                                           |
+| `VAPID_PRIVATE_KEY`                          | Secret   | The private half of that pair                                                                                                          |
+| `CONTACT_EMAIL`, `CONTACT_WHATSAPP`          | Variable | How people reach us from `/contact`                                                                                                    |
+| `DEEPSEEK_API_KEY`                           | Secret   | The AI bonus only                                                                                                                      |
+| `AI_MONTHLY_BUDGET_USD`                      | Variable | Empty means $50                                                                                                                        |
 
 Not in GitHub, because the deploy job works them out: `BETTER_AUTH_URL` (`https://<DOMAIN>`), `DATABASE_URL` and `REDIS_URL` (`docker-compose.prod.yml` points them at
 its own services), `JOBS_MODE` (`queue`, set in the image), and the image's name and tag.
