@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useCloseDialog } from "@/components/ui/form-dialog";
 import { CheckboxChips } from "@/components/ui/checkbox-chips";
 import { ChoiceCards } from "@/components/ui/choice-cards";
 import { Field, inputClass, LabeledControl, panelClass, TextArea } from "@/components/ui/field";
@@ -17,6 +18,9 @@ import { toIsoDate } from "@/utils/dates";
 import { RegionSelect } from "./region-select";
 
 type BookingMode = (typeof BOOKING_MODES)[number];
+
+/** The parts of what guests read about the place, each edited on its own from a card on "Your place". */
+export type PlaceSection = "profile" | "thingsToKnow" | "location" | "stayRules";
 
 export interface PlaceSettings {
   name: string;
@@ -52,10 +56,10 @@ const optionalNumber = (data: FormData, key: string) => {
 const phoneNumber = (data: FormData, key: string) => text(data, key)?.replace(/[\s-]/g, "") ?? null;
 
 /**
- * The place's settings, in two parts: `place` is what guests read about the place (the "Your place" page), `general`
- * is how the business runs (Settings): how guests reach it, whether it is listed, currency, answer time, and how
- * guests book and pay. Choosing the booking mode
- * is the owner's, after accepting that online payments are always refunded in full.
+ * The place's settings. `general` is how the business runs (Settings): how guests reach it, whether it is listed,
+ * currency, answer time, and how guests book and pay; choosing the booking mode is the owner's, after accepting that
+ * online payments are always refunded in full. Each place section is one part of what guests read about the place,
+ * edited in a pop-up from its card on "Your place": it saves only its own fields, and closes the pop-up once saved.
  */
 export function SettingsForm({
   businessId,
@@ -65,9 +69,9 @@ export function SettingsForm({
   isOwner,
 }: {
   businessId: string;
-  part: "place" | "general";
+  part: "general" | PlaceSection;
   settings: PlaceSettings;
-  /** The admin's place categories to pick from (the place part). */
+  /** The admin's place categories to pick from (the profile section). */
   categories?: Array<{ slug: string; nameEn: string; nameAr: string }>;
   isOwner: boolean;
 }) {
@@ -75,6 +79,7 @@ export function SettingsForm({
   const tListing = useTranslations("listing");
   const locale = useLocale();
   const { run, pending, error } = useAction();
+  const closeDialog = useCloseDialog();
   const [saved, setSaved] = useState(false);
   const [mode, setMode] = useState<BookingMode>(settings.bookingMode);
   const [accepted, setAccepted] = useState(false);
@@ -84,24 +89,29 @@ export function SettingsForm({
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const place: Record<PlaceSection, Record<string, unknown>> = {
+      profile: {
+        name: text(data, "name"),
+        area: text(data, "area"),
+        region: text(data, "region"),
+        address: text(data, "address"),
+        categories: data.getAll("categories"),
+      },
+      thingsToKnow: {
+        tags: data.getAll("tags"),
+        accessibility: data.getAll("accessibility"),
+        minGuestAge: optionalNumber(data, "minGuestAge"),
+      },
+      location: { latitude: optionalNumber(data, "latitude"), longitude: optionalNumber(data, "longitude") },
+      stayRules: {
+        checkInTime: data.get("checkInTime"),
+        checkOutTime: data.get("checkOutTime"),
+        houseRules: text(data, "houseRules"),
+      },
+    };
     const body =
-      part === "place"
+      part === "general"
         ? {
-            name: text(data, "name"),
-            area: text(data, "area"),
-            region: text(data, "region"),
-            address: text(data, "address"),
-            checkInTime: data.get("checkInTime"),
-            checkOutTime: data.get("checkOutTime"),
-            houseRules: text(data, "houseRules"),
-            categories: data.getAll("categories"),
-            tags: data.getAll("tags"),
-            accessibility: data.getAll("accessibility"),
-            minGuestAge: optionalNumber(data, "minGuestAge"),
-            latitude: optionalNumber(data, "latitude"),
-            longitude: optionalNumber(data, "longitude"),
-          }
-        : {
             phone: phoneNumber(data, "phone"),
             whatsapp: phoneNumber(data, "whatsapp"),
             listedPublicly: data.get("listedPublicly") === "on",
@@ -111,116 +121,131 @@ export function SettingsForm({
             paymentInstructions: text(data, "paymentInstructions"),
             // Only an owner chooses how guests book and pay; anyone else saves the rest without touching it.
             ...(isOwner && { bookingMode: mode, ...(accepted && { acceptOnlineTerms: true }) }),
-          };
+          }
+        : place[part];
     setSaved(false);
-    setSaved(await run(() => api.patch(`/api/workspaces/${businessId}/settings`, body)));
+    const done = await run(() => api.patch(`/api/workspaces/${businessId}/settings`, body));
+    setSaved(done);
+    if (done && part !== "general") closeDialog();
   };
+  const plain = part !== "general";
 
   return (
     <form onSubmit={(event) => void submit(event)} className="grid gap-6">
-      {part === "place" ? (
+      {part !== "general" ? (
         <>
-          <Group title={t("profile")}>
-            <Field
-              label={t("name")}
-              name="name"
-              required
-              minLength={2}
-              maxLength={80}
-              defaultValue={settings.name}
-            />
-            <Field label={t("area")} name="area" maxLength={80} defaultValue={settings.area ?? ""} />
-            <RegionSelect defaultValue={settings.region} />
-            <div className="sm:col-span-2">
+          {part === "profile" && (
+            <Group plain title={t("profile")}>
               <Field
-                label={t("address")}
-                name="address"
-                maxLength={200}
-                defaultValue={settings.address ?? ""}
+                label={t("name")}
+                name="name"
+                required
+                minLength={2}
+                maxLength={80}
+                defaultValue={settings.name}
               />
-            </div>
-            {categories && categories.length > 0 ? (
+              <Field label={t("area")} name="area" maxLength={80} defaultValue={settings.area ?? ""} />
+              <RegionSelect defaultValue={settings.region} />
+              <div className="sm:col-span-2">
+                <Field
+                  label={t("address")}
+                  name="address"
+                  maxLength={200}
+                  defaultValue={settings.address ?? ""}
+                />
+              </div>
+              {categories && categories.length > 0 ? (
+                <CheckboxChips
+                  legend={t("categories")}
+                  name="categories"
+                  options={categories.map((category) => ({
+                    value: category.slug,
+                    label: categoryName(category, locale),
+                  }))}
+                  selected={settings.categories}
+                />
+              ) : null}
+            </Group>
+          )}
+
+          {part === "thingsToKnow" && (
+            <Group plain title={t("thingsToKnow")}>
               <CheckboxChips
-                legend={t("categories")}
-                name="categories"
-                options={categories.map((category) => ({
-                  value: category.slug,
-                  label: categoryName(category, locale),
+                legend={t("tags")}
+                hint={t("tagsHint")}
+                name="tags"
+                options={TAGS.map((tag) => ({ value: tag, label: tListing(`tags.${tag}`) }))}
+                selected={settings.tags}
+              />
+              <CheckboxChips
+                legend={t("accessibility")}
+                name="accessibility"
+                options={ACCESSIBILITY.map((key) => ({
+                  value: key,
+                  label: tListing(`accessibility.${key}`),
                 }))}
-                selected={settings.categories}
+                selected={settings.accessibility}
               />
-            ) : null}
-          </Group>
-
-          <Group title={t("thingsToKnow")}>
-            <CheckboxChips
-              legend={t("tags")}
-              hint={t("tagsHint")}
-              name="tags"
-              options={TAGS.map((tag) => ({ value: tag, label: tListing(`tags.${tag}`) }))}
-              selected={settings.tags}
-            />
-            <CheckboxChips
-              legend={t("accessibility")}
-              name="accessibility"
-              options={ACCESSIBILITY.map((key) => ({ value: key, label: tListing(`accessibility.${key}`) }))}
-              selected={settings.accessibility}
-            />
-            <Field
-              label={t("minGuestAge")}
-              name="minGuestAge"
-              type="number"
-              min={0}
-              max={99}
-              defaultValue={settings.minGuestAge ?? ""}
-              hint={t("minGuestAgeHint")}
-            />
-          </Group>
-
-          <Group title={t("location")}>
-            <Field
-              label={t("latitude")}
-              name="latitude"
-              type="number"
-              step="any"
-              min={-90}
-              max={90}
-              defaultValue={settings.latitude ?? ""}
-            />
-            <Field
-              label={t("longitude")}
-              name="longitude"
-              type="number"
-              step="any"
-              min={-180}
-              max={180}
-              defaultValue={settings.longitude ?? ""}
-            />
-            <p className="text-sm text-muted sm:col-span-2">{t("locationHint")}</p>
-          </Group>
-
-          <Group title={t("stayRules")}>
-            <Field
-              label={t("checkInTime")}
-              name="checkInTime"
-              type="time"
-              defaultValue={settings.checkInTime}
-            />
-            <Field
-              label={t("checkOutTime")}
-              name="checkOutTime"
-              type="time"
-              defaultValue={settings.checkOutTime}
-            />
-            <div className="sm:col-span-2">
-              <TextArea
-                label={t("houseRules")}
-                name="houseRules"
-                maxLength={2000}
-                defaultValue={settings.houseRules ?? ""}
+              <Field
+                label={t("minGuestAge")}
+                name="minGuestAge"
+                type="number"
+                min={0}
+                max={99}
+                defaultValue={settings.minGuestAge ?? ""}
+                hint={t("minGuestAgeHint")}
               />
-            </div>
-          </Group>
+            </Group>
+          )}
+
+          {part === "location" && (
+            <Group plain title={t("location")}>
+              <Field
+                label={t("latitude")}
+                name="latitude"
+                type="number"
+                step="any"
+                min={-90}
+                max={90}
+                defaultValue={settings.latitude ?? ""}
+              />
+              <Field
+                label={t("longitude")}
+                name="longitude"
+                type="number"
+                step="any"
+                min={-180}
+                max={180}
+                defaultValue={settings.longitude ?? ""}
+              />
+              <p className="text-sm text-muted sm:col-span-2">{t("locationHint")}</p>
+            </Group>
+          )}
+
+          {part === "stayRules" && (
+            <Group plain title={t("stayRules")}>
+              <Field
+                label={t("checkInTime")}
+                name="checkInTime"
+                type="time"
+                defaultValue={settings.checkInTime}
+              />
+              <Field
+                label={t("checkOutTime")}
+                name="checkOutTime"
+                type="time"
+                defaultValue={settings.checkOutTime}
+              />
+              <div className="sm:col-span-2">
+                <TextArea
+                  label={t("houseRules")}
+                  name="houseRules"
+                  maxLength={2000}
+                  defaultValue={settings.houseRules ?? ""}
+                />
+              </div>
+            </Group>
+          )}
         </>
       ) : (
         <>
@@ -336,7 +361,7 @@ export function SettingsForm({
         {part === "general" && needsTerms && !accepted ? (
           <p className="text-sm text-muted">{t("payments.policy.required")}</p>
         ) : null}
-        {saved && !error ? (
+        {saved && !error && !plain ? (
           <p role="status" className="text-sm font-semibold text-success">
             {t("saved")}
           </p>
@@ -347,11 +372,18 @@ export function SettingsForm({
   );
 }
 
-/** One titled part of the form, as a raised card with its fields two to a row from `sm`. */
-function Group({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * One titled part of the form, with its fields two to a row from `sm`: a raised card on the Settings page, and `plain`
+ * in a pop-up, whose own title already names it (the legend stays for screen readers).
+ */
+function Group({ title, plain = false, children }: { title: string; plain?: boolean; children: ReactNode }) {
   return (
-    <fieldset className={`${panelClass} grid gap-4 sm:grid-cols-2`}>
-      <legend className="float-start mb-1 font-display text-xl font-semibold sm:col-span-2">{title}</legend>
+    <fieldset className={plain ? "grid gap-4 sm:grid-cols-2" : `${panelClass} grid gap-4 sm:grid-cols-2`}>
+      <legend
+        className={plain ? "sr-only" : "float-start mb-1 font-display text-xl font-semibold sm:col-span-2"}
+      >
+        {title}
+      </legend>
       {children}
     </fieldset>
   );

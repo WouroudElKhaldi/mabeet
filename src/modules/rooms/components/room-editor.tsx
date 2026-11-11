@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRef } from "react";
+import { useCloseDialog } from "@/components/ui/form-dialog";
 import { Button } from "@/components/ui/button";
 import { choiceChipClass, Field, labelledControlClass, inputClass, TextArea } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-error";
@@ -48,6 +49,7 @@ export function RoomEditor({
   const tAmenity = useTranslations("placePage.amenity");
   const files = useRef<HTMLInputElement>(null);
   const { run, pending, error } = useAction();
+  const closeDialog = useCloseDialog();
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -68,7 +70,10 @@ export function RoomEditor({
       if (photos.length > 0) await uploadPhotos(businessId, photos, created.id);
       return created;
     });
-    if (saved && !room) form.reset();
+    if (saved && !room) {
+      form.reset();
+      closeDialog();
+    }
   };
 
   return (

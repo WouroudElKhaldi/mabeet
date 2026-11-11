@@ -4,11 +4,14 @@ export {
   businessStatusInput,
   hostProfileInput,
   platformBusinessParams,
+  platformHostsQuery,
   settingsInput,
   workspaceInput,
 } from "./schemas";
 export { BusinessStatusToggle } from "./components/business-status-toggle";
 export { CreateWorkspaceForm } from "./components/create-workspace-form";
 export { HostProfileForm } from "./components/host-profile-form";
+export { AddPlaceButton } from "./components/add-place-button";
+export { NewPlaceForm } from "./components/new-place-form";
 export { PlaceEssentials } from "./components/place-essentials";
-export { SettingsForm } from "./components/settings-form";
+export { type PlaceSection, SettingsForm } from "./components/settings-form";
