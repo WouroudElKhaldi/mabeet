@@ -13,4 +13,5 @@ export {
 } from "./schemas";
 export { PhotoManager } from "./components/photo-manager";
 export { RoomEditor } from "./components/room-editor";
+export { SetupChecklist } from "./components/setup-checklist";
 export { SpecialPrices } from "./components/special-prices";
