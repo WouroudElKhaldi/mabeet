@@ -17,13 +17,40 @@ const USE = {
   select: { businesses: { where: { isDeleted: false } }, offerings: { where: { isDeleted: false } } },
 } as const;
 
-/** Every live category with how many places and experiences use it, for the admin. */
-export function listCategoriesWithUse(db: Db) {
+export interface CategoryFilters {
+  /** Words in the slug or either name. */
+  q: string;
+  kind?: ListingKind;
+}
+
+function categoryWhere({ q, kind }: CategoryFilters): Prisma.CategoryWhereInput {
+  const words = { contains: q, mode: "insensitive" } as const;
+  return {
+    isDeleted: false,
+    ...(kind ? { kind } : {}),
+    ...(q ? { OR: [{ slug: words }, { nameEn: words }, { nameAr: words }] } : {}),
+  };
+}
+
+/**
+ * The live categories with how many places and experiences use each, for the admin: every one, or one page of those
+ * that match.
+ */
+export function listCategoriesWithUse(
+  db: Db,
+  filters: CategoryFilters = { q: "" },
+  page?: { skip: number; take: number },
+) {
   return db.category.findMany({
-    where: { isDeleted: false },
+    where: categoryWhere(filters),
     orderBy: [{ kind: "asc" }, { position: "asc" }, { slug: "asc" }],
+    ...page,
     select: { slug: true, kind: true, nameEn: true, nameAr: true, icon: true, position: true, _count: USE },
   });
+}
+
+export function countCategories(db: Db, filters: CategoryFilters) {
+  return db.category.count({ where: categoryWhere(filters) });
 }
 
 /** Creates a category, or brings back a deleted one with the same slug (the slug is its key). */

@@ -4,6 +4,7 @@ export {
   createPartner,
   endSponsorship,
   listNearbyPartners,
+  listPartnerPage,
   listPartnersForAdmin,
   removePartner,
   restorePartner,

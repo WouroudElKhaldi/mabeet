@@ -117,3 +117,10 @@ export const PHOTO_AREAS = [
 
 /** Analytics for the place on screen, or for every place the member may read the numbers of. */
 export type AnalyticsScope = "place" | "all";
+
+/**
+ * The kinds of people the admin's people table filters by: a platform admin, someone who owns a place (a host),
+ * someone on a place's team who owns none, and everyone else (a guest).
+ */
+export const PERSON_KINDS = ["guest", "team", "host", "admin"] as const;
+export type PersonKind = (typeof PERSON_KINDS)[number];

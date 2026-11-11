@@ -41,7 +41,7 @@ export {
   markRefundSent,
   requestPayout,
 } from "./server/host-money-service";
-export { countPlatformBookings } from "./server/platform-bookings";
+export { countPlatformBookings, listPersonTripsForAdmin } from "./server/platform-bookings";
 export {
   type ChannelNights,
   getLifetimeDirectRevenue,
@@ -52,7 +52,13 @@ export {
   type MonthlyRevenue,
 } from "./server/booking-stats";
 export { stayIssue } from "./server/booking-policy";
-export { addBlock, getCalendar, getCalendarBoard, removeBlock } from "./server/closed-dates-service";
+export {
+  addBlock,
+  getCalendar,
+  getCalendarBoard,
+  removeBlock,
+  reopenNights,
+} from "./server/closed-dates-service";
 export {
   buildRoomCalendar,
   connectFeed,

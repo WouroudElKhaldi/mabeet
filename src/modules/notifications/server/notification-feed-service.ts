@@ -6,6 +6,7 @@ import {
   requirePlatformAdmin,
   type TenantContext,
 } from "@/server/auth/tenant-context";
+import { PAGE_SIZE, pageOf } from "@/utils/paging";
 
 // The bell: what happened that the person should know about, read from the audit log. Emails and push send the same
 // news outward; this is the list inside the app. Settings saves and photo uploads are not news. A new kind of entry
@@ -39,7 +40,6 @@ const OWNER_NEWS = [
 /** For platform admins: what needs them, across every business. */
 const PLATFORM_NEWS = ["payout.requested", "payment.online_late", "booking.requested"] as const;
 
-const PAGE_SIZE = 20;
 /** The bell's card: the latest few. */
 const LATEST = 5;
 
@@ -56,11 +56,9 @@ async function feed(
   size: number,
 ) {
   if (actions.length === 0) return { items: [], seenAt: null, page: 1, pages: 1 };
-  const total = await countFeed(scope, actions);
-  const pages = Math.max(1, Math.ceil(total / size));
-  const current = Math.min(Math.max(1, Math.floor(page)), pages);
+  const { page: current, pages, skip, take } = pageOf(await countFeed(scope, actions), page, size);
   const [items, seenAt] = await Promise.all([
-    listFeed(scope, actions, { take: size, skip: (current - 1) * size }),
+    listFeed(scope, actions, { take, skip }),
     notificationsSeenAt(userId),
   ]);
   return { items, seenAt, page: current, pages };

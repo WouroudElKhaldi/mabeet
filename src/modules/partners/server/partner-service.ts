@@ -5,6 +5,7 @@ import { type Db, prisma, runInTransaction } from "@/server/db/client";
 import { invalid, notFound } from "@/server/errors";
 import { parseIsoDate, todayUtc, toIsoDate } from "@/utils/dates";
 import { distanceKm, mapPin } from "@/utils/geo";
+import { pageOf } from "@/utils/paging";
 import type { partnerInput, sponsorshipInput } from "../schemas";
 import * as partners from "./partner-repository";
 
@@ -35,6 +36,31 @@ export async function listPartnersForAdmin(actor: PlatformActor, now = new Date(
       endsOn: toIsoDate(sponsorship.endsOn),
     })),
   }));
+}
+
+/** One page of the partners for the admin's table, searched and filtered, with the sponsorships not over yet. */
+export async function listPartnerPage(
+  actor: PlatformActor,
+  filters: partners.PartnerFilters,
+  page = 1,
+  now = new Date(),
+) {
+  requirePlatformAdmin(actor);
+  const total = await partners.countPartners(prisma, filters);
+  const { skip, take, ...paging } = pageOf(total, page);
+  const rows = await partners.listPartnerPage(prisma, filters, todayUtc(now), { skip, take });
+  return {
+    total,
+    ...paging,
+    partners: rows.map(({ sponsorships, ...partner }) => ({
+      ...partner,
+      sponsorships: sponsorships.map((sponsorship) => ({
+        id: sponsorship.id,
+        startsOn: toIsoDate(sponsorship.startsOn),
+        endsOn: toIsoDate(sponsorship.endsOn),
+      })),
+    })),
+  };
 }
 
 export async function createPartner(actor: PlatformActor, input: z.infer<typeof partnerInput>) {
