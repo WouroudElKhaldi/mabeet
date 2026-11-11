@@ -12,7 +12,7 @@ export function findMembershipById(db: Db, businessId: string, membershipId: str
 
 export function listUserWorkspaces(db: Db, userId: string) {
   return db.membership.findMany({
-    where: { userId, status: "ACTIVE" },
+    where: { userId, status: "ACTIVE", isDeleted: false, business: { isDeleted: false } },
     include: { business: { select: { id: true, name: true, slug: true } }, role: { select: { name: true } } },
     orderBy: { createdAt: "asc" },
   });

@@ -17,6 +17,7 @@ import { currentNavItem, isActiveNav, tabItems } from "./nav";
 import type { NavGroup } from "./nav";
 import { NAV_ICONS } from "./nav-icons";
 import { NavLinks } from "./nav-links";
+import { PlaceSwitcher, type SwitcherPlace } from "./place-switcher";
 
 interface AppFrameProps {
   nav: NavGroup[];
@@ -28,6 +29,8 @@ interface AppFrameProps {
   userName: string;
   /** The notification bell, built by the layout for this person. */
   bell?: ReactNode;
+  /** In a place's dashboard: that place and every place this person works in, to switch between them. */
+  places?: { current: SwitcherPlace; all: SwitcherPlace[] };
   children: ReactNode;
 }
 
@@ -43,7 +46,16 @@ function Avatar({ name, label }: { name: string; label?: string }) {
 }
 
 /** The parts of the dashboard frame that move: the phone drawer, the bar at the bottom, the page name in the top bar. */
-export function AppFrame({ nav, areaLabel, badge, viewSiteHref, userName, bell, children }: AppFrameProps) {
+export function AppFrame({
+  nav,
+  areaLabel,
+  badge,
+  viewSiteHref,
+  userName,
+  bell,
+  places,
+  children,
+}: AppFrameProps) {
   const t = useTranslations("shell");
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,7 +68,8 @@ export function AppFrame({ nav, areaLabel, badge, viewSiteHref, userName, bell, 
         <div className="flex h-16 shrink-0 items-center border-b border-line px-5">
           <Wordmark />
         </div>
-        <div className="p-4">
+        <div className="flex flex-col gap-5 p-4">
+          {places ? <PlaceSwitcher current={places.current} places={places.all} /> : null}
           <NavLinks nav={nav} label={t("tabs")} />
         </div>
       </aside>
@@ -172,6 +185,15 @@ export function AppFrame({ nav, areaLabel, badge, viewSiteHref, userName, bell, 
           </div>
         }
       >
+        {places ? (
+          <div className="mb-5">
+            <PlaceSwitcher
+              current={places.current}
+              places={places.all}
+              onNavigate={() => setMenuOpen(false)}
+            />
+          </div>
+        ) : null}
         <NavLinks nav={nav} label={t("tabs")} onNavigate={() => setMenuOpen(false)} />
         <Link
           href={viewSiteHref}

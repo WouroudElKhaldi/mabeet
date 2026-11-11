@@ -27,6 +27,18 @@ describe("creating a place", () => {
     ]);
   });
 
+  it("lists every place the person works in, in the order they joined, and never a deleted one", async () => {
+    const owner = await createUser();
+    const first = await createWorkspace(owner.id, { name: "Beit One" });
+    const second = await createWorkspace(owner.id, { name: "Beit Two" });
+    const gone = await createWorkspace(owner.id, { name: "Beit Gone" });
+    await prisma.business.update({ where: { id: gone.id }, data: { isDeleted: true } });
+    expect((await listWorkspaces(owner.id)).map((membership) => membership.business.id)).toEqual([
+      first.id,
+      second.id,
+    ]);
+  });
+
   it("works out the region from the town, so search finds the place by its region", async () => {
     const owner = await createUser();
     const inTown = await createWorkspace(owner.id, { name: "Beit Ehden", area: "Ehden" });
