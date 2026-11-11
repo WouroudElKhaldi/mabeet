@@ -2,6 +2,7 @@ import { recordPlatformAction } from "@/modules/audit/server";
 import { type PlatformActor, requirePlatformAdmin } from "@/server/auth/tenant-context";
 import { type Db, prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { conflict, notFound } from "@/server/errors";
+import { pageOf } from "@/utils/paging";
 import * as payouts from "./payout-repository";
 
 // Payouts to hosts. Mabeet takes no commission: every cent a guest pays online is the host's, held until the stay
@@ -34,14 +35,32 @@ export async function listBusinessPayouts(businessId: string) {
 
 // ---------- Platform admin ----------
 
-/** Requests to send, the oldest first, and the latest payouts already decided. */
-export async function getPayoutQueue(actor: PlatformActor, recentShown = 20) {
+/** One page of a payout table: the requests to send (`waiting`), or the payouts already sent or refused. */
+async function payoutPage(waiting: boolean, filters: payouts.PayoutFilters, page: number) {
+  const total = await payouts.countPayouts(prisma, waiting, filters);
+  const { skip, take, ...paging } = pageOf(total, page);
+  const rows = await payouts.listPayoutPage(prisma, waiting, filters, { skip, take });
+  return { total, ...paging, payouts: rows };
+}
+
+/** Requests waiting to be sent, the oldest first, a page at a time. */
+export async function listPayoutRequests(
+  actor: PlatformActor,
+  filters: payouts.PayoutFilters = { q: "" },
+  page = 1,
+) {
   requirePlatformAdmin(actor);
-  const [requests, recent] = await Promise.all([
-    payouts.listPayoutRequests(prisma),
-    payouts.listDecidedPayouts(prisma, recentShown),
-  ]);
-  return { requests, recent };
+  return payoutPage(true, filters, page);
+}
+
+/** Payouts already sent or refused, the latest first, a page at a time. */
+export async function listPayoutHistory(
+  actor: PlatformActor,
+  filters: payouts.PayoutFilters = { q: "" },
+  page = 1,
+) {
+  requirePlatformAdmin(actor);
+  return payoutPage(false, filters, page);
 }
 
 /**

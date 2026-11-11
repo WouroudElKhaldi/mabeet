@@ -76,34 +76,53 @@ export function recordFeedResult(
   return db.calendarFeed.updateMany({ where: { id: feedId, isDeleted: false }, data: result });
 }
 
+/** What the admin's sync health table filters by: words in the place's or room's name, and where the link is from. */
+export interface FeedHealthFilters {
+  q: string;
+  source?: FeedSource;
+}
+
 /**
  * The live links that need a look (the same rule as `feedNeedsLook`): the last read failed, or nothing was read
  * since `staleBefore`, counting from when the link was added.
  */
-function needsLookWhere(staleBefore: Date) {
+function needsLookWhere(staleBefore: Date, filters: FeedHealthFilters) {
+  const words = { contains: filters.q, mode: "insensitive" } as const;
   return {
     isDeleted: false,
     room: { isDeleted: false },
-    OR: [
-      { lastError: { not: null } },
-      { lastSyncedAt: { lt: staleBefore } },
-      { lastSyncedAt: null, createdAt: { lt: staleBefore } },
+    source: filters.source,
+    AND: [
+      {
+        OR: [
+          { lastError: { not: null } },
+          { lastSyncedAt: { lt: staleBefore } },
+          { lastSyncedAt: null, createdAt: { lt: staleBefore } },
+        ],
+      },
+      ...(filters.q ? [{ OR: [{ business: { name: words } }, { room: { name: words } }] }] : []),
     ],
   } satisfies Prisma.CalendarFeedWhereInput;
 }
 
-/** For the admin's sync health: the links that need a look, the newest first, with their place and room. */
-export function listFeedsNeedingLook(db: Db, staleBefore: Date, take: number) {
+/** For the admin's sync health: one page of the links that need a look, the newest first, with place and room. */
+export function listFeedsNeedingLook(
+  db: Db,
+  staleBefore: Date,
+  filters: FeedHealthFilters,
+  page: { skip: number; take: number },
+) {
   return db.calendarFeed.findMany({
-    where: needsLookWhere(staleBefore),
+    where: needsLookWhere(staleBefore, filters),
     orderBy: { createdAt: "desc" },
-    take,
+    skip: page.skip,
+    take: page.take,
     select: { ...feedFields, room: { select: { name: true } }, business: { select: { name: true } } },
   });
 }
 
-export function countFeedsNeedingLook(db: Db, staleBefore: Date) {
-  return db.calendarFeed.count({ where: needsLookWhere(staleBefore) });
+export function countFeedsNeedingLook(db: Db, staleBefore: Date, filters: FeedHealthFilters = { q: "" }) {
+  return db.calendarFeed.count({ where: needsLookWhere(staleBefore, filters) });
 }
 
 export function countLiveFeeds(db: Db) {

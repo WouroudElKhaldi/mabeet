@@ -123,24 +123,27 @@ test("a paid stay that has started: the host asks for the money, and an admin se
   const problems = [watchForErrors(hostPage), watchForErrors(adminPage)];
 
   await hostPage.goto(`${await placeDashboard(hostPage, automatic.name)}/payouts`);
-  const ask = hostPage.getByRole("region", { name: "Ask for a payout" });
+  await hostPage.getByRole("button", { name: "Ask for a payout" }).click();
+  const ask = hostPage.getByRole("dialog", { name: "Ask for a payout" });
   const holder = `Demo Host ${Date.now() % 100_000}`;
   await ask.getByLabel("Amount").fill("10");
   await ask.getByLabel("Account holder's name").fill(holder);
   await ask.getByLabel("Whish phone number").fill("+96170123456");
   await ask.getByRole("button", { name: "Ask for it" }).click();
-  await expect(hostPage.getByText("Requested. You'll be told when it's sent.")).toBeVisible();
+  await expect(ask).toBeHidden();
 
-  await adminPage.goto("/admin/money");
-  const payout = adminPage
-    .getByRole("region", { name: "Payouts to send" })
-    .getByRole("listitem")
-    .filter({ hasText: holder });
+  // The admin finds the request by the account's name and sends it from its pop-up.
+  await adminPage.goto(`/admin/money/requests?q=${encodeURIComponent(holder)}`);
+  const payout = adminPage.getByRole("row").filter({ hasText: holder });
   const transfer = `WH-${Date.now() % 1_000_000}`;
-  await payout.getByPlaceholder("Transfer reference").fill(transfer);
-  await payout.getByRole("button", { name: "Mark as sent" }).click();
+  await payout.getByRole("button", { name: "Send or refuse" }).click();
+  const decide = adminPage.getByRole("dialog");
+  await decide.getByPlaceholder("Transfer reference").fill(transfer);
+  await decide.getByRole("button", { name: "Mark as sent" }).click();
+  await expect(decide).toBeHidden();
   await expect(payout).toBeHidden();
-  await expect(adminPage.getByRole("region", { name: "Recent payouts" })).toContainText(transfer);
+  await adminPage.goto(`/admin/money/payouts?q=${encodeURIComponent(holder)}`);
+  await expect(adminPage.getByRole("table")).toContainText(transfer);
 
   expect(problems.flat()).toEqual([]);
   await host.close();
@@ -171,13 +174,13 @@ test("a refund that did not go through: an admin sends it by hand", async ({ bro
   const admin = await newContext(browser, { storageState: signedIn("admin") });
   const adminPage = await admin.newPage();
   const problems = watchForErrors(adminPage);
-  await adminPage.goto("/admin/money");
-  const refund = adminPage
-    .getByRole("region", { name: "Refunds to send by hand" })
-    .getByRole("listitem")
-    .filter({ hasText: reference });
-  await refund.getByPlaceholder("Transfer reference").fill(`WR-${Date.now() % 1_000_000}`);
+  await adminPage.goto(`/admin/money/refunds?q=${encodeURIComponent(reference)}`);
+  const refund = adminPage.getByRole("row").filter({ hasText: reference });
   await refund.getByRole("button", { name: "Mark as sent" }).click();
+  const sent = adminPage.getByRole("dialog");
+  await sent.getByPlaceholder("Transfer reference").fill(`WR-${Date.now() % 1_000_000}`);
+  await sent.getByRole("button", { name: "Mark as sent" }).click();
+  await expect(sent).toBeHidden();
   await expect(refund).toBeHidden();
   expect(problems).toEqual([]);
   await admin.close();

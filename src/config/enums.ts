@@ -8,6 +8,7 @@ import type {
   FeedSource,
   HostContact,
   PayoutMethod,
+  PayoutStatus,
   PhotoArea,
   PriceUnit,
   SkillLevel,
@@ -72,6 +73,10 @@ export type OnlinePaymentMethod = (typeof ONLINE_PAYMENT_METHODS)[number];
 
 /** Where Mabeet sends a host's payout: a bank account (IBAN) or a Whish number. Never a card. */
 export const PAYOUT_METHODS = ["BANK_TRANSFER", "WHISH"] as const satisfies readonly PayoutMethod[];
+
+/** A payout the admin has decided: sent, or refused (then the host can ask again). */
+export const DECIDED_PAYOUT_STATUSES = ["PAID", "REJECTED"] as const satisfies readonly PayoutStatus[];
+export type DecidedPayoutStatus = (typeof DECIDED_PAYOUT_STATUSES)[number];
 
 /** A business is live, or suspended by a platform admin (hidden everywhere until reactivated). */
 export const BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies readonly BusinessStatus[];

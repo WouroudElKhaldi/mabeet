@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { decidePayout, getPayoutQueue } from "@/modules/payments/server";
+import { decidePayout, listPayoutHistory, listPayoutRequests } from "@/modules/payments/server";
 import { resolveContext, resolvePlatformActor } from "@/server/auth/resolve-context";
 import { createPlatformAdmin, createUser, memberWith, prisma, stay } from "@tests/integration/helpers";
 import { addDays, todayUtc } from "@/utils/dates";
@@ -131,6 +132,13 @@ async function pendingRefund(place: Place, paymentId: string, hoursAgo: number) 
   });
 }
 
+/** Gives the place a name no other test uses, so the admin's tables can be searched for it alone. */
+async function uniquelyNamed(place: Place) {
+  const name = `Beit ${randomUUID()}`;
+  await prisma.business.update({ where: { id: place.business.id }, data: { name } });
+  return name;
+}
+
 describe("what the admin sees to send", () => {
   it("lists the payouts asked for, what each host is owed, and only refunds housekeeping stopped retrying", async () => {
     const place = await placeWithRoom("AUTOMATIC");
@@ -138,18 +146,27 @@ describe("what the admin sees to send", () => {
     const admin = await createPlatformAdmin();
     const asked = await requestPayout(place.ctx, toWhish(3_000));
 
-    const queue = await getPayoutQueue(admin);
-    expect(queue.requests.find((payout) => payout.id === asked.id)?.business.name).toBe(place.business.name);
-    expect(
-      (await getHostBalances(admin)).find(
-        (row) => row.businessId === place.business.id && row.currency === "USD",
-      ),
-    ).toMatchObject({ earnedCents: 10_000, requestedCents: 3_000, availableCents: 7_000 });
+    // Searched by a name only this place has, so rows other tests left behind never crowd it off the first page.
+    const name = await uniquelyNamed(place);
+    const requests = await listPayoutRequests(admin, { q: name });
+    expect(requests.payouts.map((payout) => payout.id)).toEqual([asked.id]);
+    expect(requests.payouts[0]?.business.name).toBe(name);
+    expect((await listPayoutRequests(admin, { q: name, method: "BANK_TRANSFER" })).total).toBe(0);
+    expect((await getHostBalances(admin, name.toUpperCase())).balances).toEqual([
+      expect.objectContaining({
+        businessId: place.business.id,
+        placeName: name,
+        currency: "USD",
+        earnedCents: 10_000,
+        requestedCents: 3_000,
+        availableCents: 7_000,
+      }),
+    ]);
 
     const payment = await paidStay(place, 8_000, -3, 20);
     const fresh = await pendingRefund(place, payment.id, 1);
     const stuck = await pendingRefund(place, payment.id, 30);
-    const toSend = (await listRefundsToSend(admin)).map((refund) => refund.id);
+    const toSend = (await listRefundsToSend(admin, name)).refunds.map((refund) => refund.id);
     expect(toSend).toContain(stuck.id);
     expect(toSend).not.toContain(fresh.id);
   });
@@ -171,6 +188,13 @@ describe("the admin sends payouts and refunds by hand", () => {
     const second = await requestPayout(place.ctx, toWhish(4_000));
     await decidePayout(admin, second.id, { action: "rejected", note: "The Whish number did not answer" });
     expect(await usd(place)).toMatchObject({ availableCents: 4_000 });
+
+    const name = await uniquelyNamed(place);
+    const history = (status?: "PAID" | "REJECTED") =>
+      listPayoutHistory(admin, { q: name, status }).then((list) => list.payouts.map((payout) => payout.id));
+    expect(await history()).toEqual([second.id, first.id]);
+    expect(await history("PAID")).toEqual([first.id]);
+    expect((await listPayoutRequests(admin, { q: name })).total).toBe(0);
   });
 
   it("never treats someone else as an admin", async () => {

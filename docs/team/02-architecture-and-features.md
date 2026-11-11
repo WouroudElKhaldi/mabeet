@@ -613,8 +613,13 @@ site's colour palette. Code: `src/app/admin/**`.
 - **The admin's long lists** are read a page at a time by the module that owns the table, filtered in the query:
   `listPlatformHosts` (workspaces: name, email, phone or place; place status; plan), `listPlatformPeople` and
   `getPlatformPerson` (accounts: guest, team member, host or admin), `listPersonTripsForAdmin` (bookings: a
-  person's latest stays), `listCategoryPage` (admin), `listOffersForAdmin` (billing) and `listPartnerPage`
-  (partners). Each returns `{ total, page, pages }` from `pageOf` (`src/utils/paging.ts`, 20 a page).
+  person's latest stays), `listCategoryPage` (admin), `listOffersForAdmin` (billing), `listPartnerPage`
+  (partners), `listPayoutRequests` and `listPayoutHistory` (payments: place or account name; how it is sent; sent
+  or refused), `listRefundsToSend` (bookings: place, guest or booking reference) and `getSyncHealth`
+  (calendar-sync: place or room name; source). Each returns `{ total, page, pages }` from `pageOf`
+  (`src/utils/paging.ts`, 20 a page). `getHostBalances` (bookings) is the one list paged after it is worked out:
+  balances are computed from payments, never stored, so it names each place with `listPlaceNames` (workspaces, any
+  status), filters by that name and pages the result.
 - **Setting a plan by hand:** `setPlanAsAdmin` (billing, `PATCH /api/admin/businesses/{businessId}/plan`) sets a
   plan until a last day (housekeeping ends it like a Whish month) or with no end. A place paying by card is refused:
   its plan follows Stripe, and the next webhook would undo the change.

@@ -8,7 +8,7 @@ import { listPlatformPeople } from "@/modules/accounts/server";
 import { getPlanRevenue } from "@/modules/billing/server";
 import { countPlatformBookings, listRefundsToSend } from "@/modules/bookings/server";
 import { getSyncHealth } from "@/modules/calendar-sync/server";
-import { getPayoutQueue } from "@/modules/payments/server";
+import { listPayoutRequests } from "@/modules/payments/server";
 import { listPlatformBusinesses } from "@/modules/workspaces/server";
 import { requirePageAdmin } from "@/server/http/session";
 import { toIsoDate } from "@/utils/dates";
@@ -27,21 +27,21 @@ export default async function AdminOverviewPage() {
     listPlatformPeople(actor),
     countPlatformBookings(actor),
     getPlanRevenue(actor),
-    getPayoutQueue(actor),
+    listPayoutRequests(actor),
     listRefundsToSend(actor),
     getSyncHealth(actor),
   ]);
   const earned = revenue.thisMonth.find((row) => row.currency === "USD")?.cents ?? 0;
   const attention = [
     {
-      href: "/admin/money",
-      label: t("attention.payouts", { count: payouts.requests.length }),
-      urgent: payouts.requests.length > 0,
+      href: "/admin/money/requests",
+      label: t("attention.payouts", { count: payouts.total }),
+      urgent: payouts.total > 0,
     },
     {
-      href: "/admin/money",
-      label: t("attention.refunds", { count: refunds.length }),
-      urgent: refunds.length > 0,
+      href: "/admin/money/refunds",
+      label: t("attention.refunds", { count: refunds.total }),
+      urgent: refunds.total > 0,
     },
     {
       href: "/admin/health",

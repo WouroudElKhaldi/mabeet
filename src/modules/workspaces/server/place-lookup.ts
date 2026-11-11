@@ -33,6 +33,12 @@ export function findPlacesForReports(businessIds: readonly string[]) {
   return businesses.findPlacesForReports(prisma, businessIds);
 }
 
+/** Each place's name by its id, whatever its status: for the admin's money tables. */
+export async function listPlaceNames(businessIds: readonly string[]) {
+  const rows = await businesses.findBusinessNames(prisma, businessIds);
+  return new Map(rows.map((row) => [row.id, row.name]));
+}
+
 /**
  * The places a guest saved, by id, with their categories as slugs: the same card fields as search. Unlisted places
  * are kept (their page still works and the guest chose them); paused and deleted ones are not.

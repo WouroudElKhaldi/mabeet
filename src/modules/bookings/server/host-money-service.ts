@@ -6,6 +6,7 @@ import {
   lockBusinessMoney,
   sumPayouts,
 } from "@/modules/payments/server";
+import { listPlaceNames } from "@/modules/workspaces/server";
 import {
   type PlatformActor,
   requireBusinessOwner,
@@ -16,6 +17,7 @@ import {
 import { type Db, prisma, runInTransaction } from "@/server/db/client";
 import { conflict } from "@/server/errors";
 import { todayUtc } from "@/utils/dates";
+import { pageOf } from "@/utils/paging";
 import * as payments from "./payment-repository";
 
 // What Mabeet holds for each host, worked out every time and never stored: what guests paid online, minus refunds,
@@ -152,24 +154,43 @@ export async function requestPayout(ctx: TenantContext, input: PayoutRequest, no
 
 // ---------- Platform admin ----------
 
-/** What Mabeet holds for each host that still has money with it or coming. */
-export async function getHostBalances(actor: PlatformActor, now = new Date()) {
+/**
+ * What Mabeet holds for each host that still has money with it or coming, with the place's name, found by words in
+ * that name and read a page at a time, the most available first.
+ */
+export async function getHostBalances(actor: PlatformActor, q = "", page = 1, now = new Date()) {
   requirePlatformAdmin(actor);
-  const money = await balances(null, now);
-  return money.filter((row) => row.earnedCents + row.upcomingCents - row.paidOutCents !== 0);
+  const money = (await balances(null, now)).filter(
+    (row) => row.earnedCents + row.upcomingCents - row.paidOutCents !== 0,
+  );
+  const names = await listPlaceNames([...new Set(money.map((row) => row.businessId))]);
+  const words = q.toLocaleLowerCase();
+  const found = money
+    .map((row) => ({ ...row, placeName: names.get(row.businessId) ?? row.businessId }))
+    .filter((row) => row.placeName.toLocaleLowerCase().includes(words))
+    .sort((a, b) => b.availableCents - a.availableCents);
+  const { skip, take, ...paging } = pageOf(found.length, page);
+  return { total: found.length, ...paging, balances: found.slice(skip, skip + take) };
 }
 
-/** Refunds the providers kept refusing, to send by hand: the oldest first, with who to send each one to. */
-export async function listRefundsToSend(actor: PlatformActor, now = new Date()) {
+/**
+ * Refunds the providers kept refusing, to send by hand: the oldest first, a page at a time, with who to send each one
+ * to, found by words in the place's name, the guest's name or the booking's reference.
+ */
+export async function listRefundsToSend(actor: PlatformActor, q = "", page = 1, now = new Date()) {
   requirePlatformAdmin(actor);
-  const owed = await payments.listRefundsToSendByHand(
-    prisma,
-    new Date(now.getTime() - AUTOMATIC_REFUND_WINDOW_MS),
-  );
-  return owed.map(({ payment: { sessionBooking, ...payment }, ...refund }) => ({
-    ...refund,
-    payment: { ...payment, booking: payment.booking ?? sessionBooking },
-  }));
+  const recordedBefore = new Date(now.getTime() - AUTOMATIC_REFUND_WINDOW_MS);
+  const total = await payments.countRefundsToSendByHand(prisma, recordedBefore, q);
+  const { skip, take, ...paging } = pageOf(total, page);
+  const owed = await payments.listRefundsToSendByHand(prisma, recordedBefore, q, { skip, take });
+  return {
+    total,
+    ...paging,
+    refunds: owed.map(({ payment: { sessionBooking, ...payment }, ...refund }) => ({
+      ...refund,
+      payment: { ...payment, booking: payment.booking ?? sessionBooking },
+    })),
+  };
 }
 
 /** The admin sent a refund by hand, with the transfer's reference. Each one is marked once. */
