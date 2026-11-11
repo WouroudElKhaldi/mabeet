@@ -69,7 +69,10 @@ Our product gives the host one booking page, one calendar, and a database that r
   rules that Prisma cannot write, such as the rule against overlapping nights. We write those rules by hand in SQL
   migration files.
 - **Better Auth:** sign in with email and password, and sessions saved in the database. It also lets AI apps connect
-  with OAuth (a safe sign-in for apps).
+  with OAuth (a safe sign-in for apps). Every new account confirms its email first (`requireEmailVerification`):
+  sign-up sends "Confirm your email" with a button, shows "Check your inbox", and the session starts only once the
+  link is opened; signing in before that sends a new link. Without `RESEND_API_KEY` the email, link included, is
+  printed in the log.
 - **Zod 4:** checks every input: API input, AI tool input, settings in `.env`, and answers from DeepSeek, Stripe and
   Whish.
 - **next-intl:** English, Arabic and Lebanese Arabic. Arabic is right-to-left.
@@ -543,7 +546,8 @@ Each feature says what it does, where its code is, and the rules that matter.
 ### A. Guest account
 
 Booking needs an account. A signed-out visitor who presses Book is sent to sign in (or sign up) and comes back to
-the same dates; the booking API answers 401 to anyone not signed in (`requireUser(request)` in the route). Every
+the same dates; the booking API answers 401 to anyone not signed in, and 403 to an account whose email is not
+confirmed (`requireVerifiedUser(request)` in the route; opening a place, `POST /api/workspaces`, asks the same). Every
 `Booking` and `SessionBooking` has a required `guestUserId`, and a booking's page (`/b/[token]`) opens only for the
 guest who made it.
 
@@ -1233,7 +1237,8 @@ Shared pieces:
 - Without an API key, emails are printed in the log.
 - Addresses on reserved test domains (`.test`, `.example`, `.invalid`, `.localhost`) are never sent to, because they
   can never receive email. The demo accounts (`host@mabeet.test`) use them.
-- Emails only reach other people's inboxes after the sending domain is verified on Resend.
+- Emails only reach other people's inboxes after the sending domain is verified on Resend. The live site needs it:
+  every new account confirms its email before it can sign in, so with Resend's test sender no one else could.
 
 ### E. Experiences and services
 
@@ -1596,7 +1601,7 @@ rooms, or the one whole-place unit) with their photos, its `rooms` to show (at a
 and its photos (the rooms' photos when it has none of its own). `getRoomAvailability(slug, roomId, range)` is the calendar's
 read, behind `GET /api/public/places/{slug}/rooms/{roomId}/availability` (no sign-in, 120 a minute from one address): the
 taken nights as dates, for the year ahead by default (`AVAILABILITY_DAYS`), for the same rooms a quote accepts.
-The guest's booking route is `POST /api/public/places/{slug}/bookings` (`requireUser`, 10 requests per 10 minutes per guest): it
+The guest's booking route is `POST /api/public/places/{slug}/bookings` (`requireVerifiedUser`, 10 requests per 10 minutes per guest): it
 calls `requestBooking` with the guest taken from the session, and answers `{ publicToken, reference, status }` only. The
 book page (`/p/{slug}/book`) is its screen.
 The guest's own booking page is `/b/{token}`: `getBookingForGuest` (someone else's link is "not found"), then

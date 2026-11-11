@@ -14,13 +14,6 @@ export interface Email {
   idempotencyKey?: string;
 }
 
-/** Resend's shared test sender only delivers to the account owner, so it can't verify other people's emails. */
-const RESEND_TEST_SENDER = "@resend.dev";
-
-/** True once emails can reach any address: a key is set and the sender is on a verified domain. */
-export const emailReachesEveryone = () =>
-  Boolean(env.RESEND_API_KEY) && !env.EMAIL_FROM.includes(RESEND_TEST_SENDER);
-
 /**
  * Top-level domains reserved so they can never receive email (RFC 2606 and RFC 6761). Demo and test accounts use
  * them (host@mabeet.test), so sending there would only fail or bounce.
@@ -30,8 +23,9 @@ const RESERVED_DOMAIN = /\.(test|example|invalid|localhost)$/i;
 const canReceiveEmail = (address: string) => !RESERVED_DOMAIN.test(address.trim());
 
 /**
- * Sends one email through Resend. Without RESEND_API_KEY it logs instead, so local development needs no account.
- * Addresses on reserved test domains are skipped.
+ * Sends one email through Resend. Without RESEND_API_KEY it prints the email's text in the log instead, links and
+ * all, so local development needs no account and a new account can still be confirmed. Addresses on reserved test
+ * domains are skipped.
  */
 export async function sendEmail(email: Email): Promise<void> {
   const recipients = (Array.isArray(email.to) ? email.to : [email.to]).filter(canReceiveEmail);
@@ -41,7 +35,7 @@ export async function sendEmail(email: Email): Promise<void> {
   }
   if (!env.RESEND_API_KEY) {
     console.warn(
-      `[email not sent: RESEND_API_KEY is empty] to=${recipients.join(",")} subject="${email.subject}"`,
+      `[email not sent: RESEND_API_KEY is empty] to=${recipients.join(",")} subject="${email.subject}"\n${email.text}`,
     );
     return;
   }

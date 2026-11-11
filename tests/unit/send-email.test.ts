@@ -4,7 +4,7 @@ const env = vi.hoisted(() => ({ RESEND_API_KEY: "re_test_key", EMAIL_FROM: "Mabe
 
 vi.mock("@/server/env", () => ({ env }));
 
-const { emailReachesEveryone, sendEmail } = await import("@/server/email/send");
+const { sendEmail } = await import("@/server/email/send");
 
 const email = { subject: "Confirmed", html: "<p>Hi</p>", text: "Hi" };
 
@@ -38,23 +38,16 @@ describe("sendEmail", () => {
     expect(body.to).toEqual(["owner@guesthouse.lb"]);
   });
 
-  it("logs instead of sending when there is no Resend key", async () => {
+  it("logs the email, its links included, instead of sending when there is no Resend key", async () => {
     const fetch = stubResend();
     const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     env.RESEND_API_KEY = "";
-    await sendEmail({ ...email, to: "owner@guesthouse.lb" });
+    await sendEmail({
+      ...email,
+      text: "Confirm: https://mabeet.test/verify?token=abc",
+      to: "owner@guesthouse.lb",
+    });
     expect(fetch).not.toHaveBeenCalled();
-    expect(warned).toHaveBeenCalled();
-  });
-});
-
-describe("emailReachesEveryone", () => {
-  it("is true only with a key and a sender on our own verified domain", () => {
-    expect(emailReachesEveryone()).toBe(true);
-    env.EMAIL_FROM = "Mabeet <onboarding@resend.dev>";
-    expect(emailReachesEveryone()).toBe(false);
-    env.EMAIL_FROM = "Mabeet <hello@mabeet.app>";
-    env.RESEND_API_KEY = "";
-    expect(emailReachesEveryone()).toBe(false);
+    expect(String(warned.mock.calls[0]?.[0])).toContain("https://mabeet.test/verify?token=abc");
   });
 });

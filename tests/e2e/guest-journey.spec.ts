@@ -12,6 +12,7 @@ import {
   test,
   watchForErrors,
 } from "./helpers";
+import { confirmEmail } from "./mailbox";
 
 // A guest's whole journey, page by page, on a phone: making an account, signing out and back in, asking for a new
 // password, booking and paying at a place that confirms at once, finding the stay in My trips and cancelling it for
@@ -25,6 +26,33 @@ test.beforeEach(({ page }) => {
 
 test.afterEach(() => {
   expect(problems).toEqual([]);
+});
+
+test("a new account waits for its email to be confirmed before it can sign in", async ({ page }) => {
+  const email = newEmail("waiting");
+  await page.goto("/sign-up");
+  await page.getByLabel("Full name").fill("Hiba Saad");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText("Check your inbox")).toBeVisible();
+  await expect(page.getByText(email)).toBeVisible();
+
+  const signIn = async () => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+  };
+  // Not yet: signing in only sends the link again.
+  await signIn();
+  await expect(page.getByText("Please confirm your email first. We just sent you a new link.")).toBeVisible();
+  await page.goto("/account");
+  await expect(page).toHaveURL(/\/sign-in/);
+
+  await confirmEmail(email);
+  await signIn();
+  await expect(page).not.toHaveURL(/\/sign-in/);
 });
 
 test("a new account: sign up, sign out, sign back in, and a forgotten password", async ({ page }) => {
