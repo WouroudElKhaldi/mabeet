@@ -819,7 +819,13 @@ totals, then a card per place, numbers only where their role reads bookings; one
 `/host`. `StatTile`, `BarChart` and `ShareBar` are shared in `components/ui`. `/dashboard/[id]/analytics` (menu, Money, `analytics.read`):
 the filters as a plain form (30, 90 or 365 days, any period, this place or all), eight numbers, nights and revenue
 by month, channels and requests by outcome (`ShareBar`), and a row per place when there are several. No rating until
-reviews are built; the AI report is a later bonus.
+reviews are built; the AI report is a later bonus. Until a place is listed, its home starts with `SetupChecklist`
+(progress bar, each step with "Do it", "Guided setup" in its header, "Publish" once the rest is done).
+`/dashboard/[id]/setup?step=` is the guided setup (`settings.manage`): `StepFlow` in a `max-w-2xl` column, "Step 2 of
+8" and "Save and exit" on top, the progress bar, the question as the `h1` with one line under it, the screen's form
+(its button "Save and continue"), then Back and "Skip for now" (or "Next" on photos and rooms). Screens: how guests
+book, where it is, the description, photos, rooms or the whole place's price (adding a room opens a `FormDialog`),
+booking and payment, contact, then the checklist. It has a `loading.tsx`.
 
 | Page                       | Feature     | Sections, top to bottom                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | -------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

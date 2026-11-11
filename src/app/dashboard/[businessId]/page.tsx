@@ -55,7 +55,6 @@ export default async function TodayPage({ params }: PageProps) {
             businessId={businessId}
             steps={setup.steps}
             photoCount={setup.photoCount}
-            bookingUnit={setup.bookingUnit}
             ready={setup.ready}
           />
         ) : null}

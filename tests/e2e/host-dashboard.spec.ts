@@ -84,13 +84,39 @@ test(
     await expect(switcher.getByRole("link", { name: "All my places" })).toBeHidden();
 
     await switcher.locator("summary").click();
-    await expect(switcher.getByRole("link", { name: "Add a place" })).toHaveAttribute("href", "/host");
+    // Adding a place opens a pop-up here, never the sign-up page for new hosts.
+    await expect(switcher.getByRole("button", { name: "Add a place" })).toBeVisible();
     await switcher.getByRole("link", { name: "All my places" }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole("heading", { level: 1, name: "All my places" })).toBeVisible();
     await expectNoSidewaysScroll(page);
   },
 );
+
+test("a new place starts its guided setup: one question a screen, then save and exit", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Add a place" }).first().click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name of your place").fill(`Beit Setup ${Date.now() % 100_000}`);
+  await dialog.getByRole("button", { name: "Add the place" }).click();
+
+  await expect(page).toHaveURL(/\/dashboard\/[^/]+\/setup$/);
+  const progress = page.getByRole("progressbar", { name: "Setup progress" });
+  await expect(page.getByText("Step 1 of 8")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "How do guests book your place?" })).toBeVisible();
+  await page.getByRole("button", { name: "Save and continue" }).click();
+
+  await expect(page).toHaveURL(/step=profile$/);
+  await expect(progress).toHaveAttribute("aria-valuenow", "2");
+  await page.getByLabel("Area").fill("Batroun");
+  await page.getByRole("button", { name: "Save and exit" }).click();
+
+  // Back on the place's home, where the checklist leads into the setup again.
+  await expect(page).toHaveURL(/\/dashboard\/[^/]+$/);
+  const checklist = page.getByRole("region", { name: "Get your place ready for guests" });
+  await expect(checklist.getByRole("link", { name: "Guided setup" })).toBeVisible();
+  await expectNoSidewaysScroll(page);
+});
 
 test("the top bar: the bell, the site, dark mode and language", { tag: "@desktop" }, async ({ page }) => {
   await page.goto(`${base}/calendar`);

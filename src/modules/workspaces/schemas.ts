@@ -3,6 +3,7 @@ import { BOOKING_MODES, BUSINESS_STATUSES, CURRENCIES, HOST_CONTACT_OPTIONS } fr
 import { ACCESSIBILITY, LANGUAGES, TAGS } from "@/config/listing";
 import { REGION_KEYS } from "@/config/regions";
 import { PLANS } from "@/config/plans";
+import { SETUP_SCREENS } from "@/config/setup";
 import { id, listChoice, listQuery, phone } from "@/lib/schemas";
 
 /** Creating a place: the person who creates it becomes its owner. */
@@ -94,3 +95,6 @@ export const platformHostsQuery = listQuery.extend({
   status: listChoice(BUSINESS_STATUSES),
   plan: listChoice(PLANS),
 });
+
+/** The guided setup's screen in its address (`?step=photos`); the first one when it is missing or wrong. */
+export const setupQuery = z.object({ step: z.enum(SETUP_SCREENS).catch("unit") });

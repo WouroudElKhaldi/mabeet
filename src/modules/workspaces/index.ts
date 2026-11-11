@@ -5,6 +5,7 @@ export {
   hostProfileInput,
   platformBusinessParams,
   platformHostsQuery,
+  setupQuery,
   settingsInput,
   workspaceInput,
 } from "./schemas";

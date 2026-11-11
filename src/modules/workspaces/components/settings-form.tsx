@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useCloseDialog } from "@/components/ui/form-dialog";
+import { useCloseDialog, useSubmitLabel } from "@/components/ui/form-dialog";
 import { CheckboxChips } from "@/components/ui/checkbox-chips";
 import { ChoiceCards } from "@/components/ui/choice-cards";
 import { Field, inputClass, LabeledControl, panelClass, TextArea } from "@/components/ui/field";
@@ -21,6 +21,12 @@ type BookingMode = (typeof BOOKING_MODES)[number];
 
 /** The parts of what guests read about the place, each edited on its own from a card on "Your place". */
 export type PlaceSection = "profile" | "thingsToKnow" | "location" | "stayRules";
+
+/**
+ * The parts of how the place runs that the guided setup asks one screen at a time: the numbers guests reach it on,
+ * and how guests book and pay. Settings shows them together, in `general`.
+ */
+type RunningSection = "contact" | "payments";
 
 export interface PlaceSettings {
   name: string;
@@ -60,6 +66,7 @@ const phoneNumber = (data: FormData, key: string) => text(data, key)?.replace(/[
  * currency, answer time, and how guests book and pay; choosing the booking mode is the owner's, after accepting that
  * online payments are always refunded in full. Each place section is one part of what guests read about the place,
  * edited in a pop-up from its card on "Your place": it saves only its own fields, and closes the pop-up once saved.
+ * `contact` and `payments` are parts of `general` on their own, for the guided setup, which moves on once saved.
  */
 export function SettingsForm({
   businessId,
@@ -69,7 +76,7 @@ export function SettingsForm({
   isOwner,
 }: {
   businessId: string;
-  part: "general" | PlaceSection;
+  part: "general" | PlaceSection | RunningSection;
   settings: PlaceSettings;
   /** The admin's place categories to pick from (the profile section). */
   categories?: Array<{ slug: string; nameEn: string; nameAr: string }>;
@@ -80,6 +87,7 @@ export function SettingsForm({
   const locale = useLocale();
   const { run, pending, error } = useAction();
   const closeDialog = useCloseDialog();
+  const submitLabel = useSubmitLabel(t("save"));
   const [saved, setSaved] = useState(false);
   const [mode, setMode] = useState<BookingMode>(settings.bookingMode);
   const [accepted, setAccepted] = useState(false);
@@ -109,26 +117,100 @@ export function SettingsForm({
         houseRules: text(data, "houseRules"),
       },
     };
+    const contact = { phone: phoneNumber(data, "phone"), whatsapp: phoneNumber(data, "whatsapp") };
+    const payments = {
+      paymentInstructions: text(data, "paymentInstructions"),
+      // Only an owner chooses how guests book and pay; anyone else saves the rest without touching it.
+      ...(isOwner && { bookingMode: mode, ...(accepted && { acceptOnlineTerms: true }) }),
+    };
     const body =
       part === "general"
         ? {
-            phone: phoneNumber(data, "phone"),
-            whatsapp: phoneNumber(data, "whatsapp"),
+            ...contact,
+            ...payments,
             listedPublicly: data.get("listedPublicly") === "on",
             currency: data.get("currency"),
             commissionRateBps: Math.round(Number(data.get("commission")) * 100),
             holdHours: Number(data.get("holdHours")),
-            paymentInstructions: text(data, "paymentInstructions"),
-            // Only an owner chooses how guests book and pay; anyone else saves the rest without touching it.
-            ...(isOwner && { bookingMode: mode, ...(accepted && { acceptOnlineTerms: true }) }),
           }
-        : place[part];
+        : part === "contact"
+          ? contact
+          : part === "payments"
+            ? payments
+            : place[part];
     setSaved(false);
     const done = await run(() => api.patch(`/api/workspaces/${businessId}/settings`, body));
     setSaved(done);
     if (done && part !== "general") closeDialog();
   };
   const plain = part !== "general";
+  const waitsForTerms = (part === "general" || part === "payments") && needsTerms && !accepted;
+
+  const contactFields = (
+    <>
+      <Field label={t("phone")} name="phone" type="tel" defaultValue={settings.phone ?? ""} />
+      <Field label={t("whatsapp")} name="whatsapp" type="tel" defaultValue={settings.whatsapp ?? ""} />
+    </>
+  );
+  const paymentFields = (
+    <>
+      <p className="text-sm text-muted sm:col-span-2">{t("payments.intro")}</p>
+      <div className="sm:col-span-2">
+        <ChoiceCards
+          legend={t("payments.bookingMode")}
+          name="bookingMode"
+          columns={3}
+          value={mode}
+          onChange={setMode}
+          disabled={!isOwner}
+          choices={BOOKING_MODES.map((value) => ({
+            value,
+            title: t(`payments.modes.${value}.name`),
+            body: t(`payments.modes.${value}.body`),
+          }))}
+        />
+      </div>
+      {isOnlineMode(mode) ? (
+        <div className="grid gap-2 rounded-xl bg-surface-2 p-4 text-sm sm:col-span-2">
+          <p className="font-semibold">{t("payments.policy.title")}</p>
+          <p className="text-muted">{t("payments.policy.body")}</p>
+          {termsAccepted && settings.onlineTermsAcceptedAt ? (
+            <p className="font-semibold text-success">
+              {t("payments.policy.accepted", {
+                date: formatDate(toIsoDate(settings.onlineTermsAcceptedAt), locale, {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }),
+              })}
+            </p>
+          ) : (
+            <label className="flex items-start gap-2 font-semibold">
+              <input
+                type="checkbox"
+                checked={accepted}
+                disabled={!isOwner}
+                onChange={(event) => setAccepted(event.target.checked)}
+                className="mt-0.5 size-4 accent-accent"
+              />
+              {t("payments.policy.accept")}
+            </label>
+          )}
+        </div>
+      ) : null}
+      {mode === "OFFLINE" ? (
+        <div className="sm:col-span-2">
+          <TextArea
+            label={t("paymentInstructions")}
+            name="paymentInstructions"
+            maxLength={1000}
+            defaultValue={settings.paymentInstructions ?? ""}
+            placeholder={t("paymentPlaceholder")}
+          />
+        </div>
+      ) : null}
+    </>
+  );
 
   return (
     <form onSubmit={(event) => void submit(event)} className="grid gap-6">
@@ -222,6 +304,18 @@ export function SettingsForm({
             </Group>
           )}
 
+          {part === "contact" && (
+            <Group plain title={t("contact")}>
+              {contactFields}
+            </Group>
+          )}
+
+          {part === "payments" && (
+            <Group plain title={t("payments.title")}>
+              {paymentFields}
+            </Group>
+          )}
+
           {part === "stayRules" && (
             <Group plain title={t("stayRules")}>
               <Field
@@ -250,8 +344,7 @@ export function SettingsForm({
       ) : (
         <>
           <Group title={t("contact")}>
-            <Field label={t("phone")} name="phone" type="tel" defaultValue={settings.phone ?? ""} />
-            <Field label={t("whatsapp")} name="whatsapp" type="tel" defaultValue={settings.whatsapp ?? ""} />
+            {contactFields}
             <label className="flex items-center gap-3 text-sm font-semibold sm:col-span-2">
               <input
                 type="checkbox"
@@ -263,63 +356,7 @@ export function SettingsForm({
             </label>
           </Group>
 
-          <Group title={t("payments.title")}>
-            <p className="text-sm text-muted sm:col-span-2">{t("payments.intro")}</p>
-            <div className="sm:col-span-2">
-              <ChoiceCards
-                legend={t("payments.bookingMode")}
-                name="bookingMode"
-                columns={3}
-                value={mode}
-                onChange={setMode}
-                disabled={!isOwner}
-                choices={BOOKING_MODES.map((value) => ({
-                  value,
-                  title: t(`payments.modes.${value}.name`),
-                  body: t(`payments.modes.${value}.body`),
-                }))}
-              />
-            </div>
-            {isOnlineMode(mode) ? (
-              <div className="grid gap-2 rounded-xl bg-surface-2 p-4 text-sm sm:col-span-2">
-                <p className="font-semibold">{t("payments.policy.title")}</p>
-                <p className="text-muted">{t("payments.policy.body")}</p>
-                {termsAccepted && settings.onlineTermsAcceptedAt ? (
-                  <p className="font-semibold text-success">
-                    {t("payments.policy.accepted", {
-                      date: formatDate(toIsoDate(settings.onlineTermsAcceptedAt), locale, {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      }),
-                    })}
-                  </p>
-                ) : (
-                  <label className="flex items-start gap-2 font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={accepted}
-                      disabled={!isOwner}
-                      onChange={(event) => setAccepted(event.target.checked)}
-                      className="mt-0.5 size-4 accent-accent"
-                    />
-                    {t("payments.policy.accept")}
-                  </label>
-                )}
-              </div>
-            ) : null}
-            {mode === "OFFLINE" ? (
-              <div className="sm:col-span-2">
-                <TextArea
-                  label={t("paymentInstructions")}
-                  name="paymentInstructions"
-                  maxLength={1000}
-                  defaultValue={settings.paymentInstructions ?? ""}
-                  placeholder={t("paymentPlaceholder")}
-                />
-              </div>
-            ) : null}
-          </Group>
+          <Group title={t("payments.title")}>{paymentFields}</Group>
 
           <Group title={t("bookingRules")}>
             <LabeledControl label={t("currency")}>
@@ -355,12 +392,10 @@ export function SettingsForm({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={pending || (part === "general" && needsTerms && !accepted)}>
-          {t("save")}
+        <Button type="submit" disabled={pending || waitsForTerms}>
+          {submitLabel}
         </Button>
-        {part === "general" && needsTerms && !accepted ? (
-          <p className="text-sm text-muted">{t("payments.policy.required")}</p>
-        ) : null}
+        {waitsForTerms ? <p className="text-sm text-muted">{t("payments.policy.required")}</p> : null}
         {saved && !error && !plain ? (
           <p role="status" className="text-sm font-semibold text-success">
             {t("saved")}

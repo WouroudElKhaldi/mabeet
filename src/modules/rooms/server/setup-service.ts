@@ -37,7 +37,6 @@ export async function getSetupChecklist(ctx: TenantContext) {
   return {
     steps,
     photoCount,
-    bookingUnit: settings.bookingUnit,
     listed: settings.listedPublicly,
     /** Every step before publishing is done. */
     ready: steps.every((step) => step.key === "publish" || step.done),

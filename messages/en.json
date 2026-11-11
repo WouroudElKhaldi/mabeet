@@ -2703,6 +2703,51 @@
         "title": "Publish",
         "body": "Your place appears in search and guests can book it."
       }
+    },
+    "flow": {
+      "start": "Guided setup",
+      "stepOf": "Step {current} of {total}",
+      "back": "Back",
+      "next": "Next",
+      "skip": "Skip for now",
+      "continue": "Save and continue",
+      "saveAndExit": "Save and exit",
+      "finish": "Go to your dashboard",
+      "notYours": "Someone who manages the rooms of this place does this step.",
+      "screens": {
+        "unit": {
+          "title": "How do guests book your place?",
+          "intro": "Room by room, or the whole place at once. You can change it later."
+        },
+        "profile": {
+          "title": "Where is your place?",
+          "intro": "Its name, the town and region guests search by, and what kind of place it is."
+        },
+        "describe": {
+          "title": "Describe your place",
+          "intro": "A few lines guests read first: what makes a stay here special."
+        },
+        "photos": {
+          "title": "Add some photos",
+          "intro": "Five photos fill your page. Start with the one that says the most about the place."
+        },
+        "rooms": {
+          "title": "What do guests book?",
+          "intro": "Each room with its size and price per night, or the whole place with its price."
+        },
+        "booking": {
+          "title": "How do guests book and pay?",
+          "intro": "Instantly, as a request you confirm, or paid to you directly."
+        },
+        "contact": {
+          "title": "How do guests reach you?",
+          "intro": "The phone or WhatsApp number shown on your page."
+        },
+        "publish": {
+          "title": "Ready to publish?",
+          "intro": "Check what is done. Publish once every step is ticked, and guests can find and book you."
+        }
+      }
     }
   },
   "lists": {
