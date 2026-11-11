@@ -1,10 +1,11 @@
 import type { Plan } from "@prisma/client";
-import { type PaidPlan, PLAN_LIMITS, type PlanPaymentMethod } from "@/config/plans";
+import { type PaidPlan, PLAN_LIMITS, PLAN_MONTH_MS, type PlanPaymentMethod } from "@/config/plans";
 import { findAccountEmail } from "@/modules/accounts/server";
 import { settleOnlinePayment } from "@/modules/bookings/server";
 import { recordAction } from "@/modules/audit/server";
 import {
   createBillingPortalSession,
+  createPlanCoupon,
   createSubscriptionCheckout,
   createWhishPayment,
   getWhishStatus,
@@ -21,13 +22,13 @@ import { env } from "@/server/env";
 import { conflict, invalid, notFound, unavailable } from "@/server/errors";
 import { secureToken } from "@/utils/tokens";
 import * as billing from "./billing-repository";
+import { bestDiscountFor, openOffersFor } from "./offer-service";
 import * as planPayments from "./plan-payment-repository";
 
 // Host plans: what each allows, paying by card through Stripe (a subscription) or by Whish (a month at a time),
 // and Stripe's webhooks keeping the plan true. Plans are always paid instantly: nothing is paid by hand and
 // nothing waits for an admin. Plan payments are Mabeet's revenue.
 
-const PLAN_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 /** A Whish plan payment still pending this long has probably lost its callback, so housekeeping asks Whish. */
 const STALE_PLAN_PAYMENT_AGE_MS = 2 * 60_000;
 /** Past a day, a Whish link has long run out: housekeeping stops asking about it. */
@@ -71,12 +72,22 @@ export function planPaymentMethods(): Record<PlanPaymentMethod, boolean> {
   };
 }
 
-/** For the billing page: the plan, what is used against it, and which ways to pay are on. */
-export async function getBilling(ctx: TenantContext) {
+/** For the billing page: the plan, what is used against it, which ways to pay are on, and the offers open to it. */
+export async function getBilling(ctx: TenantContext, now = new Date()) {
   requirePermission(ctx, "settings.manage");
   const row = await loadBilling(ctx.businessId);
   const methods = planPaymentMethods();
+  const offers = await openOffersFor(ctx.businessId, row.createdAt, now);
   return {
+    offers: offers.map((offer) => ({
+      id: offer.id,
+      name: offer.name,
+      plan: offer.plan,
+      kind: offer.kind,
+      percentOff: offer.percentOff,
+      until: offer.until,
+      monthlyCents: offer.monthlyCents,
+    })),
     plan: row.plan,
     limits: PLAN_LIMITS[row.plan],
     usage: { rooms: row._count.rooms, offerings: row._count.offerings, members: row._count.memberships },
@@ -101,8 +112,15 @@ function planForPrice(priceId: string | null | undefined): Plan | null {
 const billingUrl = (businessId: string, query = "") =>
   new URL(`/dashboard/${businessId}/billing${query}`, env.BETTER_AUTH_URL).toString();
 
-/** Returns the Stripe Checkout page to send the owner to. The plan starts when Stripe's webhook confirms it. */
-export async function startCheckout(ctx: TenantContext, plan: PaidPlan) {
+/** Months left of an offer, rounded up: the months a card coupon takes the share off. */
+const monthsLeft = (until: Date, now: Date) =>
+  Math.max(1, Math.ceil((until.getTime() - now.getTime()) / PLAN_MONTH_MS));
+
+/**
+ * Returns the Stripe Checkout page to send the owner to. The plan starts when Stripe's webhook confirms it. Under a
+ * percent-off offer, a one-use coupon takes the share off each invoice for the months the offer has left.
+ */
+export async function startCheckout(ctx: TenantContext, plan: PaidPlan, now = new Date()) {
   requireOwner(ctx, OWNER_ONLY);
   const priceId = priceFor(plan);
   if (!stripeEnabled() || !priceId) throw unavailable("Card payments are not set up yet.");
@@ -110,7 +128,17 @@ export async function startCheckout(ctx: TenantContext, plan: PaidPlan) {
   // A paying business changes plan in the billing portal, so it never ends up with two subscriptions.
   if (row.stripeSubscriptionId)
     throw conflict("You already pay by card. Change your plan from Manage billing.");
+  const discount = await bestDiscountFor(ctx.businessId, row.createdAt, plan, now);
+  const couponId =
+    discount && discount.percentOff !== null
+      ? await createPlanCoupon({
+          percentOff: discount.percentOff,
+          months: monthsLeft(discount.until, now),
+          name: discount.name,
+        })
+      : undefined;
   const session = await createSubscriptionCheckout({
+    couponId,
     priceId,
     businessId: ctx.businessId,
     customerId: row.stripeCustomerId,
@@ -127,17 +155,20 @@ export async function startCheckout(ctx: TenantContext, plan: PaidPlan) {
  * runs out without a new payment, the business goes back to Free. Our row is written first and Whish is called
  * after: if Whish refuses, the row is marked failed, so no payment is left waiting for a link that never existed.
  */
-export async function startWhishPlanCheckout(ctx: TenantContext, plan: PaidPlan) {
+export async function startWhishPlanCheckout(ctx: TenantContext, plan: PaidPlan, now = new Date()) {
   requireOwner(ctx, OWNER_ONLY);
   if (!whishEnabled()) throw unavailable("Whish payments are not set up yet.");
   const row = await loadBilling(ctx.businessId);
   if (row.stripeSubscriptionId) throw conflict("You pay by card. Change your plan from Manage billing.");
+  // A percent-off offer open now lowers this month's price, and the payment remembers it.
+  const discount = await bestDiscountFor(ctx.businessId, row.createdAt, plan, now);
   const payment = await planPayments.createPlanPayment(prisma, {
     businessId: ctx.businessId,
     paidById: ctx.userId,
     plan,
     months: 1,
-    amountCents: PLAN_LIMITS[plan].monthlyUsd * 100,
+    offerId: discount?.id,
+    amountCents: discount ? discount.monthlyCents : PLAN_LIMITS[plan].monthlyUsd * 100,
     currency: "USD",
     method: "WHISH",
     providerRef: `whish-plan:${secureToken()}`,

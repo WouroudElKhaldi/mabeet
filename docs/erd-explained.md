@@ -229,6 +229,22 @@ admin approves anything. It also records how many months the payment bought.
 
 - It belongs to **one business**.
 - It _may_ belong to **one user** (the owner who paid; empty for automatic Stripe renewals).
+- It _may_ belong to **one PlanOffer** (the share off that lowered its price).
+
+### 24a. PlanOffer
+
+An offer a platform admin gives hosts: a paid plan **free**, or a **share off** its price, for every place or one
+place, during each place's first months or between two dates. Ending it sets `isDeleted`; what it gave stays.
+
+- It _may_ belong to **one business** (empty means every place).
+- It belongs to **one user** (the admin who made it).
+- It has many **PlanOfferClaims** and many **PlanPayments** (the discounted ones).
+
+### 24b. PlanOfferClaim
+
+"This place took this free offer": its plan runs until `endsAt`. A place takes each offer once.
+
+- It belongs to **one offer** and **one business**.
 
 ### 25. WhishSandboxPayment
 

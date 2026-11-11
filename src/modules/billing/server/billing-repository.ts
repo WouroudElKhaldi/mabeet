@@ -19,6 +19,8 @@ export function findBilling(db: Db, businessId: string) {
       stripeCustomerId: true,
       stripeSubscriptionId: true,
       planRenewsAt: true,
+      /** When the place joined, from which "first months" offers are counted. */
+      createdAt: true,
       _count: {
         select: {
           // The whole-place unit is the place itself, not one more room: it never uses up the plan.

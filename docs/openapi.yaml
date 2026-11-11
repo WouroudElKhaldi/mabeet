@@ -7383,3 +7383,319 @@ paths:
                       const: false
                   required:
                     - hidden
+  /api/admin/offers:
+    get:
+      tags:
+        - Platform
+      summary: Plan offers and their use
+      description: "Platform admins only (anyone else gets 404). One page of the offers, newest first, ended ones too: { total, page, pages, offers: [{ id, name, plan, kind, percentOff, businessId, firstMonths, startsAt, endsAt, createdAt, placeName, claims, payments, state }] }. state is running, upcoming, over (its dates passed) or ended (an admin ended it). A wrong filter value is ignored."
+      security:
+        - session: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          description: Words in the offer's name or its place's name.
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - FREE
+              - PERCENT_OFF
+          description: Only offers of this kind.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: The page, 20 offers each; past the end gives the last.
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+    post:
+      tags:
+        - Platform
+      summary: Add a plan offer
+      description: Platform admins only (anyone else gets 404). kind FREE gives the plan with nothing to pay; PERCENT_OFF needs percentOff (1-99). The time is either firstMonths (1-24, counted from the day each place joined) or startsOn and lastDay (both days included). businessId is one place, or null for every place. Dates already past are 400; an unknown place is 404. Answers 201 with { id }.
+      security:
+        - session: []
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $schema: https://json-schema.org/draft/2020-12/schema
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 60
+                plan:
+                  type: string
+                  enum:
+                    - PRO
+                    - BUSINESS
+                kind:
+                  type: string
+                  enum:
+                    - FREE
+                    - PERCENT_OFF
+                percentOff:
+                  type: integer
+                  minimum: 1
+                  maximum: 99
+                businessId:
+                  default: null
+                  anyOf:
+                    - type: string
+                      minLength: 1
+                      maxLength: 64
+                    - type: "null"
+                firstMonths:
+                  type: integer
+                  minimum: 1
+                  maximum: 24
+                startsOn:
+                  type: string
+                  format: date
+                  pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+                lastDay:
+                  type: string
+                  format: date
+                  pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+              required:
+                - name
+                - plan
+                - kind
+      responses:
+        "200":
+          description: Success
+        "201":
+          description: Created
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+  /api/admin/offers/{offerId}:
+    delete:
+      tags:
+        - Platform
+      summary: End a plan offer
+      description: Platform admins only (anyone else gets 404). Hosts stop seeing it now; a free plan already taken runs to its end, and payments made under it stay. The row is kept (isDeleted). An offer already ended is 404.
+      security:
+        - session: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+  /api/workspaces/{businessId}/billing/offers/{offerId}/claim:
+    post:
+      tags:
+        - Payments
+      summary: Take a free plan offer (owners)
+      description: "Owners only. The place is on the offer's plan until the offer ends for it, then back on Free unless it pays: { plan, until }. Offers open to the place are listed in the billing page's data. An offer not open to the place, already taken, or a share-off offer is 404; a place paying by card or already on a bigger plan is 409."
+      security:
+        - session: []
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+  /api/admin/businesses/{businessId}/plan:
+    patch:
+      tags:
+        - Platform
+      summary: Set a place's plan by hand
+      description: Platform admins only (anyone else gets 404). A paid plan runs to the end of lastDay (then housekeeping puts the place back on Free), or with no end when lastDay is null; Free has no lastDay. A place paying by card is 409 (its plan follows its Stripe subscription); a lastDay already past is 400; an unknown place is 404. Logged as business.plan_changed. Answers { plan, renewsAt }.
+      security:
+        - session: []
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $schema: https://json-schema.org/draft/2020-12/schema
+              type: object
+              properties:
+                plan:
+                  type: string
+                  enum:
+                    - FREE
+                    - PRO
+                    - BUSINESS
+                lastDay:
+                  default: null
+                  anyOf:
+                    - type: string
+                      format: date
+                      pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+                    - type: "null"
+              required:
+                - plan
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited

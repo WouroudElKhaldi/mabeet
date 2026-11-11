@@ -1,4 +1,4 @@
-import type { Plan } from "@prisma/client";
+import type { OfferKind, Plan } from "@prisma/client";
 
 // Host plans. Prices are shown on /pricing; Stripe charges whatever its price objects say
 // (STRIPE_PRICE_PRO, STRIPE_PRICE_BUSINESS), so keep the two in step. null means unlimited.
@@ -9,6 +9,15 @@ export type PlanName = (typeof PLANS)[number];
 /** The plans a host can pay for. */
 export const PAID_PLANS = ["PRO", "BUSINESS"] as const satisfies readonly Plan[];
 export type PaidPlan = (typeof PAID_PLANS)[number];
+
+/** A plan month, as Whish payments and offers count it. */
+export const PLAN_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** What a plan offer gives: the plan with nothing to pay, or a share off its price. */
+export const OFFER_KINDS = ["FREE", "PERCENT_OFF"] as const satisfies readonly OfferKind[];
+
+/** The longest "first months" offer, in months (the database refuses more). */
+export const MAX_OFFER_FIRST_MONTHS = 24;
 
 /** How a plan is paid: by card (a Stripe subscription) or by Whish (a month at a time). */
 export const PLAN_PAYMENT_METHODS = ["card", "whish"] as const;

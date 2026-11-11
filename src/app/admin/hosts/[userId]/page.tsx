@@ -3,6 +3,7 @@ import { PageHeader, Panel } from "@/components/shell/page-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { isLanguage } from "@/config/listing";
+import { AdminPlanButton } from "@/modules/billing";
 import { BusinessStatusToggle } from "@/modules/workspaces";
 import { getPlatformHost } from "@/modules/workspaces/server";
 import { requirePageAdmin } from "@/server/http/session";
@@ -15,8 +16,10 @@ type PageProps = { params: Promise<{ userId: string }> };
 export default async function AdminHostPage({ params }: PageProps) {
   const { userId } = await params;
   const actor = await requirePageAdmin();
-  const [t, tAdmin, languageNames, locale, host] = await Promise.all([
+  const [t, tPlan, planNames, tAdmin, languageNames, locale, host] = await Promise.all([
     getTranslations("admin.hosts"),
+    getTranslations("admin.plan"),
+    getTranslations("plans.names"),
     getTranslations("admin"),
     getTranslations("listing.languages"),
     getLocale(),
@@ -100,7 +103,7 @@ export default async function AdminHostPage({ params }: PageProps) {
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 font-semibold">
                     <bdi>{business.name}</bdi>
-                    {business.status === "SUSPENDED" && <Pill>{t("suspended", { count: 1 })}</Pill>}
+                    {business.status === "SUSPENDED" && <Pill>{t("statuses.SUSPENDED")}</Pill>}
                   </p>
                   <p className="text-sm text-muted">
                     {t("counts", {
@@ -119,6 +122,11 @@ export default async function AdminHostPage({ params }: PageProps) {
                     )}
                     {tAdmin("since")} {day(business.createdAt)}
                   </p>
+                  <p className="text-sm font-semibold">
+                    {business.planRenewsAt
+                      ? tPlan("current", { plan: planNames(business.plan), date: day(business.planRenewsAt) })
+                      : tPlan("currentNoEnd", { plan: planNames(business.plan) })}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-start gap-2">
                   <ButtonLink href={`/dashboard/${business.id}`} size="sm" variant="secondary">
@@ -129,6 +137,12 @@ export default async function AdminHostPage({ params }: PageProps) {
                       {t("openPage")}
                     </ButtonLink>
                   )}
+                  <AdminPlanButton
+                    businessId={business.id}
+                    businessName={business.name}
+                    plan={business.plan}
+                    paysByCard={business.paysByCard}
+                  />
                   <BusinessStatusToggle
                     businessId={business.id}
                     businessName={business.name}

@@ -21,6 +21,7 @@ const ADMIN_PAGES = {
   hosts: { group: "platform", path: "hosts", icon: "hosts", tab: true },
   users: { group: "platform", path: "users", icon: "people" },
   money: { group: "money", path: "money", icon: "money", tab: true },
+  offers: { group: "money", path: "offers", icon: "offers" },
   categories: { group: "content", path: "categories", icon: "categories" },
   partners: { group: "content", path: "partners", icon: "partners" },
   appearance: { group: "content", path: "appearance", icon: "appearance" },

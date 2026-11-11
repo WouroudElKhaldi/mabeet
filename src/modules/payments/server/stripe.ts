@@ -54,6 +54,26 @@ async function call<T extends z.ZodType>(
 }
 
 const urlResult = z.object({ url: z.string() });
+const idResult = z.object({ id: z.string() });
+
+/**
+ * A coupon for one plan checkout under a percent-off offer: the share off each monthly invoice for as many months as
+ * the offer has left. It can be used once, so it never discounts anyone else.
+ */
+export async function createPlanCoupon(input: { percentOff: number; months: number; name: string }) {
+  const coupon = await call(
+    "/coupons",
+    {
+      percent_off: input.percentOff,
+      duration: "repeating",
+      duration_in_months: input.months,
+      max_redemptions: 1,
+      name: input.name,
+    },
+    idResult,
+  );
+  return coupon.id;
+}
 
 /** A Stripe Checkout page for a plan subscription. The business id travels with it, so the webhook knows whose it is. */
 export function createSubscriptionCheckout(input: {
@@ -63,11 +83,14 @@ export function createSubscriptionCheckout(input: {
   email: string;
   successUrl: string;
   cancelUrl: string;
+  /** A coupon from createPlanCoupon, for a percent-off offer. */
+  couponId?: string;
 }) {
   return call(
     "/checkout/sessions",
     {
       mode: "subscription",
+      "discounts[0][coupon]": input.couponId,
       "line_items[0][price]": input.priceId,
       "line_items[0][quantity]": 1,
       success_url: input.successUrl,
