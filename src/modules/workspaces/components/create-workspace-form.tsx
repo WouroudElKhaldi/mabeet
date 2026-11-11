@@ -17,6 +17,8 @@ const METHOD_ICONS = { card: CreditCard, whish: Smartphone } as const;
 const CHECKOUT_PATH: Record<PlanPaymentMethod, string> = { card: "checkout", whish: "whish" };
 
 const dashboardOf = (businessId: string) => `/dashboard/${businessId}`;
+/** A new place on Free goes straight into its guided setup. */
+const setupOf = (businessId: string) => `${dashboardOf(businessId)}/setup`;
 
 /**
  * Creates a host's workspace. With a paid plan chosen on /pricing, it then goes straight on to paying for it (by
@@ -56,7 +58,7 @@ export function CreateWorkspaceForm({
           })
         ).id;
       setCreatedId(businessId);
-      if (!paying) return { url: dashboardOf(businessId) };
+      if (!paying) return { url: setupOf(businessId) };
       return api.post<{ url: string }>(`/api/workspaces/${businessId}/billing/${CHECKOUT_PATH[method]}`, {
         plan,
       });

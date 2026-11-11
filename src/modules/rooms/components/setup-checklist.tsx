@@ -1,52 +1,56 @@
 "use client";
 
-import type { BookingUnit } from "@prisma/client";
 import clsx from "clsx";
-import { Check } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Panel } from "@/components/shell/page-header";
 import { ArrowLink } from "@/components/ui/arrow-link";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { FormError } from "@/components/ui/form-error";
-import { SETUP_PHOTOS, type SetupStep } from "@/config/setup";
+import { SETUP_PHOTOS, SETUP_SCREEN_OF_STEP, type SetupStep } from "@/config/setup";
 import { useAction } from "@/hooks/use-action";
 import { api } from "@/lib/api-client";
 
-/** Where each step is done. Rooms are their own page, unless the place is booked as a whole. */
-function stepPath(step: SetupStep, bookingUnit: BookingUnit): string {
-  if (step === "describe" || step === "photos") return step === "photos" ? "/place#photos" : "/place";
-  if (step === "rooms") return bookingUnit === "WHOLE_PLACE" ? "/place" : "/rooms";
-  return "/settings";
-}
-
 /**
- * Getting a new place ready, on its home page until it is listed: each step says what it needs and leads to the page
- * where it is done, and ticks itself once it is saved there. Publishing is the last step, here in one click once the
- * others are done.
+ * Getting a new place ready, on its home page until it is listed: each step says what it needs and leads to its
+ * screen of the guided setup, and ticks itself once it is saved, there or on the place's own pages. Publishing is the
+ * last step, here in one click once the others are done. The guided setup ends on this same list (`inSetup`), without
+ * the button that leads into it.
  */
 export function SetupChecklist({
   businessId,
   steps,
   photoCount,
-  bookingUnit,
   ready,
+  inSetup = false,
 }: {
   businessId: string;
   steps: Array<{ key: SetupStep; done: boolean }>;
   photoCount: number;
-  bookingUnit: BookingUnit;
   ready: boolean;
+  inSetup?: boolean;
 }) {
   const t = useTranslations("setup");
   const { run, pending, error } = useAction();
-  const base = `/dashboard/${businessId}`;
+  const setup = `/dashboard/${businessId}/setup`;
   const doneCount = steps.filter((step) => step.done).length;
 
   const publish = () =>
     void run(() => api.patch(`/api/workspaces/${businessId}/settings`, { listedPublicly: true }));
 
   return (
-    <Panel title={t("title")} intro={t("intro", { done: doneCount, total: steps.length })}>
+    <Panel
+      title={t("title")}
+      intro={t("intro", { done: doneCount, total: steps.length })}
+      action={
+        inSetup ? null : (
+          <ButtonLink href={setup} size="sm">
+            <Sparkles className="size-4" aria-hidden />
+            {t("flow.start")}
+          </ButtonLink>
+        )
+      }
+    >
       <div
         role="progressbar"
         aria-label={t("progress")}
@@ -96,7 +100,7 @@ export function SetupChecklist({
                 </Button>
               )
             ) : step.done ? null : (
-              <ArrowLink href={`${base}${stepPath(step.key, bookingUnit)}`}>{t("go")}</ArrowLink>
+              <ArrowLink href={`${setup}?step=${SETUP_SCREEN_OF_STEP[step.key]}`}>{t("go")}</ArrowLink>
             )}
           </li>
         ))}

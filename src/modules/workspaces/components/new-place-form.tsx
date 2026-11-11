@@ -12,7 +12,7 @@ import { api } from "@/lib/api-client";
 /**
  * Adding another place from inside the dashboard, in a pop-up: only its name and town. A host already here knows
  * Mabeet, so there is no plan to pick and nothing to pay: each place has its own plan and starts on Free, changed later
- * on its Billing page. It goes straight into the new place, where its setup checklist leads the way.
+ * on its Billing page. It goes straight into the new place's guided setup, one question a screen.
  */
 export function NewPlaceForm() {
   const t = useTranslations("host");
@@ -26,7 +26,7 @@ export function NewPlaceForm() {
         name: data.get("name"),
         area: String(data.get("area") ?? "") || undefined,
       });
-      return { url: `/dashboard/${id}` };
+      return { url: `/dashboard/${id}/setup` };
     });
   };
 

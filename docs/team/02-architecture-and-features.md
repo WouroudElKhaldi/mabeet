@@ -937,8 +937,16 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   too.
 - **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
 - **Another place, from the dashboard:** "Add a place" in the place switcher and on "All my places" opens
-  `NewPlaceForm` in a pop-up (name and town only). It creates the place on Free and goes straight into it; the plan
-  pitch of `/host` is for new hosts only. Each place has its own plan.
+  `NewPlaceForm` in a pop-up (name and town only). It creates the place on Free and goes straight into its guided
+  setup; the plan pitch of `/host` is for new hosts only. Each place has its own plan.
+- **Getting a new place ready:** `getSetupChecklist` (rooms) works out each step of `SETUP_STEPS`
+  (`src/config/setup.ts`) from what is saved, so a step ticks itself wherever it is done. Until the place is listed,
+  its home shows `SetupChecklist`, each step leading to its screen of the guided setup. The guided setup
+  (`/dashboard/{id}/setup?step=`, `SETUP_SCREENS`) asks one question a screen, through the same forms as the place's
+  pages (`PlaceEssentials` with `ask`, `SettingsForm` parts `profile`, `payments` and `contact`, `PhotoManager`,
+  `RoomEditor`), and ends on the checklist with "Publish". `StepFlow` (`src/components/ui/step-flow.tsx`) wraps each
+  screen in `FormStep` (`form-dialog.tsx`): the form calls `useCloseDialog()` once saved, which here moves on, and
+  its button says "Save and continue" (`useSubmitLabel`). A new place on Free, from `/host` too, lands on it.
 - **Choosing a plan before there is a business:** `/pricing` sends a paid plan to `/host?plan=PRO` (checked with
   `paidPlan`), where it can be changed in place (each plan is its own address). A signed-out visitor keeps it
   through sign-up or sign-in (`?next=`). `CreateWorkspaceForm` creates
