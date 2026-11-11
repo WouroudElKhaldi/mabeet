@@ -244,3 +244,20 @@ and the `OfferingSession` dates that exist.
    built with experiences (F8); the table already takes it.
 4. How a sponsor pays is not decided yet, so there is no money column. If it is paid through the platform, it is paid
    instantly with Stripe or Whish like plans, and its money is `BigInt` minor units with a line in `moneyAsNumbers`.
+
+## 6. Plan offers (applied)
+
+Approved by the user (the database keeper) for admin offers on host plans, in the migration
+`20261111000000_plan_offers`. How they work is in `02` ("Plans and billing").
+
+1. `OfferKind` enum (`FREE`, `PERCENT_OFF`), matched by `OFFER_KINDS` in `src/config/plans.ts` with `satisfies`.
+2. `PlanOffer`: name, `plan`, `kind`, `percentOff`, `businessId` (one place, or empty for every place),
+   `firstMonths` or `startsAt`/`endsAt` (`endsAt` is the day after the last one), `createdById`, `isDeleted` (an
+   ended offer), `createdAt`. CHECKs: `plan_offer_paid_plan` (never on Free), `plan_offer_percent` (a share of 1 to
+   99 only on `PERCENT_OFF`, none on `FREE`) and `plan_offer_shape` (exactly one kind of time: `firstMonths` 1 to 24,
+   or both dates with `endsAt` after `startsAt`). Each branch tests `IS NOT NULL` itself, because a CHECK lets an
+   unknown (NULL) result through.
+3. `PlanOfferClaim`: a place taking a free offer: `offerId`, `businessId`, `endsAt` (when the plan it gave ends),
+   `isDeleted`, `createdAt`, unique on (`offerId`, `businessId`), so each place takes an offer once.
+4. `PlanPayment.offerId`: the percent-off offer a Whish payment was discounted by, if any. No new money column: the
+   discounted price is the payment's own `amountCents`.
