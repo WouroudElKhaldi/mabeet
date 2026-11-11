@@ -191,7 +191,7 @@ describe("actions that move no money", () => {
     });
   });
 
-  it("closes and reopens nights, leaving closed dates that reach outside the days asked", async () => {
+  it("closes and reopens nights, keeping the closed nights outside the days asked", async () => {
     const place = await placeWithWritingKey();
     const day = (offset: number) => toIsoDate(addDays(todayUtc(), offset));
     const closed = await tool(place.key.secret, "close_dates", {
@@ -209,12 +209,38 @@ describe("actions that move no money", () => {
       checkOut: day(36),
     });
     expect(reopened.payload).toMatchObject({
-      reopened: [{ checkIn: day(30), checkOut: day(33) }],
-      leftClosed: [{ checkIn: day(34), checkOut: day(38) }],
+      reopened: [
+        { checkIn: day(30), checkOut: day(33) },
+        { checkIn: day(34), checkOut: day(36) },
+      ],
+      leftClosed: [{ checkIn: day(36), checkOut: day(38) }],
     });
     expect(
       await prisma.occupancy.count({ where: { roomId: place.room.id, kind: "MANUAL", active: true } }),
     ).toBe(1);
+  });
+
+  it("reopens only the last night of a closed stretch, as a host asks it", async () => {
+    const place = await placeWithWritingKey();
+    const day = (offset: number) => toIsoDate(addDays(todayUtc(), offset));
+    // Closed for the nights of the 12th, 13th and 14th; then the 14th is wanted back.
+    await tool(place.key.secret, "close_dates", {
+      room: place.room.name,
+      checkIn: day(12),
+      checkOut: day(15),
+    });
+    const reopened = await tool(place.key.secret, "reopen_dates", {
+      room: place.room.name,
+      checkIn: day(14),
+      checkOut: day(15),
+    });
+    expect(reopened).toMatchObject({
+      isError: false,
+      payload: {
+        reopened: [{ checkIn: day(14), checkOut: day(15) }],
+        leftClosed: [{ checkIn: day(12), checkOut: day(14) }],
+      },
+    });
   });
 
   it("takes a room off the site and opens it again", async () => {

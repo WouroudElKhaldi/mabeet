@@ -69,6 +69,48 @@ export async function addBlock(ctx: TenantContext, input: BlockInput, now = new 
   return block;
 }
 
+/**
+ * Opens again every closed night of a range in one room, whatever blocks they belong to. A block the range covers is
+ * reopened; one it covers at an end keeps its other nights; one it covers in the middle is left as two, one on each
+ * side. Each part kept is a new block with the same note, and the old one is kept inactive, so the history stays.
+ * Bookings and platform stays are never touched. Returns the nights reopened and the closed nights left beside them.
+ */
+export async function reopenNights(ctx: TenantContext, roomId: string, range: DateRange, now = new Date()) {
+  requirePermission(ctx, "blocks.manage");
+  if (range.checkOut <= range.checkIn) throw invalid("Check-out must be after check-in");
+  const result = await runInTransaction(async (tx) => {
+    await bookings.lockActiveRoom(tx, ctx.businessId, roomId);
+    const reopened: DateRange[] = [];
+    const leftClosed: DateRange[] = [];
+    for (const block of await bookings.listManualBlocks(tx, ctx.businessId, roomId, range)) {
+      await bookings.deactivateManualBlock(tx, ctx.businessId, block.id);
+      await recordAction(ctx, "block.removed", "occupancy", block.id, tx);
+      reopened.push({
+        checkIn: block.checkIn > range.checkIn ? block.checkIn : range.checkIn,
+        checkOut: block.checkOut < range.checkOut ? block.checkOut : range.checkOut,
+      });
+      const sides = [
+        { checkIn: block.checkIn, checkOut: range.checkIn },
+        { checkIn: range.checkOut, checkOut: block.checkOut },
+      ].filter((side) => side.checkIn < side.checkOut);
+      for (const side of sides) {
+        const kept = await bookings.createManualBlock(tx, {
+          businessId: ctx.businessId,
+          roomId,
+          range: side,
+          note: block.note,
+        });
+        await recordAction(ctx, "block.added", "occupancy", kept.id, tx);
+        leftClosed.push(side);
+      }
+    }
+    return { reopened, leftClosed };
+  });
+  // Freed nights may end a clash with a platform stay.
+  if (result.reopened.length > 0) await recheckImportClashes(ctx.businessId, roomId, now);
+  return result;
+}
+
 export async function removeBlock(ctx: TenantContext, blockId: string, now = new Date()) {
   requirePermission(ctx, "blocks.manage");
   const block = await bookings.findActiveBlock(prisma, ctx.businessId, blockId);

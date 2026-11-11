@@ -9,7 +9,7 @@ import {
   getCalendar,
   getCalendarLinks,
   listBookings,
-  removeBlock,
+  reopenNights,
   syncFeedNow,
 } from "@/modules/bookings/server";
 import { listRoomNames, listRooms, updateRoom } from "@/modules/rooms/server";
@@ -18,7 +18,7 @@ import { getPlaceBasics } from "@/modules/workspaces/server";
 import { can, type TenantContext } from "@/server/auth/tenant-context";
 import { resolveContext } from "@/server/auth/resolve-context";
 import { invalid, notFound } from "@/server/errors";
-import { addDays, parseIsoDate, toDateRange, toIsoDate, todayUtc } from "@/utils/dates";
+import { addDays, type DateRange, parseIsoDate, toDateRange, toIsoDate, todayUtc } from "@/utils/dates";
 import { type AiTool, defineTool } from "./tool";
 
 // Tools for owners and staff, through their own AI app. Each one calls the same service the dashboard uses, so the
@@ -291,27 +291,16 @@ const ACTION_TOOLS = [
   team({
     name: "reopen_dates",
     description:
-      "Opens again nights the member closed by hand, for one room, between checkIn and checkOut. Only closed dates lying wholly inside those days are reopened; bookings and Airbnb or Booking.com stays are never touched.",
+      "Opens again nights the member closed by hand, for one room, from checkIn to the night before checkOut. Any closed nights in that range are reopened, even part of a longer closed stretch: closed 12 to 15 (the nights of the 12th, 13th and 14th) and reopened 14 to 15 leaves 12 to 14 closed; reopening the middle leaves two closed stretches, one on each side. Bookings and Airbnb or Booking.com stays are never touched.",
     input: z.object({ room: roomArgument, checkIn: isoDate, checkOut: isoDate }),
     requires: "blocks.manage",
     mutates: true,
     run: async ({ room, checkIn, checkOut }, ctx) => {
-      if (checkOut <= checkIn) throw invalid("Check-out must be after check-in");
       const found = await findRoom(ctx, room);
-      const from = parseIsoDate(checkIn);
-      const to = parseIsoDate(checkOut);
-      const closed = (await getCalendar(ctx, { from, to, roomId: found.id })).filter(
-        (night) => night.kind === "MANUAL",
-      );
-      const inside = closed.filter((night) => night.checkIn >= from && night.checkOut <= to);
-      for (const night of inside) await removeBlock(ctx, night.id);
-      const nights = (list: typeof closed) =>
+      const { reopened, leftClosed } = await reopenNights(ctx, found.id, toDateRange({ checkIn, checkOut }));
+      const nights = (list: DateRange[]) =>
         list.map((night) => ({ checkIn: toIsoDate(night.checkIn), checkOut: toIsoDate(night.checkOut) }));
-      return {
-        room: found.name,
-        reopened: nights(inside),
-        leftClosed: nights(closed.filter((night) => !inside.includes(night))),
-      };
+      return { room: found.name, reopened: nights(reopened), leftClosed: nights(leftClosed) };
     },
   }),
   team({
