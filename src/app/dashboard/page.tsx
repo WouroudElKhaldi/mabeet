@@ -1,13 +1,13 @@
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/shell/app-shell";
 import { PageHeader } from "@/components/shell/page-header";
-import { ButtonLink } from "@/components/ui/button";
 import type { Locale } from "@/config/appearance";
 import { getPlacesOverview } from "@/modules/analytics/server";
+import { AddPlaceButton } from "@/modules/workspaces";
 import { requirePageUser } from "@/server/http/session";
 import { formatMoney } from "@/utils/format";
 
@@ -59,12 +59,7 @@ export default async function AllMyPlacesPage() {
       <PageHeader
         title={t("title")}
         intro={t("intro", { count: places.length })}
-        actions={
-          <ButtonLink href="/host" variant="secondary" size="sm">
-            <Plus className="size-4" aria-hidden />
-            {t("addPlace")}
-          </ButtonLink>
-        }
+        actions={<AddPlaceButton />}
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">

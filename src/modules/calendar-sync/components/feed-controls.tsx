@@ -4,6 +4,7 @@ import { clsx } from "clsx";
 import { RefreshCw, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
+import { useCloseDialog } from "@/components/ui/form-dialog";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { inputClass } from "@/components/ui/field";
@@ -61,13 +62,17 @@ export function AddFeedForm({ businessId, roomId }: { businessId: string; roomId
   const { run, pending, error } = useAction();
   const [url, setUrl] = useState("");
   const [source, setSource] = useState<(typeof FEED_SOURCES)[number]>("AIRBNB");
+  const closeDialog = useCloseDialog();
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const added = await run(() =>
       api.post(`/api/workspaces/${businessId}/feeds`, { roomId, url: url.trim(), source }),
     );
-    if (added) setUrl("");
+    if (added) {
+      setUrl("");
+      closeDialog();
+    }
   };
 
   return (

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PageHeader, Panel } from "@/components/shell/page-header";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Pill } from "@/components/ui/pill";
 import { StatTile } from "@/components/ui/stat-tile";
 import { getPayouts } from "@/modules/bookings/server";
@@ -71,13 +72,15 @@ export default async function PayoutsPage({ params }: PageProps) {
           ))
         )}
 
-        <Panel title={t("requestTitle")}>
-          <PayoutRequestForm
-            businessId={businessId}
-            balances={data.balances.map(({ currency, availableCents }) => ({ currency, availableCents }))}
-            last={data.lastDetails}
-          />
-        </Panel>
+        <div>
+          <FormDialog label={t("requestTitle")} title={t("requestTitle")} size="lg">
+            <PayoutRequestForm
+              businessId={businessId}
+              balances={data.balances.map(({ currency, availableCents }) => ({ currency, availableCents }))}
+              last={data.lastDetails}
+            />
+          </FormDialog>
+        </div>
 
         <Panel title={t("history")}>
           {data.payouts.length === 0 ? (

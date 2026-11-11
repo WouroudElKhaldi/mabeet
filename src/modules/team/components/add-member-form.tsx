@@ -3,6 +3,7 @@
 import { Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { useCloseDialog } from "@/components/ui/form-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, LabeledControl } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-error";
@@ -18,6 +19,7 @@ export function AddMemberForm({ businessId, roles }: { businessId: string; roles
   const t = useTranslations("dashboard.team");
   const { run, pending, error, fieldErrors } = useAction(["name", "email", "phone"]);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const closeDialog = useCloseDialog();
 
   if (roles.length === 0) return <p className="text-sm text-muted">{t("noRoleToGive")}</p>;
 
@@ -39,6 +41,8 @@ export function AddMemberForm({ businessId, roles }: { businessId: string; roles
     if (sent) {
       setSentTo(email);
       form.reset();
+      // In the pop-up, the new invitation now shows in the list behind it.
+      closeDialog();
     }
   };
 

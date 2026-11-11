@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useCloseDialog } from "@/components/ui/form-dialog";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
@@ -40,6 +41,7 @@ export function RoleEditor({
   const tConfirm = useTranslations("confirm");
   const { run, pending, error, fieldErrors } = useAction(["name"]);
   const { confirm, dialog } = useConfirm();
+  const closeDialog = useCloseDialog();
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -55,7 +57,10 @@ export function RoleEditor({
         ? api.patch(`/api/workspaces/${businessId}/roles/${role.id}`, body)
         : api.post(`/api/workspaces/${businessId}/roles`, body),
     );
-    if (saved && !role) form.reset();
+    if (saved && !role) {
+      form.reset();
+      closeDialog();
+    }
   };
 
   const remove = async (existing: EditableRole) => {

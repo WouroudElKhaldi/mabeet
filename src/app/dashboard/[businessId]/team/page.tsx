@@ -1,7 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
 import { DisclosurePanel } from "@/components/shell/disclosure-panel";
-import { PageHeader, Panel } from "@/components/shell/page-header";
+import { PageHeader } from "@/components/shell/page-header";
+import { FormDialog } from "@/components/ui/form-dialog";
+import { DataCell, DataRow, DataTable } from "@/components/ui/data-table";
 import { Pill } from "@/components/ui/pill";
 import {
   AddMemberForm,
@@ -21,8 +23,8 @@ import { formatDate } from "@/utils/format";
 type PageProps = { params: Promise<{ businessId: string }> };
 
 /**
- * The team: who works in this place and with which role, inviting someone, the invitations sent, and the roles with
- * the permissions each one gives. Managing the team and managing the roles are two permissions, so each part shows
+ * The team: who works in this place and with which role, and the invitations sent, as tables; the roles with the
+ * permissions each one gives. Inviting someone and making a role open in a pop-up. Managing the team and managing the roles are two permissions, so each part shows
  * only to a member who holds its own.
  */
 export default async function TeamPage({ params }: PageProps) {
@@ -45,93 +47,129 @@ export default async function TeamPage({ params }: PageProps) {
 
   return (
     <>
-      <PageHeader title={t("title")} intro={t("intro")} />
+      <PageHeader
+        title={t("title")}
+        intro={t("intro")}
+        actions={
+          managesTeam ? (
+            <FormDialog label={t("invite")} title={t("inviteTitle")} intro={t("inviteIntro")}>
+              <AddMemberForm businessId={businessId} roles={givable} />
+            </FormDialog>
+          ) : null
+        }
+      />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-10">
         {members && (
-          <Panel title={t("members")} intro={t("memberCount", { count: members.length })}>
-            <ul className="divide-y divide-line">
+          <section aria-labelledby="team-members" className="grid gap-3">
+            <div>
+              <h2 id="team-members" className="text-xl font-semibold">
+                {t("members")}
+              </h2>
+              <p className="mt-1 text-sm text-muted">{t("memberCount", { count: members.length })}</p>
+            </div>
+            <DataTable label={t("members")} columns={[{ label: t("member") }, { label: t("role") }]}>
               {members.map((member) => {
                 const isOwner = ownerRoleIds.has(member.role.id);
                 return (
-                  <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                    <div className="min-w-0">
+                  <DataRow key={member.id}>
+                    <DataCell>
                       <p className="flex flex-wrap items-center gap-2 font-semibold">
                         <bdi>{member.user.name}</bdi>
                         {member.id === ctx.membershipId && <Pill>{t("you")}</Pill>}
                       </p>
-                      <p className="truncate text-sm text-muted">
+                      <p className="max-w-64 truncate text-muted">
                         <bdi dir="ltr">{member.user.email}</bdi>
                       </p>
-                    </div>
-                    {canManageMember(ctx, { id: member.id, isOwner }) ? (
-                      <MemberControls
-                        businessId={businessId}
-                        member={{ id: member.id, name: member.user.name, role: member.role }}
-                        roles={givable}
-                      />
-                    ) : (
-                      <span className="text-sm font-semibold text-muted">{member.role.name}</span>
-                    )}
-                  </li>
+                    </DataCell>
+                    <DataCell>
+                      {canManageMember(ctx, { id: member.id, isOwner }) ? (
+                        <MemberControls
+                          businessId={businessId}
+                          member={{ id: member.id, name: member.user.name, role: member.role }}
+                          roles={givable}
+                        />
+                      ) : (
+                        <span className="font-semibold text-muted">{member.role.name}</span>
+                      )}
+                    </DataCell>
+                  </DataRow>
                 );
               })}
-            </ul>
-          </Panel>
-        )}
-
-        {managesTeam && (
-          <Panel title={t("inviteTitle")} intro={t("inviteIntro")}>
-            <AddMemberForm businessId={businessId} roles={givable} />
-          </Panel>
+            </DataTable>
+          </section>
         )}
 
         {invitations && (
-          <Panel title={t("invitations")}>
+          <section aria-labelledby="team-invitations" className="grid gap-3">
+            <h2 id="team-invitations" className="text-xl font-semibold">
+              {t("invitations")}
+            </h2>
             {invitations.length === 0 ? (
-              <p className="text-sm text-muted">{t("noInvitations")}</p>
+              <p className="rounded-xl bg-surface-2 p-4 text-sm text-muted">{t("noInvitations")}</p>
             ) : (
-              <ul className="divide-y divide-line">
+              <DataTable
+                label={t("invitations")}
+                columns={[
+                  { label: t("invitee") },
+                  { label: t("role"), wide: true },
+                  { label: t("status") },
+                  { label: t("sent"), wide: true },
+                  { label: t("cancelInvite"), align: "end", hiddenLabel: true },
+                ]}
+              >
                 {invitations.map((invitation) => (
-                  <li key={invitation.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                    <div className="min-w-0">
-                      <p className="flex flex-wrap items-center gap-2 font-semibold">
+                  <DataRow key={invitation.id}>
+                    <DataCell>
+                      <p className="font-semibold">
                         <bdi>{invitation.name}</bdi>
-                        <Pill tone={invitation.status === "PENDING" ? "accent" : "quiet"}>
-                          {t(`invitationStatus.${invitation.status}`)}
-                        </Pill>
                       </p>
-                      <p className="text-sm text-muted">
-                        <bdi dir="ltr">{invitation.email}</bdi> · <bdi>{invitation.role.name}</bdi>
+                      <p className="max-w-64 truncate text-muted">
+                        <bdi dir="ltr">{invitation.email}</bdi>
                       </p>
-                      <p className="text-sm text-muted">
-                        {invitation.acceptedAt
-                          ? t("acceptedOn", { date: day(invitation.acceptedAt) })
-                          : t("invitedBy", {
-                              name: invitation.invitedBy.name,
-                              date: day(invitation.createdAt),
-                            })}
-                      </p>
-                    </div>
-                    {invitation.status === "PENDING" && (
-                      <CancelInvitation
-                        businessId={businessId}
-                        invitation={{ id: invitation.id, name: invitation.name }}
-                      />
-                    )}
-                  </li>
+                    </DataCell>
+                    <DataCell wide>
+                      <bdi>{invitation.role.name}</bdi>
+                    </DataCell>
+                    <DataCell>
+                      <Pill tone={invitation.status === "PENDING" ? "accent" : "quiet"}>
+                        {t(`invitationStatus.${invitation.status}`)}
+                      </Pill>
+                    </DataCell>
+                    <DataCell wide className="text-muted">
+                      {invitation.acceptedAt
+                        ? t("acceptedOn", { date: day(invitation.acceptedAt) })
+                        : t("invitedBy", {
+                            name: invitation.invitedBy.name,
+                            date: day(invitation.createdAt),
+                          })}
+                    </DataCell>
+                    <DataCell align="end">
+                      {invitation.status === "PENDING" && (
+                        <CancelInvitation
+                          businessId={businessId}
+                          invitation={{ id: invitation.id, name: invitation.name }}
+                        />
+                      )}
+                    </DataCell>
+                  </DataRow>
                 ))}
-              </ul>
+              </DataTable>
             )}
-          </Panel>
+          </section>
         )}
 
         {managesRoles && (
           <section aria-labelledby="team-roles" className="grid gap-4">
-            <div>
-              <h2 id="team-roles" className="text-2xl font-semibold">
-                {t("roles")}
-              </h2>
-              <p className="mt-1 max-w-2xl text-sm text-muted">{t("rolesIntro")}</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 id="team-roles" className="text-xl font-semibold">
+                  {t("roles")}
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm text-muted">{t("rolesIntro")}</p>
+              </div>
+              <FormDialog label={t("newRole")} title={t("newRole")} variant="secondary" size="lg">
+                <RoleEditor businessId={businessId} grantable={grantable} />
+              </FormDialog>
             </div>
             {roles.map((role) => (
               <DisclosurePanel
@@ -157,9 +195,6 @@ export default async function TeamPage({ params }: PageProps) {
                 )}
               </DisclosurePanel>
             ))}
-            <Panel title={t("newRole")}>
-              <RoleEditor businessId={businessId} grantable={grantable} />
-            </Panel>
           </section>
         )}
       </div>
