@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { CURRENCIES, PAYOUT_METHODS } from "@/config/enums";
-import { id, phone } from "@/lib/schemas";
+import { CURRENCIES, DECIDED_PAYOUT_STATUSES, PAYOUT_METHODS } from "@/config/enums";
+import { id, listChoice, listQuery, phone } from "@/lib/schemas";
 
 // The simulated Whish server takes Whish's own request bodies.
 export const whishCreateBody = z.object({
@@ -27,6 +27,12 @@ export const whishPayParams = z.object({ code: z.string().min(4).max(32) });
 // ---------- Payouts ----------
 
 export const payoutParams = z.object({ payoutId: id });
+
+/** The admin's table of payout requests to send: words, a page, and how each is sent. */
+export const payoutRequestsQuery = listQuery.extend({ method: listChoice(PAYOUT_METHODS) });
+
+/** The admin's table of payouts already decided: the same, and whether each was sent or refused. */
+export const payoutHistoryQuery = payoutRequestsQuery.extend({ status: listChoice(DECIDED_PAYOUT_STATUSES) });
 
 /** A host asking for a payout: to a bank account (an IBAN, with the bank's name) or a Whish number. Never a card. */
 export const payoutRequestInput = z

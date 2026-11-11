@@ -8,6 +8,7 @@ export {
   findPlacesForReports,
   getPublicPlace,
   listListedPlaces,
+  listPlaceNames,
   listPlacesByIds,
 } from "./server/place-lookup";
 export {

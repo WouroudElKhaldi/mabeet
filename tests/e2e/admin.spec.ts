@@ -169,20 +169,18 @@ test("appearance: a palette changes the whole site, and Cedar comes back", async
 
 test("money, users and health show their sections", async ({ page }) => {
   await page.goto("/admin/money");
-  for (const section of [
-    "Earned from plans",
-    "Payouts to send",
-    "What Mabeet owes hosts",
-    "Refunds to send by hand",
-    "Plan revenue by month",
-    "Recent payouts",
-  ]) {
+  for (const section of ["Earned from plans", "Plan revenue by month"]) {
     await expect(page.getByRole("region", { name: section })).toBeVisible();
   }
-  await page.goto("/admin/users");
-  await expect(page.getByRole("region", { name: "Newest people" }).getByText("Demo Guest")).toBeVisible();
+  // Each long money list is a tab of its own, with a search.
+  for (const tab of ["Payouts to send", "Refunds to send", "Held for hosts", "Payout history"]) {
+    await page.getByRole("navigation", { name: "Money sections" }).getByRole("link", { name: tab }).click();
+    await expect(page.getByRole("search", { name: "Search and filter" })).toBeVisible();
+  }
+  await page.goto("/admin/users?q=Demo+Guest");
+  await expect(page.getByRole("table").getByText("Demo Guest")).toBeVisible();
   await page.goto("/admin/health");
-  await expect(page.getByRole("region", { name: "Calendar sync" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Health" })).toBeVisible();
 });
 
 test("notifications: the bell and the full list", async ({ page }) => {

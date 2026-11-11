@@ -207,6 +207,15 @@ const LISTED_BUSINESS_FIELDS = {
  * The same fields as a search result, for places named by id: a guest's saved places. A place its owner has
  * unlisted is still here (its page still works, and the guest chose it), but a paused or deleted one is not.
  */
+/** The names of businesses by id, whatever their status: for the admin, who sees paused and deleted places too. */
+export function findBusinessNames(db: Db, businessIds: readonly string[]) {
+  if (businessIds.length === 0) return Promise.resolve([]);
+  return db.business.findMany({
+    where: { id: { in: [...businessIds] } },
+    select: { id: true, name: true },
+  });
+}
+
 export function findBusinessesByIds(db: Db, businessIds: readonly string[]) {
   if (businessIds.length === 0) return Promise.resolve([]);
   return db.business.findMany({

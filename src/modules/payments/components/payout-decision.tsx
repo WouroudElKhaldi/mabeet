@@ -4,21 +4,28 @@ import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
+import { useCloseDialog } from "@/components/ui/form-dialog";
 import { FormError } from "@/components/ui/form-error";
 import { useAction } from "@/hooks/use-action";
 import { api } from "@/lib/api-client";
 
 /**
  * The admin sent a payout by hand from Mabeet's Whish or Stripe account and marks it sent, with the transfer's
- * reference, or refuses it. Each payout is decided once; the server refuses a second answer.
+ * reference, or refuses it. Each payout is decided once; the server refuses a second answer. In the admin's table it
+ * opens in a pop-up, which closes once the answer is saved.
  */
 export function PayoutDecision({ payoutId }: { payoutId: string }) {
   const t = useTranslations("admin.money");
   const { run, pending, error } = useAction();
   const [reference, setReference] = useState("");
   const referenceId = useId();
-  const decide = (action: "paid" | "rejected") =>
-    run(() => api.post(`/api/admin/payouts/${payoutId}`, { action, reference: reference.trim() || null }));
+  const closeDialog = useCloseDialog();
+  const decide = async (action: "paid" | "rejected") => {
+    const saved = await run(() =>
+      api.post(`/api/admin/payouts/${payoutId}`, { action, reference: reference.trim() || null }),
+    );
+    if (saved) closeDialog();
+  };
 
   return (
     <div className="grid gap-2">
