@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/server/http/session";
 import { AppFrame } from "./app-frame";
+import type { SwitcherPlace } from "./place-switcher";
 import type { NavGroup } from "./nav";
 
 /**
@@ -16,6 +17,7 @@ export async function AppShell({
   area = "host",
   adminVisiting = false,
   bell,
+  places,
   children,
 }: {
   nav: NavGroup[];
@@ -24,6 +26,8 @@ export async function AppShell({
   adminVisiting?: boolean;
   /** The notification bell, built by the layout for this person. */
   bell?: ReactNode;
+  /** In a place's dashboard: that place and every place this person works in, for the switcher atop the menu. */
+  places?: { current: SwitcherPlace; all: SwitcherPlace[] };
   children: ReactNode;
 }) {
   const [t, user] = await Promise.all([getTranslations("shell"), getCurrentUser()]);
@@ -35,6 +39,7 @@ export async function AppShell({
       viewSiteHref="/"
       userName={user?.name ?? t("account")}
       bell={bell}
+      places={places}
     >
       {children}
     </AppFrame>
