@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import * as deleteRoute from "@/app/api/me/delete/route";
 import * as exportRoute from "@/app/api/me/export/route";
+import * as profileRoute from "@/app/api/me/profile/route";
 import { listMembers } from "@/modules/team/server";
 import { auth } from "@/server/auth/better-auth";
 import { createPlace, memberWith, prisma } from "@tests/integration/helpers";
 import { call, signUp, TEST_PASSWORD } from "@tests/integration/http";
-import { deleteMyAccount, exportMyData } from "../server/account-service";
+import { deleteMyAccount, exportMyData, getMyProfile } from "../server/account-service";
 
 // Nothing is deleted: an account is marked deleted, its email is freed, and its sessions end.
 
@@ -75,5 +76,35 @@ describe("downloading my data", () => {
     expect(data).toMatchObject({ email: guest.email, name: "Rana Khalil" });
     expect(JSON.stringify(data)).not.toContain(other.email);
     await expect(exportMyData(other.userId)).resolves.toMatchObject({ email: other.email });
+  });
+});
+
+describe("the profile", () => {
+  it("changes the person's own name and phone, and never their email", async () => {
+    const person = await signUp("Rana Khoury");
+
+    const saved = await call(profileRoute.PATCH, {
+      as: person,
+      body: { name: "  Rana Khoury Saad ", phone: "+96171123456", email: "other@else.test" },
+    });
+
+    expect(saved.status).toBe(200);
+    expect(await getMyProfile(person.userId)).toEqual({
+      name: "Rana Khoury Saad",
+      email: person.email,
+      phone: "+96171123456",
+    });
+    await call(profileRoute.PATCH, { as: person, body: { name: "Rana Khoury Saad", phone: null } });
+    expect(await getMyProfile(person.userId)).toMatchObject({ phone: null });
+  });
+
+  it("refuses a short name or a phone not in international format, and a signed-out visitor", async () => {
+    const person = await signUp("Nadim Aoun");
+    expect((await call(profileRoute.PATCH, { as: person, body: { name: "N" } })).status).toBe(400);
+    expect(
+      (await call(profileRoute.PATCH, { as: person, body: { name: "Nadim", phone: "71123456" } })).status,
+    ).toBe(400);
+    expect((await call(profileRoute.PATCH, { body: { name: "Nadim" } })).status).toBe(401);
+    expect(await getMyProfile(person.userId)).toMatchObject({ name: "Nadim Aoun", phone: null });
   });
 });

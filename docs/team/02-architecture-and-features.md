@@ -549,7 +549,10 @@ guest who made it.
 
 Guests see their stays (`/account`), save favourites, review a stay after check-out, download all their data
 (`GET /api/me/export`), and delete their account (`POST /api/me/delete`, typing their email to confirm; see "Nothing
-is deleted"). Code: `account-service.ts`, `src/app/(site)/account/**`.
+is deleted"). Anyone with an account changes their own name and phone (`PATCH /api/me/profile`; the email is
+how they sign in, so it stays) and their password (Better Auth's change password, which signs out their other
+devices), on `/dashboard/[businessId]/profile` or `/admin/profile`. Code: `account-service.ts`,
+`src/app/(site)/account/**`.
 
 ### A. Activity log and notification bell
 
@@ -560,11 +563,27 @@ Every important action is recorded, through the `audit` module (`@/modules/audit
 - `recordPersonAndBusiness(tx, { userId, businessId, action, entity, entityId })` for something a person did that
   the business must hear about (a guest's request, someone joining the team): it goes on the person's own timeline
   (`ActivityLog`) and in the business's `AuditLog`.
+- `notePerson(tx, { userId, businessId, action, entity, entityId })` for what only the person's own timeline needs:
+  a host's decision on their booking, a request that ran out, a place saved or unsaved (`favorite.saved`,
+  `favorite.removed`, only when the heart really changes), a review written (`review.written`).
 - Something the system noticed (a sync, a payment callback) goes in `AuditLog` with no actor; the audit module
   exports a function for it with the first such event.
 
+The guest's Activity page (`/account/activity`) reads the timeline through `listMyActivity(userId)` (`directory`
+module, `activity-service.ts`): the newest 100 entries (`listPersonActivity` in `audit`), each with the place's
+name and where it leads (the booking's page for a stay, found through `listMyBookings`; the place's page
+otherwise, through `listPlacesByIds`). A place that has closed since keeps its line without a name or link. Only
+the kinds in `src/config/activity.ts` are shown; a new kind needs a line there, its icon and text key in
+`activity-list.tsx` and its text in the three message files. Test: `activity.integration.test.ts` (directory).
+
 The bell in the top bar shows the last five events of the business. "View all" opens the full list. Code:
-`audit.ts`, `notification-feed-service.ts`, `notification-bell.tsx`.
+`audit.ts` (the feed reads `listFeed`, `countFeed`, `countFeedSince`), `notification-feed-service.ts` in
+`notifications`, which reads them and when the person last looked (`notificationsSeenAt`, from `accounts`), and the
+bell and list in `src/modules/notifications/components/`.
+
+- The bell never reads the bookings: `notifications` may not call `bookings`, which calls it to send push. So the
+  booking engine writes the guest and the reference on the log line itself (`note: { guest, reference }`, saved in
+  `AuditLog.meta`), and the bell shows them from there.
 
 The bell is read from `AuditLog`, so it shows only the actions listed in `notification-feed-service.ts`. To add a
 new kind of bell entry (all four steps, or it shows a raw key or nothing):
@@ -582,7 +601,30 @@ new kind of bell entry (all four steps, or it shows a raw key or nothing):
 
 `/admin`, for platform admins: businesses (suspend or reactivate), hosts, AI spending against the budget, calendar
 sync health, payouts and refunds to send by hand, categories, and the
-site's colour palette. Code: `admin-service.ts`, `src/app/admin/**`.
+site's colour palette. Code: `src/app/admin/**`.
+
+- Each admin read and change lives in the module that owns its table, never in `admin`: `workspaces` lists the
+  businesses and suspends them (`platform-service.ts`), `billing` adds up the plan revenue (`plan-revenue.ts`),
+  `payments` keeps the payout queue, `bookings` what each host is owed and the refunds to send by hand. `admin` keeps
+  only its own tables: the categories and the site's palette. So `workspaces` can keep calling `admin` with no circle.
+- Every one takes a `PlatformActor`, calls `requirePlatformAdmin` first, and logs its change with
+  `recordPlatformAction` (`business.suspended`, `business.reactivated`, `category.created`, `category.updated`,
+  `category.deleted`, `site.palette_changed`).
+- Suspending writes only `Business.status`: every public read and `resolveContext` already ask for `ACTIVE`, so the
+  page, the listing and the team's access go at once, and come back with `ACTIVE`.
+- A category's slug is its key: creating a deleted slug brings the row back. A category still used is never
+  deleted.
+- **The screens.** `src/app/admin/layout.tsx` checks `requirePageAdmin()` (`src/server/http/session.ts`) once and
+  answers 404 to anyone else; each page calls it again for the `PlatformActor` its services need. The menu is
+  `src/components/admin/nav-items.ts`. Pages: the overview, hosts (each owner once, with their businesses,
+  `BusinessStatusToggle` and "Open dashboard"), one host (`/admin/hosts/{userId}`: their contacts, their host
+  profile even while private, and each business with its size, "Open dashboard", its public page and the toggle;
+  `getPlatformHost` in `workspaces`), people, money (`PayoutDecision`, what each host is owed,
+  `RefundSent`, plan revenue by month), categories (`CategoryManager`), appearance (`SitePalettePicker`) and health: the calendar links
+  that need a look across the platform (`getSyncHealth` in `calendar-sync`). A link needs a look when its last read
+  failed or nothing was read for an hour (`feedNeedsLook`, `src/modules/calendar-sync/feed-health.ts`); the host's
+  Channels page uses the same rule. Each
+  component lives in the module whose route it calls.
 
 ### A. AI: how it is built
 
@@ -639,7 +681,7 @@ Route: `POST /api/mcp`.
 - **First version: read and report only.** Free rooms, bookings, revenue, the commission saved, and the numbers
   for a report over a period (`getBusinessReport`, the same figures as the analytics page). The person's AI app
   writes the report. Every key is read-only.
-- **Then: a few actions**, only what the person's role allows: `cancel_booking` (full automatic refund),
+- **Then: a few actions** (built, see below), only what the person's role allows: `cancel_booking` (full automatic refund),
   `close_dates` and `reopen_dates`, `confirm_booking` and `decline_booking`. Each calls the same service as the
   dashboard button. Keys can then have write access; read-only keys never see these tools. They are marked as
   changing data, so the AI app asks the person before running them. Marking a guest as arrived needs a new booking
@@ -660,8 +702,34 @@ the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_ro
 id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
 come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. `get_report`
 (`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give
-the same numbers as the analytics page. Not yet: the actions. Tests: `mcp-isolation.integration.test.ts` and
+the same numbers as the analytics page. Tests: `mcp-isolation.integration.test.ts` and
 `mcp-oauth.integration.test.ts` (assistant).
+
+**The actions** (`ACTION_TOOLS` in `team-tools.ts`, all `mutates: true`). A key is read only unless the member ticks
+"Allow changes" when making it (`keyInput.canWrite`, stored as `ApiKey.canWrite`); signing in with OAuth stays read
+only. A read-only key is never offered an action (`teamToolsFor`), and a member is offered only those their role
+allows there. Each takes the optional `place` like the reading tools:
+
+- `confirm_booking` (`bookings.decide`): `confirmBookingByReference`, the dashboard's confirm.
+- `decline_booking` and `cancel_booking` (`bookings.decide`): `endBookingByReference`
+  (`bookings/server/ai-booking-decisions.ts`). A booking nobody paid online for ends at once. One with an online
+  payment ends only after every check, in this order: the member is an owner; the stay starts more than two days
+  from now; the first call only answers what would happen (the refund, formatted) and the second must repeat that
+  exact refund as `confirmRefund`; the payment is in one currency and not refunded yet; what Mabeet holds for the
+  place, and for every place together, still covers the refund (`moneyFreeForRefunds` in `host-money-service.ts`:
+  payments net of refunds, minus payouts sent or asked for); for a card payment, Mabeet's Stripe balance in that
+  currency covers it too (`getStripeAvailableCents`, and a card refund is refused while it cannot be read); and at
+  most three such refunds a day per place (`enforceRateLimit`). A refusal is logged as
+  `booking.ai_refund_refused.<check>` and the member is only told to use the dashboard: the company's figures never
+  reach a host or an AI app. Then the dashboard's own decline or cancel runs, with its full refund.
+- `close_dates` and `reopen_dates` (`blocks.manage`): `addBlock` and `removeBlock`. Reopening only removes closed
+  dates lying wholly inside the days asked, and says which ones it left; bookings and platform stays are never
+  touched.
+- `set_room_open` (`rooms.manage`): `updateRoom` with `active`.
+- `sync_calendars` (`feeds.manage`): `syncFeedNow` for every connected calendar link of the place.
+
+A room is named by its id or (part of) its name; a name that fits several rooms is refused. Tests:
+`mcp-actions.integration.test.ts` (assistant).
 
 **OAuth sign-in** (for ChatGPT, Claude.ai and any app that connects without a key). Better Auth's `jwt` and
 `oauthProvider` plugins (`src/server/auth/better-auth.ts`) make Mabeet the app's sign-in server. The app finds it
@@ -781,7 +849,7 @@ saved (revenue × the place's rate), channels, nights by month, requests by outc
 `getSavings(ctx)`: since the place joined, per currency, and the plan fees paid. `getAnalytics(ctx, scope, range)`:
 one place or every place the member may read, with totals (money per currency). `getPlacesOverview(userId)`: each of
 the person's places with today's numbers where they may read bookings. Route: `GET /api/workspaces/{id}/analytics`
-(`from`, `to`; the last 30 days by default, two years at most). Reviews are not built, so there is no rating yet.
+(`from`, `to`; the last 30 days by default, two years at most). The rating is on the Reviews page, not here.
 Tests: `analytics.integration.test.ts` (analytics).
 
 ### B. Background work
@@ -804,7 +872,7 @@ Two kinds, by how much they matter:
   - `notify`: every email and push: team invitations today, then every booking, payment, refund and Contact host
     notice. 8 at once. Retried 4 times, waiting longer each time.
   - `cron`: housekeeping every 5 minutes (`SCHEDULES` in `jobs/cron-jobs.ts`), on the worker's own schedule; the
-    calendar sync joins it (every 15 minutes) with F11.
+    calendar sync runs beside it (`cron.calendar-sync`, every 5 minutes, reading links not read in 10).
   - `ai` is added with the AI assistants (last bonus): travel and team assistant answers, reports. 4 at once per
     worker, retried once. `runOrQueue`, `GET /api/jobs/{jobId}` and the progress rows come with it; nothing uses
     them before then.
@@ -927,7 +995,7 @@ handles it:
 ### B. Bookings: the host decides
 
 - `confirmBooking` (modes 2 and 3) first reads the room's Airbnb and Booking.com calendars again
-  (`refreshRoomFeeds`, in `calendar-sync`, once calendar sync is built). Then it confirms, unless a platform stay now
+  (`refreshBeforeConfirming`, in `feed-sync-service.ts`). Then it confirms, unless a platform stay now
   covers those nights or the answer time ran out.
 - `declineBooking` and `cancelBooking` refund everything the guest paid online. `cancelBooking` is refused once the
   stay has started (its money may already be paid out).
@@ -988,7 +1056,8 @@ taken by phone.
 
 ```
 CalendarFeed (room, link, source)
-  │  every 15 minutes (worker) · when the host presses "Sync now" · just before a host confirms
+  │  every 10 minutes (worker) · just before a guest books (unless read in the last 2 minutes)
+  │  · just before a host confirms · when the host presses "Sync now"
   ▼
 download: https only, public addresses only, no redirects, 10-second limit, 2 MB limit   (ical/safe-fetch.ts)
   ▼
@@ -1003,6 +1072,15 @@ in one transaction, with the room locked:
 then email and push the hosts about each NEW clash, and save lastSyncedAt and lastError
 ```
 
+- **Read as late as we can.** The platforms read our link only every few hours, so we read theirs often and just in
+  time: the worker every 10 minutes, a guest's booking first (`refreshBeforeBooking`: unless read in the last 2
+  minutes, 4 seconds at most), and a host's confirmation always (`refreshBeforeConfirming`). At a place that can
+  also be booked whole, every unit's links are read. A stay sold there a moment ago then refuses the request instead
+  of becoming a clash.
+- **Who does what.** `src/modules/calendar-sync` keeps the links (`CalendarFeed`), downloads and reads them, and
+  builds our file; it never calls the booking engine. `src/modules/bookings/server/feed-sync-service.ts` writes the
+  `IMPORTED` rows under the room lock and serves the routes: `GET/POST /api/workspaces/{id}/feeds`,
+  `DELETE .../feeds/{feedId}`, `POST .../feeds/{feedId}/sync` (all `feeds.manage`), `GET /api/ical/{token}`.
 - Imported rows are **not** under the overlap rule (its `WHERE` is `active AND kind <> 'IMPORTED'`), because Airbnb
   and Booking.com can overlap each other, and Airbnb can send a booking over nights we already sold (it refreshes
   only every few hours). So a clashing import is **stored as a normal active row with `conflict = true`**, never in
@@ -1022,22 +1100,42 @@ then email and push the hosts about each NEW clash, and save lastSyncedAt and la
 
 Each room shares `GET /api/ical/{exportToken}`:
 
-- our `DIRECT` and `MANUAL` nights from today,
+- our `DIRECT` and `MANUAL` nights from today, holds waiting for a payment or an answer included, so the platforms
+  stop selling them at their next read; at a place that can also be booked whole, the nights of the units it takes
+  turns with too (the whole place for a room, every room for the whole place),
 - the only text is "Not available" (no guest details),
 - no imported nights (that would create loops),
 - event ids never change (the platforms track events by id).
 
-An unknown link answers 404.
+An unknown link answers 404. The address may end in `.ics` (some platforms ask for it); the channels page shows it
+that way.
 
 ### C. Categories
 
 Browse categories (mountain, beach, hiking…) managed by admins, each for homes, experiences or services. A category's
 slug and kind never change, because links use them.
 
-### C. Contact the host
+### C. Contact the host (F2a)
 
-A guest can email a host from the place page (`POST /api/public/places/{slug}/messages`). It is rate limited. The
-guest's email is the reply address. A host can turn it off and offer WhatsApp only.
+A guest can ask a place's host a question from its Contact host page (`POST /api/public/places/{slug}/messages`, no
+sign-in: many guests ask before they have an account). `hostMessage` in `src/modules/directory/schemas.ts` checks it
+(name, email, the message, and optionally the stay and the number of guests; the dates come as a pair with check-out
+after check-in, or not at all). The route allows five questions an hour per address, counted across all places, so
+nobody can flood the hosts' inboxes. `sendHostMessage` (`directory/server/contact-host-service.ts`) refuses with 404
+for a place that is unknown, paused or deleted, and with 403 when the host takes questions on WhatsApp only
+(`HostProfile.contactBy`) and the place has a WhatsApp number; otherwise it queues `notify.host-message`. The choice
+covers all the host's places while the number is each place's own (and optional), so `acceptsMessages` keeps
+Contact host open on a place with no number: a guest always has one way to reach the host. Nothing is stored: there is no inbox in the
+app to read, and a question nobody answers must not look answered.
+
+`notify.host-message` (`directory/server/directory-notifications.ts`) writes to the people who can decide the
+place's bookings (`listPeopleWhoDecideBookings`, the same readers as a new request), one email per language with the
+**guest as the reply address**, so answering the email reaches the guest; then a push to each of their devices, after
+the emails, so a retried email never pushes twice. The job carries the question itself (plain values: there is no
+row to load) and reads the host's choice and the place's number again when it runs, so a host who switches to
+WhatsApp only meanwhile is not written to. Each question has its own reference, so a retried delivery is never sent twice.
+
+Tests: `src/modules/directory/tests/contact-host.integration.test.ts`.
 
 ### C. Contact the Mabeet team (F24)
 
@@ -1093,15 +1191,71 @@ Shared pieces:
 
 Hosts can sell seats in dated sessions (a hike, a wine tasting, an airport transfer).
 
-- The `session_seats_guard` trigger locks the session and refuses selling too many seats. If 20 guests race for the
-  last 5 seats, exactly 5 get one.
-- Same statuses, rules and payments as stays.
+- **Two modules.** `offerings` owns the catalogue and its schedule (`offering-service.ts`, `offering-repository.ts`):
+  what is sold and when its sessions run. Who sits in a session is the booking engine's, so seat bookings live in
+  `bookings` (`session-booking-service.ts`, `session-booking-repository.ts`), next to stays, and `bookings` calls
+  `offerings` (never the other way). `offering-lookup.ts` is what `bookings` reads and changes there: the bookable
+  offering by its link, an open session, the session lock (`lockSession`), taking a session off the schedule, and
+  `priceSession` (the price for each guest, or once for the group).
+- **The catalogue** (`offerings.manage`): `createOffering` counts against the plan
+  (`assertPlanAllowsAnother(businessId, "offerings", tx)` in the same transaction; Free has one), gets a unique link
+  from the title, and takes its region from the town when the host picks none. A category must be one of the admin's
+  categories of the same type. `updateOffering` changes only the fields sent; `active: false` takes it off the site.
+  Each change is logged (`offering.created`, `.updated`).
+- **The schedule**: `scheduleSessions` makes one session on each date, all at the same local time where the business
+  is (`zonedInstant` in `src/utils/zoned-time.ts`: 06:30 in Beirut is 04:30 UTC in winter, 03:30 in summer), each as
+  long as the offering, and only in the future (`session.scheduled`). `cancelSession` (in `bookings`, because it reads
+  the seats) locks the session, lets holds that ran out go, and refuses while anyone holds seats in it: their bookings
+  are declined or cancelled first, so each guest is told and refunded (`session.cancelled`).
+- **The same engine as a stay.** The seats are taken at once, in the business's mode (`initialStatus`): 10 minutes for
+  the online payment, or the owner's answer time offline. A booking never waits past the moment its session starts
+  (`sessionHoldUntil`). The owner confirms, declines or cancels with the same rules and the same refusals
+  (`assertOwnerCanAnswer`, `assertTransition`), the guest cancels from the same private link and route as a stay
+  (`cancelBookingAsGuest` tries the stay, then the seats), and housekeeping expires unpaid or unanswered seats
+  (`expireAllStaleSessionHolds`). Every change locks the session first.
+- **When it is too late.** Nobody answers a session that has started. A session's money is released to the host from
+  its day on, as a stay's from its check-in day (`sumHeldMoney`), so from that day seats can no longer be cancelled
+  and refunded (`sessionDayHasCome`).
+- **No overselling.** The `session_seats_guard` trigger locks the session and refuses selling too many seats
+  (23P01, shown as "Those seats were just taken"). If 20 guests race for the last 5 seats, exactly 5 get one.
+- **Money.** Paid online in full, like a stay: a `Payment` row has a `bookingId` or a `sessionBookingId`
+  (`PaidFor` in `payment-repository.ts`), and checkout, settling, refunds, the payouts page and the admin's refunds
+  to send by hand read both. Declined, cancelled or expired paid seats are refunded in full.
+- **Emails and push** are the stay's, with the words for seats: each notify job takes `kind: "session"`
+  ("Your seats at … are held", the session's time instead of dates). The bell and the guest's Activity page read the
+  same log entries, with `entity: "session_booking"`.
+- **Routes:** `GET`/`POST /api/workspaces/{businessId}/offerings`, `PATCH .../offerings/{offeringId}`,
+  `POST .../offerings/{offeringId}/sessions`, `DELETE .../sessions/{sessionId}`, `GET .../session-bookings`,
+  `POST .../session-bookings/{bookingId}/{action}`, and for guests `POST /api/public/experiences/{slug}/bookings`
+  (signed in, the stay requests' rate limit), then the stay's `/api/public/bookings/{token}/checkout` and `/cancel`.
 
-Code: `offering-service.ts`, `session-booking-service.ts`.
+Tests: `src/modules/offerings/tests/offerings.integration.test.ts`,
+`src/modules/bookings/tests/session-bookings.integration.test.ts` (the modes, the race for the last seats, payments
+and refunds, guest cancel, expiry, cancelling a session, isolation), the seats case in
+`booking-rollback.integration.test.ts`, the seat emails in `booking-notifications.integration.test.ts`, and
+`sessionHoldUntil` and `sessionDayHasCome` in `booking-policy.test.ts`.
 
-### F. Favourites
+### F. Favourites (F5)
 
-Signed-in guests can save places. Code: `favorite-service.ts`, `src/app/actions/favorites.ts`.
+Signed-in guests can save places. Code: `favorite-service.ts` and `favorite-repository.ts` (directory), behind
+`directory/server.ts`: `setFavorite(userId, slug, saved)`, `isPlaceSaved(userId, slug)` and `listMyFavorites(userId)`.
+The reference project used a server action (`src/app/actions/favorites.ts`); ours is a route like every other write,
+`PUT` and `DELETE /api/me/favorites/{slug}` (signed in, 120 changes a minute), so it is wrapped by `route()`, is in
+the contract, and no server code is pulled into a browser file through the module's door.
+
+- Saving is about a place, never about a stay: no dates and no prices are kept, and the saved list shows what each
+  place costs a night today.
+- Nothing is deleted. Unsaving marks the row (`isDeleted`) and saving again brings the same one back, so one guest
+  never collects two rows for one place (`@@unique([userId, businessId])`).
+- Saying the same thing twice is not an error. The heart on the page and the list in the account can be out of
+  step, and the guest's last tap decides.
+- `listMyFavorites` reads the saved ids, then builds the same `PlaceCard`s search builds (`buildCards` in
+  `directory-service.ts`, shared by both so a card never means two things), newest first. A place its owner has
+  **unlisted** stays on the list, because its page still works and the guest chose it; a **paused or deleted** one
+  drops off, and so does one with no bookable unit left, because there is no price to show.
+- An unknown or paused place cannot be saved at all (404).
+
+Tests: `src/modules/directory/tests/favorites.integration.test.ts`.
 
 ### F. Featured partners and sponsored listings
 
@@ -1113,11 +1267,29 @@ Bonus (F23), built on "N. Near your stay".
 - **Sponsored listings:** an admin can sponsor a partner place, or an experience or service of the platform, for a
   set of dates (`partner-service.ts`; only platform admins). While sponsored, it comes first in "Near your stay" and
   always shows a "Sponsored" label. A guest never sees a sponsored item without that label.
-- Partners are soft-deleted like every business table, and every admin change is logged.
-- This needs tables that do not exist yet: the database keeper adds them first (`07`, "Waiting for the database
-  keeper").
+- Partners are soft-deleted like every business table (removed, then brought back with their sponsorships), and
+  every admin change is logged in the same transaction (`partner.created`, `.updated`, `.removed`, `.restored`,
+  `.sponsored`, `.sponsorship_ended`).
+- Module `partners` (`partner-service.ts`, `partner-repository.ts`); routes `/api/admin/partners` (list, add),
+  `/api/admin/partners/{partnerId}` (save every field, remove), `.../restore`, `.../sponsorships` (sponsor) and
+  `.../sponsorships/{sponsorshipId}` (end). Anyone but a platform admin gets 404, as everywhere in the admin area.
+- A partner's photo is a link (`https` only), never an upload: partners are not on the platform (`07`, section 5).
+- Guests: `getPlace` (directory) adds `nearby`, from `listNearbyPartners(place, now)`: the live partners of the
+  place's region, sponsored ones first (marked `sponsored`, only on the days their sponsorship covers), then the
+  nearest by map pin (`src/utils/geo.ts`), then by name, at most 12. A place with no region shows none.
+- Screens (`src/modules/partners/components/`): `/admin/partners` shows `PartnerManager`: each live partner is a
+  `DisclosurePanel` (its kind, or "Sponsored now", beside the name) holding `PartnerForm` (every field; the link can be
+  a website or a social page), `PartnerSponsorships` (first and last day; the form sends the day after the last) and
+  Remove; then "New partner"; then the removed ones with "Bring back". The
+  place page shows `NearbyPartners` under "Things to do near your stay" (between the amenities and Meet your host, as
+  the map is not built yet): cards in a `ScrollRail` with the photo (any https host, so not through the image
+  resizer), the kind, "Sponsored", the town and distance, the link (named Instagram, Facebook or TikTok for those
+  sites) and the phone. With no partners the section is not shown. The seed adds nine demo partners in the demo
+  places' regions, three sponsored for 60 days. Test: `tests/e2e/partners.spec.ts`.
+- Sponsoring an experience or service is built with experiences (F8): the table already takes it, and those
+  offerings then join the same list.
 
-### H. Host profile
+### H. Host profile (F7a)
 
 The owner's own profile (name, bio, city, languages, years hosting, how guests may contact them). It shows on their
 listings only if they choose. Code: `host-service.ts`.
@@ -1125,6 +1297,27 @@ listings only if they choose. Code: `host-service.ts`.
 It has **no phone or WhatsApp number**. The numbers guests use are always the **business's** (`Business.whatsapp`
 and `phone`), the same on the place page and the booking page. The host's own number is `User.phone`, for the
 platform admins.
+
+**What guests see.** `getHostSection(businessId)` in `workspaces/server/host-service.ts` (behind
+`workspaces/server.ts`) gives the host of a place's public pages: `contactBy`, and `profile` only when the host
+turned `showOnListings` on. The host is the place's **first owner still on the team** (`host-repository.ts`, the
+oldest active membership on the owner role), so the page does not change when another owner joins. A host who never
+wrote a profile, or whose profile is deleted, is shown as no profile and reached both ways (`BOTH`, the schema's own
+default): how guests may reach a host is a setting, not a personal detail, so it applies even while the profile is
+hidden. The shown name is `displayName`, or the account name when it is empty.
+
+**How the host answers.** `getResponseStats(businessId, since)` in `bookings` (`booking-stats.ts`, the raw query in
+`booking-stats-repository.ts`) counts only the requests that really waited for the host: an automatic booking never
+asks them, and a mode 2 booking whose payment never came never reached them. A request counts as **answered** when a
+person confirmed or declined it, and as **missed** when it expired waiting; one cancelled meanwhile counts as
+neither, because a later cancellation overwrites `decidedAt`. The clock starts when the request reached the host: at
+once offline, at the payment in mode 2. `getPlace` turns it into `host.response` (the share answered, and the
+typical minutes) over the past year (`RESPONSE_WINDOW_DAYS`), and gives nothing at all under three requests
+(`MIN_REQUESTS_FOR_RESPONSE`), because one missed request would read as a 0% response rate. The pure rules for how
+guests read these figures are in `src/modules/directory/host.ts` (`acceptsMessages`, `offersWhatsapp`,
+`responseSpeed`, `yearsHosting`).
+
+Tests: `src/modules/directory/tests/host-section.integration.test.ts` and `host.test.ts` (directory).
 
 ### L. Languages
 
@@ -1198,6 +1391,24 @@ Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `send
 - An admin sends it by hand from the platform's Whish or Stripe account, and marks it sent with the transfer
   reference.
 - The business row is locked, so two requests cannot spend the same money.
+- **Available** is worked out every time, never stored: online payments for confirmed stays that have started, net of
+  refunds, minus payouts sent or still asked for. Everything else paid online is "upcoming". A refused request is
+  available again.
+- **Who does what.** The payments are the booking engine's, so `src/modules/bookings/server/host-money-service.ts`
+  works out the balance and saves the request under `lockBusinessMoney`; `payments` keeps the `Payout` rows
+  (`payout-service.ts`) and the admin's decision. Routes: `GET/POST /api/workspaces/{id}/payouts` (owners only),
+  `POST /api/admin/payouts/{payoutId}` (`paid` with the transfer's reference, or `rejected` with a note) and
+  `POST /api/admin/refunds/{refundId}` (a refund a provider kept refusing, sent by hand), both platform admins only.
+- **Platform admins** reach `/api/admin/**` through `adminRoute(paramsSchema, handler)` (`src/server/http/route.ts`),
+  which reads the person's role from the database and answers 404 to anyone else. Services take a `PlatformActor`
+  and call `requirePlatformAdmin`; what they do is logged with `recordPlatformAction`, under the admin's name.
+- **Only the business's own owners** ask for its payouts and write its host profile (`requireBusinessOwner`,
+  `isBusinessOwner` in `tenant-context.ts`). A platform admin visiting a business has an owner's rights to help, but
+  is not its owner: those menu lines and pages are hidden from them, and the admin sends payouts from `/admin/money`.
+- **The screen** is `/dashboard/{id}/payouts`: the balances per currency, `PayoutRequestForm` (from `payments`, filled
+  with the details used last time) and the payouts and online payments. Its menu line is `ownerOnly` in
+  `src/components/dashboard/nav-items.ts`, so a member whose role holds every permission still never sees it, and the
+  page answers 404 to anyone but the business's own owners.
 
 ### N. Near your stay (things to do nearby)
 
@@ -1328,6 +1539,8 @@ The public page reads, for `getPlace` (all without sign-in, each through its mod
   photos in the host's order. Never the room's `exportToken`, its private calendar link.
 - `listPlacePhotos(businessId)` in `rooms`: the place's own photos (not a room's or an experience's), in order, for
   the gallery and the photo tour.
+- `getHostSection(businessId)` in `workspaces` and `getResponseStats` in `bookings`: the host as guests meet them
+  (see "H. Host profile"), which `getPlace` gives as `host`, next to the place's own `whatsapp` number.
 
 Tests: `public-place.integration.test.ts` (workspaces) and `public-units.integration.test.ts` (rooms).
 `getPlace(slug)` (directory) puts them together as a `PublicPlace`: the place's public fields, its bookable `units` (the
@@ -1378,12 +1591,41 @@ push. `public/sw.js` shows the notification and opens its page (only pages of th
 (`PhoneAlerts`) comes with the account's notifications tab. Tests: `push.test.ts` and
 `push-devices.integration.test.ts` (notifications).
 
-### R. Reviews
+### R. Reviews (F5)
 
 Only a guest who stayed may review, only once, and only after check-out. A review is one overall rating (1 to 5) and
 a comment; there are no sub-ratings (cleanliness, location, value). Owners can reply or hide a review with a reason.
 A review whose author closed their account stays, without their name: closing an account keeps the user row (marked
 deleted), so review reads show no name when `author.isDeleted` (F17). Code: `review-service.ts`.
+
+**What exists today** (the `reviews` module: `review-service.ts`, `review-repository.ts`, behind
+`reviews/server.ts`):
+
+- `writeReview(guestUserId, publicToken, input, now?)`: the booking is found through `bookings`' own door
+  (`getBookingForGuest`), so someone else's stay is "not found", like its page. It must be `CONFIRMED` (a stay that
+  was declined, expired or cancelled never happened) and its check-out must be past (403 with the reason). The
+  second review of one stay is refused by the database itself — `Review.bookingId` is unique, wrapped in
+  `duplicateAsConflict` — so two taps cannot leave two reviews. Route: `POST /api/public/bookings/{token}/review`
+  (signed in, 10 per 10 minutes per guest), input `newReview` (rating 1 to 5, comment 10 to 2000 characters).
+- `listPlaceReviews(businessId)` and `getPlaceRating(businessId)`: only `PUBLISHED`, not deleted, newest first; the
+  average is to one decimal (`averageRating` in `reviews/rating.ts`, pure) and is null until someone has rated, so
+  a new place says "No reviews yet" instead of showing a 0. A hidden review counts for nothing, not even the
+  average.
+- `findReviewedBookings(bookingIds)`: which stays their guest has already reviewed. `listMyTrips` (directory) uses
+  it for `canReview`, so a stay is offered the form only while it is over, went ahead, and has no review.
+- `getPlace` carries `rating` and `reviews`, so the place page needs no second read.
+
+- `listTeamReviews(ctx)`, `replyToReview(ctx, reviewId, { reply })` and `setReviewVisibility(ctx, reviewId,
+{ hidden, reason })`, all behind `reviews.reply`: the team sees every review, hidden ones included, with the room
+  and booking reference of the stay. A reply shows under the review on the place's page; an empty one takes it
+  away. Hiding needs a reason (3 to 500 characters), keeps the review, and takes it out of the page and the rating;
+  showing it again clears the reason. Each change is logged (`review.replied`, `review.reply_removed`,
+  `review.hidden`, `review.shown`). Routes: `GET /api/workspaces/{id}/reviews`, `PUT .../reviews/{reviewId}/reply`
+  and `PUT .../reviews/{reviewId}/visibility`. Screen: the dashboard's Reviews page (`TeamReviewList`,
+  `ReviewControls`).
+
+Tests: `src/modules/reviews/tests/reviews.integration.test.ts`, `team-reviews.integration.test.ts` and
+`rating.test.ts`.
 
 ### R. Rooms (dashboard)
 
@@ -1459,16 +1701,21 @@ cannot give, a change to their own access, or an owner's row to someone who is n
 - Show a failure with `errorMessage(caught, fallback)` and `FormError`. It returns the server's own sentence when a
   person can act on it ("Those dates were just taken"), and the translated `fallback` for a crash (`INTERNAL`), a lost
   connection, a timeout or an answer that is not ours. Until `localizeError` exists, a server sentence is in English.
-- For a form, `formFailure(caught, fallback)` also gives `fieldErrors`: the first problem of each wrong field, by field
-  name. Show the text you want under each field, in the visitor's language.
+- For a form, `formFailure(caught, fallback, shownFields)` also gives `fieldErrors`: the first problem of each wrong
+  field the form shows, by field name. Show the text you want under each field, in the visitor's language. A wrong
+  field the form does not show (a value the screen sends on its own) gives the whole form the `fallback`, so a refusal
+  is never silent.
 - `api.run` (slow AI answers) is built with the AI features.
 
 ### Shared hooks
 
-- `useAction()` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } = useAction()`. `run(() =>
-api.post(...))` calls the API, then refreshes the page, and resolves to `true` when it worked. `pending` covers both
-  steps. After a failure, either `error` (for `FormError`) or `fieldErrors` is set, never both. A second `run` while
-  one is going is ignored (a double click can never save, book or pay twice) and resolves to `false`.
+- `useAction(shownFields?)` (`src/hooks/use-action.ts`): `const { run, pending, error, fieldErrors } =
+useAction(["name", "phone"])`. `run(() => api.post(...))` calls the API, then refreshes the page, and resolves to
+  `true` when it worked. `pending` covers both steps. A form that shows a message under its fields names them; a
+  button or a form without field messages passes nothing. After a failure, `fieldErrors` holds the named fields the
+  server refused, and `error` (for `FormError`) is set for everything else, so every refusal shows something. A
+  second `run` while one is going is ignored (a double click can never save, book or pay twice) and resolves to
+  `false`.
 - `useLiveQuery<T>(url, query, { delayMs, timeoutMs })` (`src/hooks/use-live-query.ts`): reads from the API and keeps
   the answer in step with what the screen asks as the visitor changes it: the dates, the guests, a search text.
   `const quote = useLiveQuery<Quote>(ready ? url : null, { checkIn, checkOut })` gives `{ data, error, loading,
@@ -1519,7 +1766,7 @@ bottom.
 
 | Job           | Worker schedule | Route (manual run)            | What it does                                                                                          | If it never runs                                                                              |
 | ------------- | --------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Calendar sync | every 15 min    | `POST /api/cron/sync-feeds`   | Reads up to 20 calendar links not read in 15 minutes                                                  | Calendars still update on "Sync now" and before each confirmation                             |
+| Calendar sync | every 5 min     | `POST /api/cron/sync-feeds`   | Reads up to 60 calendar links not read in 10 minutes, 6 at a time                                     | Calendars still update on "Sync now" and before each confirmation                             |
 | Housekeeping  | every 5 min     | `POST /api/cron/expire-holds` | Checks pending online payments, expires unanswered and unpaid bookings, ends unpaid Whish plan months | Each new request expires its room's old holds; a returning guest's payment is checked at once |
 
 The worker runs both on its own schedule (`src/modules/housekeeping/server/housekeeping-jobs.ts`), kept in the database so each run happens

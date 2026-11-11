@@ -1,7 +1,7 @@
 import type { Messages } from "next-intl";
 import type { NavIconName } from "@/components/shell/nav-icons";
 import type { Permission } from "@/config/permissions";
-import { can, type TenantContext } from "@/server/auth/tenant-context";
+import { can, isBusinessOwner, type TenantContext } from "@/server/auth/tenant-context";
 
 // The host dashboard's menu: one line per page, added with the page itself, in the order the side menu shows them.
 // Each page opens with requirePageAccess(businessId, DASHBOARD_PAGES.<page>.anyOf), so the menu and the page read the
@@ -19,6 +19,10 @@ interface DashboardPage {
   anyOf: readonly Permission[];
   /** Also in the bar at the bottom of a phone. */
   tab?: boolean;
+  /** The business's own owners only, whatever a role says, and never a visiting admin; the page checks `isBusinessOwner`. */
+  ownerOnly?: boolean;
+  /** Everyone on the team, whatever their role: the page is about the person, not the business. */
+  everyone?: boolean;
 }
 
 export const DASHBOARD_PAGES = {
@@ -31,10 +35,15 @@ export const DASHBOARD_PAGES = {
   },
   bookings: { group: "bookings", path: "bookings", icon: "bookings", anyOf: ["bookings.read"], tab: true },
   calendar: { group: "bookings", path: "calendar", icon: "calendar", anyOf: ["calendar.read"], tab: true },
+  channels: { group: "bookings", path: "channels", icon: "channels", anyOf: ["feeds.manage"] },
   place: { group: "listings", path: "place", icon: "place", anyOf: ["settings.manage"] },
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
+  reviews: { group: "listings", path: "reviews", icon: "reviews", anyOf: ["reviews.reply"] },
   settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
+  profile: { group: "business", path: "profile", icon: "profile", anyOf: [], everyone: true },
   analytics: { group: "money", path: "analytics", icon: "analytics", anyOf: ["analytics.read"] },
+  payouts: { group: "money", path: "payouts", icon: "payouts", anyOf: [], ownerOnly: true },
+  billing: { group: "money", path: "billing", icon: "billing", anyOf: ["settings.manage"] },
   team: { group: "team", path: "team", icon: "team", anyOf: ["team.manage", "roles.manage"] },
   keys: { group: "ai", path: "keys", icon: "keys", anyOf: ["ai.use"] },
 } as const satisfies Partial<Record<NavLabel, DashboardPage>>;
@@ -63,7 +72,12 @@ export function dashboardNav(ctx: TenantContext): DashboardNavGroup[] {
     group,
     items: names
       .map((name) => ({ name, page: DASHBOARD_PAGES[name] as DashboardPage }))
-      .filter(({ page }) => page.group === group && page.anyOf.some((permission) => can(ctx, permission)))
+      .filter(
+        ({ page }) =>
+          page.group === group &&
+          (page.everyone ||
+            (page.ownerOnly ? isBusinessOwner(ctx) : page.anyOf.some((permission) => can(ctx, permission)))),
+      )
       .map(({ name, page }) => ({
         href: page.path ? `/dashboard/${ctx.businessId}/${page.path}` : `/dashboard/${ctx.businessId}`,
         label: name,

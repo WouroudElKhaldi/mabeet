@@ -1,8 +1,18 @@
 import { z } from "zod";
 import { BOOKING_STATUSES } from "@/config/enums";
 import { getBusinessReport, getSavings } from "@/modules/analytics/server";
-import { findFreeRooms, getCalendar, listBookings } from "@/modules/bookings/server";
-import { listRooms } from "@/modules/rooms/server";
+import {
+  addBlock,
+  confirmBookingByReference,
+  endBookingByReference,
+  findFreeRooms,
+  getCalendar,
+  getCalendarLinks,
+  listBookings,
+  removeBlock,
+  syncFeedNow,
+} from "@/modules/bookings/server";
+import { listRoomNames, listRooms, updateRoom } from "@/modules/rooms/server";
 import { listWorkspaces } from "@/modules/team/server";
 import { getPlaceBasics } from "@/modules/workspaces/server";
 import { can, type TenantContext } from "@/server/auth/tenant-context";
@@ -12,8 +22,10 @@ import { addDays, parseIsoDate, toDateRange, toIsoDate, todayUtc } from "@/utils
 import { type AiTool, defineTool } from "./tool";
 
 // Tools for owners and staff, through their own AI app. Each one calls the same service the dashboard uses, so the
-// member's permissions and the business's boundary are checked once, in the service. This first version only reads:
-// no tool changes data.
+// member's permissions and the business's boundary are checked once, in the service. The tools that change data
+// (`mutates`) are offered only to a key that allows changes, and AI apps ask the member before running them. None of
+// them touches money except declining or cancelling a booking the guest paid online, which goes through the booking
+// engine's own checks first (`endBookingByReference`).
 
 const isoDate = z.iso.date().describe("YYYY-MM-DD");
 const MAX_BOOKINGS = 50;
@@ -195,6 +207,147 @@ const SINGLE_PLACE_TOOLS = [
   }),
 ];
 
+const reference = z.string().trim().min(4).max(20).describe('The booking reference, e.g. "MB-7KX3P9"');
+const roomArgument = z.string().trim().min(1).max(80).describe("The room's name (or part of it) or its id");
+const reason = z
+  .string()
+  .trim()
+  .max(500)
+  .optional()
+  .describe("Why, in the member's words; the guest sees it");
+const confirmRefund = z
+  .string()
+  .max(40)
+  .optional()
+  .describe(
+    "Only when the booking was paid online: the refund exactly as the first call stated it, after the member agreed. Leave out on the first call.",
+  );
+
+/** A room of this place by its id or by (part of) its name; a name that fits several rooms is refused. */
+async function findRoom(ctx: TenantContext, room: string) {
+  const rooms = await listRoomNames(ctx.businessId);
+  const wanted = room.toLowerCase();
+  const exact = rooms.find((candidate) => candidate.id === room || candidate.name.toLowerCase() === wanted);
+  if (exact) return exact;
+  const partial = rooms.filter((candidate) => candidate.name.toLowerCase().includes(wanted));
+  if (partial.length > 1) {
+    throw invalid(`Several rooms match "${room}": ${partial.map((candidate) => candidate.name).join(", ")}`);
+  }
+  if (!partial[0]) throw notFound("Room");
+  return partial[0];
+}
+
+const ACTION_TOOLS = [
+  team({
+    name: "confirm_booking",
+    description:
+      "Confirms a booking request waiting for the member's answer (status HELD). The guest is told at once.",
+    input: z.object({ reference }),
+    requires: "bookings.decide",
+    mutates: true,
+    run: ({ reference: bookingReference }, ctx) => confirmBookingByReference(ctx, bookingReference),
+  }),
+  team({
+    name: "decline_booking",
+    description:
+      "Declines a booking request waiting for the member's answer. If the guest paid online, the first call only says what would be refunded: ask the member, then call again with confirmRefund. Some paid bookings can only be declined from the dashboard; say so if refused.",
+    input: z.object({ reference, reason, confirmRefund }),
+    requires: "bookings.decide",
+    mutates: true,
+    run: (input, ctx) => endBookingByReference(ctx, { ...input, outcome: "DECLINED" }),
+  }),
+  team({
+    name: "cancel_booking",
+    description:
+      "Cancels a booking that has not started. If the guest paid online they get it all back: the first call only says what would be refunded; ask the member, then call again with confirmRefund. Some paid bookings can only be cancelled from the dashboard; say so if refused.",
+    input: z.object({ reference, reason, confirmRefund }),
+    requires: "bookings.decide",
+    mutates: true,
+    run: (input, ctx) => endBookingByReference(ctx, { ...input, outcome: "CANCELLED" }),
+  }),
+  team({
+    name: "close_dates",
+    description:
+      "Closes a room for some nights, so nobody can book them (a booking taken by phone, repairs, a family visit). checkOut is the morning after the last closed night.",
+    input: z.object({
+      room: roomArgument,
+      checkIn: isoDate,
+      checkOut: isoDate,
+      note: z.string().trim().max(200).optional().describe("A note for the team, never shown to guests"),
+    }),
+    requires: "blocks.manage",
+    mutates: true,
+    run: async ({ room, checkIn, checkOut, note }, ctx) => {
+      if (checkOut <= checkIn) throw invalid("Check-out must be after check-in");
+      const found = await findRoom(ctx, room);
+      const block = await addBlock(ctx, {
+        roomId: found.id,
+        range: toDateRange({ checkIn, checkOut }),
+        note: note ?? null,
+      });
+      return { room: found.name, checkIn: toIsoDate(block.checkIn), checkOut: toIsoDate(block.checkOut) };
+    },
+  }),
+  team({
+    name: "reopen_dates",
+    description:
+      "Opens again nights the member closed by hand, for one room, between checkIn and checkOut. Only closed dates lying wholly inside those days are reopened; bookings and Airbnb or Booking.com stays are never touched.",
+    input: z.object({ room: roomArgument, checkIn: isoDate, checkOut: isoDate }),
+    requires: "blocks.manage",
+    mutates: true,
+    run: async ({ room, checkIn, checkOut }, ctx) => {
+      if (checkOut <= checkIn) throw invalid("Check-out must be after check-in");
+      const found = await findRoom(ctx, room);
+      const from = parseIsoDate(checkIn);
+      const to = parseIsoDate(checkOut);
+      const closed = (await getCalendar(ctx, { from, to, roomId: found.id })).filter(
+        (night) => night.kind === "MANUAL",
+      );
+      const inside = closed.filter((night) => night.checkIn >= from && night.checkOut <= to);
+      for (const night of inside) await removeBlock(ctx, night.id);
+      const nights = (list: typeof closed) =>
+        list.map((night) => ({ checkIn: toIsoDate(night.checkIn), checkOut: toIsoDate(night.checkOut) }));
+      return {
+        room: found.name,
+        reopened: nights(inside),
+        leftClosed: nights(closed.filter((night) => !inside.includes(night))),
+      };
+    },
+  }),
+  team({
+    name: "set_room_open",
+    description:
+      "Opens a room for booking, or takes it off the site (open: false). Its bookings and closed dates stay as they are.",
+    input: z.object({ room: roomArgument, open: z.boolean() }),
+    requires: "rooms.manage",
+    mutates: true,
+    run: async ({ room, open }, ctx) => {
+      const found = await findRoom(ctx, room);
+      const updated = await updateRoom(ctx, found.id, { active: open });
+      return { room: updated.name, open: updated.active };
+    },
+  }),
+  team({
+    name: "sync_calendars",
+    description:
+      "Reads every connected Airbnb, Booking.com or other calendar link of the place now, instead of waiting for the next automatic read, and says whether any stay there clashes with one of ours.",
+    input: z.object({}),
+    requires: "feeds.manage",
+    mutates: true,
+    run: async (_input, ctx) => {
+      const rooms = await getCalendarLinks(ctx);
+      const results = [];
+      for (const room of rooms) {
+        for (const feed of room.feeds) {
+          const result = await syncFeedNow(ctx, feed.id);
+          results.push({ room: room.name, source: feed.source, ...result });
+        }
+      }
+      return results;
+    },
+  }),
+];
+
 /** The optional argument every place tool gains, so the AI can work in any of the member's places. */
 const placeArgument = z
   .string()
@@ -225,7 +378,7 @@ const TEAM_TOOLS = [
     mutates: false,
     run: (_input, ctx) => listMyPlaces(ctx),
   }),
-  ...SINGLE_PLACE_TOOLS.map(inAnyPlace),
+  ...[...SINGLE_PLACE_TOOLS, ...ACTION_TOOLS].map(inAnyPlace),
 ];
 
 /**

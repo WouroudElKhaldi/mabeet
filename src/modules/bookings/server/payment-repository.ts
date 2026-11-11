@@ -1,13 +1,25 @@
-import type { Db, Tx } from "@/server/db/client";
+import { type Db, moneyNumber, type Tx } from "@/server/db/client";
 
 // A booking's online payments and their refunds. Every payment is online (Whish or Stripe) and for the full total;
-// what a guest pays the owner directly is between them and is never recorded here.
+// what a guest pays the owner directly is between them and is never recorded here. A payment is for a stay
+// (`bookingId`) or for seats in a session (`sessionBookingId`), never both: a CHECK in the migration says so.
+
+/** What a payment is for, written as the payment's own column, so it can go straight into a query. */
+export type PaidFor = { bookingId: string } | { sessionBookingId: string };
+
+/** The two columns of a PaidFor, the other one null: for raw SQL, where a null never matches. */
+const columnsOf = (paidFor: PaidFor) => ({
+  bookingId: "bookingId" in paidFor ? paidFor.bookingId : null,
+  sessionBookingId: "sessionBookingId" in paidFor ? paidFor.sessionBookingId : null,
+});
+
+/** Who a payment came from, and the booking's reference, whether it paid for a stay or for seats. */
+const payer = { select: { reference: true, guestName: true } } as const;
 
 export function createOnlinePayment(
   db: Db,
-  payment: {
+  payment: PaidFor & {
     businessId: string;
-    bookingId: string;
     amountCents: number;
     currency: string;
     method: "WHISH" | "STRIPE";
@@ -25,13 +37,16 @@ export function setCheckout(
   return db.payment.update({ where: { id: paymentId }, data: checkout, select: { id: true } });
 }
 
-/** A payment to check with its provider, and the booking it pays for. */
+/** A payment to check with its provider, and the stay or the seats it pays for. */
 export function findPaymentToSettle(db: Db, paymentId: string) {
   return db.payment.findFirst({
-    where: { id: paymentId, bookingId: { not: null }, isDeleted: false },
+    where: { id: paymentId, isDeleted: false },
     include: {
       booking: {
         select: { id: true, businessId: true, roomId: true, business: { select: { holdHours: true } } },
+      },
+      sessionBooking: {
+        select: { id: true, businessId: true, sessionId: true, business: { select: { holdHours: true } } },
       },
     },
   });
@@ -56,9 +71,9 @@ export async function markFailed(db: Db, paymentId: string): Promise<void> {
 }
 
 /** Whether another payment for the same booking was already paid (a guest who paid twice). */
-export async function hasOtherPaidPayment(tx: Tx, bookingId: string, paymentId: string): Promise<boolean> {
+export async function hasOtherPaidPayment(tx: Tx, paidFor: PaidFor, paymentId: string): Promise<boolean> {
   const count = await tx.payment.count({
-    where: { bookingId, id: { not: paymentId }, status: "PAID", isDeleted: false },
+    where: { ...paidFor, id: { not: paymentId }, status: "PAID", isDeleted: false },
   });
   return count > 0;
 }
@@ -81,9 +96,9 @@ export function listPaymentsForBooking(db: Db, businessId: string, bookingId: st
   });
 }
 
-export function listPendingForBooking(db: Db, bookingId: string) {
+export function listPendingForBooking(db: Db, paidFor: PaidFor) {
   return db.payment.findMany({
-    where: { bookingId, status: "PENDING", isDeleted: false },
+    where: { ...paidFor, status: "PENDING", isDeleted: false },
     select: { id: true },
   });
 }
@@ -93,7 +108,6 @@ export function listStalePending(db: Db, window: { from: Date; to: Date }, take:
   return db.payment.findMany({
     where: {
       status: "PENDING",
-      bookingId: { not: null },
       createdAt: { gte: window.from, lt: window.to },
       isDeleted: false,
     },
@@ -107,13 +121,15 @@ export function listStalePending(db: Db, window: { from: Date; to: Date }, take:
  * Locks a booking's paid payments until the transaction ends and returns them, so two refunds (an owner's cancel
  * and the clock's expiry at the same moment) can never give back more than was paid.
  */
-export async function lockPaidPayments(tx: Tx, bookingId: string) {
+export async function lockPaidPayments(tx: Tx, paidFor: PaidFor) {
+  const { bookingId, sessionBookingId } = columnsOf(paidFor);
   await tx.$queryRaw`
     SELECT id FROM "Payment"
-    WHERE "bookingId" = ${bookingId} AND status = 'PAID' AND NOT "isDeleted"
+    WHERE ("bookingId" = ${bookingId} OR "sessionBookingId" = ${sessionBookingId})
+      AND status = 'PAID' AND NOT "isDeleted"
     FOR UPDATE`;
   return tx.payment.findMany({
-    where: { bookingId, status: "PAID", isDeleted: false },
+    where: { ...paidFor, status: "PAID", isDeleted: false },
     select: {
       id: true,
       businessId: true,
@@ -174,7 +190,6 @@ export function listRefundsToSend(db: Db, window: { from: Date; to: Date }, take
       providerRef: null,
       createdAt: { gte: window.from, lt: window.to },
       isDeleted: false,
-      payment: { bookingId: { not: null } },
     },
     orderBy: { createdAt: "asc" },
     take,
@@ -185,4 +200,98 @@ export function listRefundsToSend(db: Db, window: { from: Date; to: Date }, take
       payment: { select: { id: true, method: true, currency: true, providerPaymentId: true } },
     },
   });
+}
+
+// ---------- What Mabeet holds for hosts ----------
+
+/**
+ * What guests paid online, net of refunds, per business and currency: `earned` for confirmed stays and sessions that
+ * have started (the only money a payout may release, so a refund never gives back money already paid out),
+ * `upcoming` for the rest. A session has started once its day has come, as a stay has on its check-in day.
+ * `businessId` null reads every business.
+ */
+export async function sumHeldMoney(db: Db, businessId: string | null, today: Date) {
+  const rows = await db.$queryRaw<
+    Array<{ businessId: string; currency: string; earned: bigint; upcoming: bigint }>
+  >`
+    SELECT p."businessId", p.currency,
+           COALESCE(SUM(p."amountCents" - p."refundedCents") FILTER (WHERE s.started), 0)::bigint AS earned,
+           COALESCE(SUM(p."amountCents" - p."refundedCents") FILTER (WHERE NOT s.started), 0)::bigint AS upcoming
+    FROM "Payment" p
+    LEFT JOIN "Booking" b ON b.id = p."bookingId"
+    LEFT JOIN "SessionBooking" sb ON sb.id = p."sessionBookingId"
+    LEFT JOIN "OfferingSession" os ON os.id = sb."sessionId"
+    CROSS JOIN LATERAL (
+      SELECT COALESCE(
+        (b.status = 'CONFIRMED' AND b."checkIn" <= ${today}::date)
+          OR (sb.status = 'CONFIRMED' AND os."startsAt" < ${today}::date + 1),
+        false) AS started
+    ) s
+    WHERE NOT p."isDeleted" AND p.status IN ('PAID', 'REFUNDED')
+      AND (${businessId}::text IS NULL OR p."businessId" = ${businessId})
+    GROUP BY 1, 2`;
+  return rows.map((row) => ({
+    businessId: row.businessId,
+    currency: row.currency,
+    earnedCents: moneyNumber(row.earned),
+    upcomingCents: moneyNumber(row.upcoming),
+  }));
+}
+
+/** A business's online payments, the latest first, with the stay or the seats each paid for. */
+export function listBusinessPayments(db: Db, businessId: string, take: number) {
+  return db.payment.findMany({
+    where: { businessId, isDeleted: false, status: { in: ["PAID", "REFUNDED"] } },
+    orderBy: { paidAt: "desc" },
+    take,
+    select: {
+      id: true,
+      amountCents: true,
+      refundedCents: true,
+      currency: true,
+      method: true,
+      status: true,
+      paidAt: true,
+      booking: payer,
+      sessionBooking: payer,
+    },
+  });
+}
+
+/** Refunds a provider kept refusing and housekeeping stopped retrying: the admin sends them by hand. */
+export function listRefundsToSendByHand(db: Db, recordedBefore: Date) {
+  return db.refund.findMany({
+    where: { status: "PENDING", isDeleted: false, createdAt: { lt: recordedBefore } },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      businessId: true,
+      amountCents: true,
+      currency: true,
+      reason: true,
+      createdAt: true,
+      business: { select: { name: true } },
+      payment: {
+        select: {
+          method: true,
+          booking: { select: { ...payer.select, guestPhone: true, guestEmail: true } },
+          sessionBooking: { select: { ...payer.select, guestPhone: true, guestEmail: true } },
+        },
+      },
+    },
+  });
+}
+
+/** The admin sent a refund by hand. Only a pending one changes, so it is marked once. */
+export async function markRefundSentByHand(
+  db: Db,
+  refundId: string,
+  sent: { doneById: string; providerRef: string | null; doneAt: Date },
+) {
+  const [refund] = await db.refund.updateManyAndReturn({
+    where: { id: refundId, status: "PENDING", isDeleted: false },
+    data: { status: "DONE", ...sent },
+    select: { id: true, businessId: true },
+  });
+  return refund ?? null;
 }

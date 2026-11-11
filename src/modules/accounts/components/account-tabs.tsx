@@ -6,9 +6,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-/** The account's pages that exist. Favourites and activity join as they are built. */
+/** The account's pages. */
 const TABS = [
   { key: "trips", href: "/account" },
+  { key: "favorites", href: "/account/favorites" },
+  { key: "activity", href: "/account/activity" },
   { key: "notifications", href: "/account/notifications" },
   { key: "privacy", href: "/account/privacy" },
 ] as const;
@@ -18,7 +20,10 @@ export function AccountTabs() {
   const t = useTranslations("account.tabs");
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-line" aria-label={t("label")}>
+    <nav
+      className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line"
+      aria-label={t("label")}
+    >
       {TABS.map(({ key, href }) => {
         const active = pathname === href;
         return (

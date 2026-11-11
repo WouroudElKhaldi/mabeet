@@ -5,6 +5,8 @@
     "src/components/{ui,shell,theme}/**/*.{ts,tsx}",
     "tests/**/*.test.{ts,tsx}",
     "src/modules/*/tests/**/*.test.{ts,tsx}",
+    "tests/e2e/*.{spec,setup}.ts",
+    "tests/e2e/prepare-database.ts",
     "src/lib/api-client.ts",
     "src/hooks/*.ts",
     "scripts/*.ts",
@@ -17,8 +19,6 @@
     "tailwindcss",
     "@modelcontextprotocol/sdk",
     "aws4fetch",
-    "ical-generator",
-    "node-ical",
     "web-push",
     "@types/web-push"
   ]

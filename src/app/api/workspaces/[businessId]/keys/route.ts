@@ -8,7 +8,7 @@ export const GET = tenantRoute(workspaceParams, async ({ ctx }) => {
   return json(await listKeys(ctx));
 });
 
-/** A new read-only key. The answer carries the secret this once; it is never shown again. */
+/** A new key, read only unless it allows changes. The answer carries the secret this once; it is never shown again. */
 export const POST = tenantRoute(workspaceParams, async ({ request, ctx }) => {
   return json(await createKey(ctx, await parseBody(request, keyInput)), 201);
 });

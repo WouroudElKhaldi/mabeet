@@ -67,6 +67,7 @@ model User {
   payoutRequestedBy       Payout[]            @relation("PayoutRequestedBy")
   payoutDecidedBy         Payout[]            @relation("PayoutDecidedBy")
   sessionBookingDecidedBy SessionBooking[]    @relation("SessionBookingDecidedBy")
+  sponsorshipsCreated     Sponsorship[]       @relation("SponsorshipCreatedBy")
   invitationsTaken        Invitation[]        @relation("InvitationsAccepted")
 }
 
@@ -208,6 +209,18 @@ enum RoomKind {
   WHOLE_PLACE
 }
 
+/// What a partner place is (featured partners, F23). Matched by src/config/partner-kinds.ts.
+enum PartnerKind {
+  RESTAURANT
+  CAFE
+  SUPERMARKET
+  PARK
+  MUSEUM
+  BEACH
+  WINERY
+  OTHER
+}
+
 /// Which part of the place a photo shows, for the photo tour.
 enum PhotoArea {
   LIVING_ROOM
@@ -240,49 +253,49 @@ enum BusinessStatus {
 }
 
 model Business {
-  id                   String            @id @default(cuid())
-  name                 String
-  slug                 String            @unique
-  description          String?
-  area                 String?
+  id                    String         @id @default(cuid())
+  name                  String
+  slug                  String         @unique
+  description           String?
+  area                  String?
   /// Which part of Lebanon (a key from src/config/regions.ts), so searching for "North Lebanon" is exact. The host
   /// picks it, or it is worked out from the town in area.
-  region               String?
-  address              String?
-  latitude             Float?
-  longitude            Float?
-  phone                String?
-  whatsapp             String?
-  timezone             String            @default("Asia/Beirut")
-  currency             String            @default("USD")
-  lbpRate              Int?
-  commissionRateBps    Int               @default(1500) // 15.00%, the platform commission a direct booking saves
+  region                String?
+  address               String?
+  latitude              Float?
+  longitude             Float?
+  phone                 String?
+  whatsapp              String?
+  timezone              String         @default("Asia/Beirut")
+  currency              String         @default("USD")
+  lbpRate               Int?
+  commissionRateBps     Int            @default(1500) // 15.00%, the platform commission a direct booking saves
   /// How long the owner has to answer a booking (modes ONLINE_APPROVAL and OFFLINE).
-  holdHours            Int               @default(24)
+  holdHours             Int            @default(24)
   /// How to pay the host directly (Whish number, bank details), shown to guests in OFFLINE mode.
-  paymentInstructions  String?
-  checkInTime          String            @default("14:00")
-  checkOutTime         String            @default("11:00")
-  houseRules           String?
-  bookingUnit          BookingUnit       @default(ROOMS)
-  bookingMode          BookingMode       @default(OFFLINE)
+  paymentInstructions   String?
+  checkInTime           String         @default("14:00")
+  checkOutTime          String         @default("11:00")
+  houseRules            String?
+  bookingUnit           BookingUnit    @default(ROOMS)
+  bookingMode           BookingMode    @default(OFFLINE)
   /// When the owner accepted "online payments are always refunded in full". The app refuses an online mode
   /// (AUTOMATIC or ONLINE_APPROVAL) until it is set.
   onlineTermsAcceptedAt DateTime?
-  listedPublicly       Boolean           @default(false)
+  listedPublicly        Boolean        @default(false)
   // Fixed keys from src/config/listing.ts: tags for search filters, accessibility for "Things to know".
-  tags                 String[]
-  accessibility        String[]
-  minGuestAge          Int?
-  status               BusinessStatus    @default(ACTIVE)
-  plan                 Plan              @default(FREE)
-  stripeCustomerId     String?           @unique
-  stripeSubscriptionId String?           @unique
+  tags                  String[]
+  accessibility         String[]
+  minGuestAge           Int?
+  status                BusinessStatus @default(ACTIVE)
+  plan                  Plan           @default(FREE)
+  stripeCustomerId      String?        @unique
+  stripeSubscriptionId  String?        @unique
   /// When the paid plan renews, or ends if it was cancelled.
-  planRenewsAt         DateTime?
-  isDeleted            Boolean           @default(false)
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  planRenewsAt          DateTime?
+  isDeleted             Boolean        @default(false)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   roles           Role[]
   memberships     Membership[]
@@ -536,39 +549,39 @@ enum BookingStatus {
 }
 
 model Booking {
-  id             String        @id @default(cuid())
-  reference      String        @unique
-  businessId     String
-  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  roomId         String
-  room           Room          @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  id            String        @id @default(cuid())
+  reference     String        @unique
+  businessId    String
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  roomId        String
+  room          Room          @relation(fields: [roomId], references: [id], onDelete: Restrict)
   /// Booking needs an account, so every booking belongs to the guest who made it.
-  guestUserId    String
-  guestUser      User          @relation("GuestBookings", fields: [guestUserId], references: [id], onDelete: Restrict)
-  guestName      String
-  guestPhone     String
-  guestEmail     String?
-  guestCount     Int
-  guestNote      String?
+  guestUserId   String
+  guestUser     User          @relation("GuestBookings", fields: [guestUserId], references: [id], onDelete: Restrict)
+  guestName     String
+  guestPhone    String
+  guestEmail    String?
+  guestCount    Int
+  guestNote     String?
   /// The language the guest booked in; their emails are written in it.
-  locale         String        @default("en")
-  checkIn        DateTime      @db.Date
-  checkOut       DateTime      @db.Date
-  totalCents     BigInt
-  currency       String
+  locale        String        @default("en")
+  checkIn       DateTime      @db.Date
+  checkOut      DateTime      @db.Date
+  totalCents    BigInt
+  currency      String
   /// Copied from the business when the booking is made, so later changes do not affect it. Paid online (always
   /// totalCents) when AUTOMATIC or ONLINE_APPROVAL.
-  bookingMode    BookingMode
-  status         BookingStatus @default(HELD)
-  publicToken    String        @unique
-  holdExpiresAt  DateTime?
-  decidedById    String?
-  decidedBy      User?         @relation("BookingDecidedBy", fields: [decidedById], references: [id], onDelete: Restrict)
-  decidedAt      DateTime?
-  cancelReason   String?
-  isDeleted      Boolean       @default(false)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  bookingMode   BookingMode
+  status        BookingStatus @default(HELD)
+  publicToken   String        @unique
+  holdExpiresAt DateTime?
+  decidedById   String?
+  decidedBy     User?         @relation("BookingDecidedBy", fields: [decidedById], references: [id], onDelete: Restrict)
+  decidedAt     DateTime?
+  cancelReason  String?
+  isDeleted     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   occupancy Occupancy?
   payments  Payment[]
@@ -967,10 +980,11 @@ model Offering {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  photos   Photo[]
-  sessions OfferingSession[]
-  bookings SessionBooking[]
-  reviews  Review[]
+  photos       Photo[]
+  sessions     OfferingSession[]
+  bookings     SessionBooking[]
+  reviews      Review[]
+  sponsorships Sponsorship[]
 
   @@index([businessId])
   @@index([kind, active])
@@ -999,40 +1013,40 @@ model OfferingSession {
 }
 
 model SessionBooking {
-  id             String          @id @default(cuid())
-  reference      String          @unique
-  publicToken    String          @unique
-  businessId     String
-  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  offeringId     String
-  offering       Offering        @relation(fields: [offeringId], references: [id], onDelete: Restrict)
-  sessionId      String
-  session        OfferingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  id            String          @id @default(cuid())
+  reference     String          @unique
+  publicToken   String          @unique
+  businessId    String
+  business      Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  offeringId    String
+  offering      Offering        @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  sessionId     String
+  session       OfferingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
   /// Booking needs an account, so every booking belongs to the guest who made it.
-  guestUserId    String
-  guestUser      User            @relation("GuestSessionBookings", fields: [guestUserId], references: [id], onDelete: Restrict)
-  guestName      String
-  guestPhone     String
-  guestEmail     String?
-  guestNote      String?
+  guestUserId   String
+  guestUser     User            @relation("GuestSessionBookings", fields: [guestUserId], references: [id], onDelete: Restrict)
+  guestName     String
+  guestPhone    String
+  guestEmail    String?
+  guestNote     String?
   /// The language the guest booked in; their emails are written in it.
-  locale         String          @default("en")
-  seats          Int
-  totalCents     BigInt
-  currency       String
+  locale        String          @default("en")
+  seats         Int
+  totalCents    BigInt
+  currency      String
   /// Copied from the business when the booking is made, so later changes do not affect it.
-  bookingMode    BookingMode
-  status         BookingStatus   @default(HELD)
-  holdExpiresAt  DateTime?
-  decidedById    String?
-  decidedBy      User?           @relation("SessionBookingDecidedBy", fields: [decidedById], references: [id], onDelete: Restrict)
-  decidedAt      DateTime?
-  cancelReason   String?
-  isDeleted      Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  payments       Payment[]
-  review         Review?
+  bookingMode   BookingMode
+  status        BookingStatus   @default(HELD)
+  holdExpiresAt DateTime?
+  decidedById   String?
+  decidedBy     User?           @relation("SessionBookingDecidedBy", fields: [decidedById], references: [id], onDelete: Restrict)
+  decidedAt     DateTime?
+  cancelReason  String?
+  isDeleted     Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  payments      Payment[]
+  review        Review?
 
   @@index([businessId, status])
   @@index([status, holdExpiresAt])
@@ -1282,4 +1296,51 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+/// A place near guesthouses that is not on the platform (a restaurant, a supermarket, a park, a museum), shown to
+/// guests staying in its region under "Things to do near your stay" (F23). Platform admins manage it; it belongs to
+/// no business and is never booked through us.
+model PartnerPlace {
+  id           String        @id @default(cuid())
+  name         String
+  kind         PartnerKind
+  /// Which part of Lebanon (a key from src/config/regions.ts): guests staying in that region are shown it.
+  region       String
+  /// The town or area, as guests know it ("Batroun old souk").
+  area         String?
+  latitude     Float?
+  longitude    Float?
+  /// A photo linked from elsewhere (the partner's own website): partners are not on the platform, so nothing of
+  /// theirs is uploaded to us.
+  photoUrl     String?
+  websiteUrl   String?
+  phone        String?
+  isDeleted    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  sponsorships Sponsorship[]
+
+  @@index([region])
+}
+
+/// The dates during which a partner place, or an experience or service of the platform, is sponsored: it comes
+/// first near guests' stays and is always marked "Sponsored". Exactly one of the two is set (a CHECK in the
+/// migration). The last day is endsOn - 1, like a check-out.
+model Sponsorship {
+  id             String        @id @default(cuid())
+  partnerPlaceId String?
+  partnerPlace   PartnerPlace? @relation(fields: [partnerPlaceId], references: [id], onDelete: Restrict)
+  offeringId     String?
+  offering       Offering?     @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  startsOn       DateTime      @db.Date
+  endsOn         DateTime      @db.Date
+  createdById    String
+  createdBy      User          @relation("SponsorshipCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  isDeleted      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+
+  @@index([startsOn, endsOn])
+  @@index([partnerPlaceId])
+  @@index([offeringId])
 }

@@ -27,6 +27,9 @@ const CATEGORY_ICONS = {
 
 type CategoryIconName = keyof typeof CATEGORY_ICONS;
 
+/** The icon names an admin can choose, in the order the picker shows them. */
+export const CATEGORY_ICON_NAMES = Object.keys(CATEGORY_ICONS) as [CategoryIconName, ...CategoryIconName[]];
+
 /** A category's icon by its stored name, or a house for a name we do not know. */
 export function categoryIcon(name: string): LucideIcon {
   return Object.hasOwn(CATEGORY_ICONS, name) ? CATEGORY_ICONS[name as CategoryIconName] : House;

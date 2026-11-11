@@ -44,7 +44,7 @@ export function CalendarSidePanel(props: SidePanelProps) {
     .slice(0, UPCOMING_SHOWN);
 
   return (
-    <aside className="grid content-start gap-4">
+    <aside className="grid min-w-0 grid-cols-1 content-start gap-4">
       {openEntry ? (
         <EntryDetails {...props} entry={openEntry} roomName={roomName} />
       ) : (

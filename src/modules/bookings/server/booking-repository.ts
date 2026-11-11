@@ -211,6 +211,14 @@ export function findBooking(db: Db, businessId: string, bookingId: string) {
   });
 }
 
+/** A booking by the reference the guest and host see ("MB-7KX3P9"), as an AI app names it. */
+export function findBookingByReference(db: Db, businessId: string, reference: string) {
+  return db.booking.findFirst({
+    where: { reference: reference.trim().toUpperCase(), businessId, isDeleted: false },
+    include: staffFields,
+  });
+}
+
 /** A booking by its private link, only for the guest who made it: anyone else gets nothing. */
 export function findBookingByPublicToken(db: Db, publicToken: string, guestUserId: string) {
   return db.booking.findFirst({
@@ -452,4 +460,96 @@ export async function findImportClashForNotice(db: Db, occupancyId: string) {
     select: { note: true, booking: { select: { reference: true, guestName: true } } },
   });
   return { ...imported, clashes };
+}
+
+/** Booking requests on the whole platform, all time and since `since`, for the platform admin. */
+export async function countPlatformBookings(db: Db, since: Date) {
+  const [total, recent] = await Promise.all([
+    db.booking.count({ where: { isDeleted: false } }),
+    db.booking.count({ where: { isDeleted: false, createdAt: { gte: since } } }),
+  ]);
+  return { total, recent };
+}
+
+// ---------- Calendar sync: platform stays in, our nights out ----------
+
+/**
+ * Mirrors one calendar link's stays into IMPORTED night rows: each read is the whole picture, so a stay is saved by
+ * its platform id (reading again never makes copies), and a stay that left the link (cancelled on the platform)
+ * frees its nights. The caller holds the room lock.
+ */
+export async function replaceImportedStays(
+  tx: Tx,
+  feed: { id: string; businessId: string; roomId: string },
+  stays: ReadonlyArray<DateRange & { uid: string }>,
+) {
+  for (const stay of stays) {
+    await tx.occupancy.upsert({
+      where: { feedId_externalUid: { feedId: feed.id, externalUid: stay.uid } },
+      create: {
+        businessId: feed.businessId,
+        roomId: feed.roomId,
+        feedId: feed.id,
+        externalUid: stay.uid,
+        kind: "IMPORTED",
+        checkIn: stay.checkIn,
+        checkOut: stay.checkOut,
+      },
+      update: { checkIn: stay.checkIn, checkOut: stay.checkOut, active: true, isDeleted: false },
+    });
+  }
+  await tx.occupancy.updateMany({
+    where: {
+      businessId: feed.businessId,
+      feedId: feed.id,
+      active: true,
+      externalUid: { notIn: stays.map((stay) => stay.uid) },
+    },
+    data: { active: false },
+  });
+}
+
+/** A disconnected link's stays no longer block anything, and are no longer clashes. */
+export function removeFeedStays(tx: Tx, businessId: string, feedId: string) {
+  return tx.occupancy.updateMany({
+    where: { businessId, feedId, isDeleted: false },
+    data: { active: false, conflict: false, isDeleted: true },
+  });
+}
+
+/** How many of a link's stays clash with our nights now. */
+export function countFeedClashes(db: Db, businessId: string, feedId: string) {
+  return db.occupancy.count({
+    where: { businessId, feedId, kind: "IMPORTED", active: true, conflict: true, isDeleted: false },
+  });
+}
+
+/**
+ * The nights a room's calendar link shows as taken: our bookings (holds waiting for a payment or an answer included,
+ * so a platform stops selling them at once) and closed dates, from today. At a place that also books whole
+ * (`acrossUnits`), the units it takes turns with count too. Platform stays are never sent back out: that would make
+ * Airbnb and Booking.com block each other in a loop.
+ */
+export function listExportNights(
+  db: Db,
+  unit: { id: string; businessId: string; kind: "ROOM" | "WHOLE_PLACE" },
+  from: Date,
+  now: Date,
+  acrossUnits: boolean,
+) {
+  const siblings =
+    unit.kind === "ROOM" ? { room: { kind: "WHOLE_PLACE" as const } } : { roomId: { not: unit.id } };
+  return db.occupancy.findMany({
+    where: {
+      businessId: unit.businessId,
+      kind: { not: "IMPORTED" },
+      active: true,
+      isDeleted: false,
+      checkOut: { gt: from },
+      NOT: staleHold(now),
+      OR: acrossUnits ? [{ roomId: unit.id }, siblings] : [{ roomId: unit.id }],
+    },
+    orderBy: { checkIn: "asc" },
+    select: { id: true, checkIn: true, checkOut: true },
+  });
 }

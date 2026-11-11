@@ -21,14 +21,43 @@ export {
   settleOnlinePayment,
   startBookingCheckout,
 } from "./server/booking-payments";
+export {
+  cancelBookingAsGuest,
+  cancelSession,
+  cancelSessionBooking,
+  confirmSessionBooking,
+  declineSessionBooking,
+  expireAllStaleSessionHolds,
+  listMySessionBookings,
+  listSessionBookings,
+  requestSessionBooking,
+} from "./server/session-booking-service";
+export { confirmBookingByReference, endBookingByReference } from "./server/ai-booking-decisions";
 export { findFreeRooms, getTakenNights } from "./server/availability-service";
+export {
+  getHostBalances,
+  getPayouts,
+  listRefundsToSend,
+  markRefundSent,
+  requestPayout,
+} from "./server/host-money-service";
+export { countPlatformBookings } from "./server/platform-bookings";
 export {
   type ChannelNights,
   getLifetimeDirectRevenue,
   getPlaceSnapshots,
+  getResponseStats,
   getStayNumbers,
   type MonthlyNights,
   type MonthlyRevenue,
 } from "./server/booking-stats";
 export { stayIssue } from "./server/booking-policy";
 export { addBlock, getCalendar, getCalendarBoard, removeBlock } from "./server/closed-dates-service";
+export {
+  buildRoomCalendar,
+  connectFeed,
+  disconnectFeed,
+  getCalendarLinks,
+  syncDueFeeds,
+  syncFeedNow,
+} from "./server/feed-sync-service";

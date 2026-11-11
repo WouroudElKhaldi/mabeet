@@ -20,6 +20,20 @@ export interface TenantContext {
   readonly readOnly?: boolean;
 }
 
+/**
+ * A platform admin in the admin area (`/admin`, `/api/admin/**`), where no business is chosen. Only
+ * `resolvePlatformActor` makes one, after reading the person's role from the database.
+ */
+export interface PlatformActor {
+  readonly userId: string;
+  readonly platformAdmin: true;
+}
+
+/** For what only a platform admin may do. The type already says so; this refuses anything that got around it. */
+export function requirePlatformAdmin(actor: PlatformActor): void {
+  if (actor.platformAdmin !== true) throw forbidden("Platform admins only");
+}
+
 export function can(ctx: TenantContext, permission: Permission): boolean {
   return ctx.permissions.has(permission);
 }
@@ -31,4 +45,17 @@ export function requirePermission(ctx: TenantContext, permission: Permission): v
 /** For what only an owner may do (spend the business's money, see payouts), whatever a role's permissions say. */
 export function requireOwner(ctx: TenantContext, refusal: string): void {
   if (!ctx.isOwner) throw forbidden(refusal);
+}
+
+/**
+ * True for the business's own owners. A platform admin visiting a business acts with an owner's rights to help, but
+ * is not its owner: they never ask for its money or speak as its host.
+ */
+export function isBusinessOwner(ctx: TenantContext): boolean {
+  return ctx.isOwner && ctx.platformAdmin !== true;
+}
+
+/** For what only the business's own owners may do: ask for its payouts, write its host profile. */
+export function requireBusinessOwner(ctx: TenantContext, refusal: string): void {
+  if (!isBusinessOwner(ctx)) throw forbidden(refusal);
 }

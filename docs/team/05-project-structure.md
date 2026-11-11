@@ -32,7 +32,7 @@ A module creates only the folders it needs. Its rules:
 1. **Two doors.** Outside code imports `@/modules/<name>` or `@/modules/<name>/server`, nothing else. Repositories
    and every other inner file are private. Inside the module, files import each other by relative path.
 2. **No circles.** If `bookings` calls `payments`, `payments` never calls `bookings` back; one side becomes a job or
-   is called by a third module. The order today: `bookings` calls `rooms`, `workspaces`, `team` and `audit`; `directory` calls `bookings`, `rooms` and `workspaces`; `rooms` calls `billing`, `workspaces` and `audit`; `workspaces` calls `admin` and `audit`; `team` calls `accounts`, `audit` and `billing`; `billing` calls
+   is called by a third module. The order today: `bookings` calls `rooms`, `offerings`, `workspaces`, `team` and `audit`; `offerings` calls `admin`, `billing` and `audit`; `directory` calls `bookings`, `rooms` and `workspaces`; `rooms` calls `billing`, `workspaces` and `audit`; `workspaces` calls `admin` and `audit`; `team` calls `accounts`, `audit` and `billing`; `billing` calls
    `accounts`, `payments`, `bookings` (a guest's payment arriving by Stripe's webhook or Whish's callback) and `audit`; `housekeeping` calls `billing` and `bookings`; `analytics` calls `bookings`, `rooms`, `workspaces`, `team` and `billing`. Decided for what comes next: `bookings` calls
    `payments` and `calendar-sync`, and neither of them ever calls `bookings` (rule 4 says how).
 3. **One transaction across modules passes `tx`.** A public function that writes takes an optional `tx`, so a caller
@@ -65,7 +65,7 @@ climbing into another module, or the kernel importing a module fails `pnpm lint`
 | `workspaces`    | Creating a place, its settings, the host profile, the place's own site                                                                                                  |
 | `team`          | Roles, members, invitations, and the team's emails                                                                                                                      |
 | `rooms`         | Rooms, photos, rates and price calculation (`pricing.ts`)                                                                                                               |
-| `offerings`     | Experiences and services, and their sessions                                                                                                                            |
+| `offerings`     | Experiences and services, and their sessions (the seats booked in them are `bookings`')                                                                                 |
 | `bookings`      | The booking engine: reservations, availability, holds, decisions, closed dates, session bookings, locks, a booking's payments and full refunds, writing imported nights |
 | `calendar-sync` | Airbnb and Booking.com calendar links: managing, downloading and reading feeds, building the export                                                                     |
 | `payments`      | The Whish and Stripe clients, the Whish simulator, payouts, the lock on a business's money                                                                              |
@@ -78,10 +78,10 @@ climbing into another module, or the kernel importing a module fails `pnpm lint`
 | `audit`         | The audit log and each person's timeline (`recordAction`, `recordPersonAndBusiness`)                                                                                    |
 | `housekeeping`  | The scheduled tidy-up: expiring holds and plan months                                                                                                                   |
 | `admin`         | The platform admin area                                                                                                                                                 |
-| `partners`      | Partner businesses                                                                                                                                                      |
+| `partners`      | Featured partners (F23): partner places near guesthouses and their sponsorships; `listNearbyPartners` for the place page; screens `PartnerManager` and `NearbyPartners` |
 | `contact`       | Messages to the Mabeet team from the Contact page: the input check, the email job and the form                                                                          |
 
-`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping` and `contact` exist today, and `rooms` has begun (the reads a booking needs). The others are
+`accounts`, `workspaces`, `team`, `bookings`, `billing`, `payments`, `audit`, `housekeeping`, `contact`, `directory`, `reviews` and `partners` exist today, and `rooms` has begun (the reads a booking needs). The others are
 created by the first feature that needs them, in this shape.
 
 ## Where each kind of file goes
@@ -420,6 +420,12 @@ src/
           route.ts
         partners/
           [partnerId]/
+            restore/
+              route.ts
+            sponsorships/
+              [sponsorshipId]/
+                route.ts
+              route.ts
             route.ts
           route.ts
         payouts/

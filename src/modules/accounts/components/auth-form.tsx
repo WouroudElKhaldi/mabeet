@@ -11,6 +11,7 @@ import { SlideLabel, slideParent } from "@/components/ui/slide-label";
 import { Field } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { afterSignIn } from "@/utils/sign-in-url";
+import { PASSWORD_MIN_LENGTH } from "@/config/passwords";
 
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const t = useTranslations("auth");
@@ -109,7 +110,7 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         name="password"
         type="password"
         required
-        minLength={10}
+        minLength={PASSWORD_MIN_LENGTH}
         autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
         hint={mode === "sign-up" ? t("passwordHint") : undefined}
       />

@@ -2,11 +2,16 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { ButtonLink } from "@/components/ui/button";
 import { Section } from "@/components/site/section";
 import type { Locale } from "@/config/appearance";
+import { NearbyPartners } from "@/modules/partners";
 import { formatMoney } from "@/utils/format";
 import { lowestRateCents } from "../summary";
 import type { PublicPlace } from "../types";
 import { AmenityList } from "./amenity-list";
 import { BookingBox } from "./booking-box";
+import { ReviewList } from "@/modules/reviews";
+import { countPhotos, groupPhotos } from "../photo-groups";
+import { MeetHost } from "./meet-host";
+import { PlaceMap } from "./place-map";
 import { PhotoGallery } from "./photo-gallery";
 import { PlaceHeader } from "./place-header";
 import { PlaceSummary } from "./place-summary";
@@ -21,25 +26,33 @@ import { UnitList } from "./unit-list";
 export async function PlaceView({
   place,
   initial,
+  saved,
+  signedIn,
 }: {
   place: PublicPlace;
   /** A stay carried over from a search or a link (the page's address). */
   initial?: { roomId?: string; checkIn?: string; checkOut?: string; guests?: number };
+  /** Whether this guest already keeps the place on their list, for the heart. */
+  saved: boolean;
+  signedIn: boolean;
 }) {
   const [t, locale] = await Promise.all([getTranslations("placePage"), getLocale()]);
-  const [booking, known, card] = await Promise.all([
+  const [booking, known, card, host, nearby] = await Promise.all([
     getTranslations("booking"),
     getTranslations("thingsToKnow"),
     getTranslations("place"),
+    getTranslations("meetHost"),
+    getTranslations("partners.nearby"),
   ]);
   const whole = place.bookingUnit === "WHOLE_PLACE";
   const fromRate = lowestRateCents(place.units);
   const allUnits = whole ? [...place.units, ...place.rooms] : place.units;
+  const photoGroups = groupPhotos(place.photos, allUnits);
 
   return (
     <div className="mx-auto max-w-280 px-4 pt-6 sm:px-6 lg:px-10 lg:pb-16">
-      <PlaceHeader place={place} />
-      <PhotoGallery name={place.name} photos={place.photos} />
+      <PlaceHeader place={place} saved={saved} signedIn={signedIn} />
+      <PhotoGallery place={place} photoCount={countPhotos(photoGroups)} />
       <div className="mt-8 grid gap-12 lg:grid-cols-[1fr_380px] lg:gap-20">
         <div className="flex min-w-0 flex-col gap-10">
           <div className="flex flex-col gap-4">
@@ -59,6 +72,22 @@ export async function PlaceView({
           ) : null}
           <Section id="amenities" title={t("amenities")}>
             <AmenityList units={allUnits} />
+          </Section>
+          <Section id="reviews" title={t("reviews")}>
+            <ReviewList reviews={place.reviews} placeName={place.name} />
+          </Section>
+          {place.latitude !== null && place.longitude !== null ? (
+            <Section id="where" title={t("whereYoullBe")}>
+              <PlaceMap place={place} />
+            </Section>
+          ) : null}
+          {place.nearby.length > 0 ? (
+            <Section id="nearby" title={nearby("title")} intro={nearby("intro")}>
+              <NearbyPartners partners={place.nearby} />
+            </Section>
+          ) : null}
+          <Section id="host" title={host("title")}>
+            <MeetHost place={place} />
           </Section>
           <Section id="things-to-know" title={known("title")}>
             <ThingsToKnow place={place} />

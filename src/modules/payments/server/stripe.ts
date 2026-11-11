@@ -129,6 +129,22 @@ export function retrieveCheckoutSession(sessionId: string) {
   );
 }
 
+/**
+ * What Mabeet's Stripe account can pay out right now in one currency, in minor units. Card refunds are paid from it,
+ * so an AI app's cancellation checks it first. Only the platform reads it: no host is ever shown this figure.
+ */
+export async function getStripeAvailableCents(currency: string): Promise<number> {
+  const balance = await call(
+    "/balance",
+    null,
+    z.object({ available: z.array(z.object({ amount: z.number(), currency: z.string() })) }),
+  );
+  const wanted = currency.toLowerCase();
+  return balance.available
+    .filter((funds) => funds.currency === wanted)
+    .reduce((total, funds) => total + funds.amount, 0);
+}
+
 /** Refunds a card payment in full. `refundId` is our Refund row: a retry of the same refund never refunds twice. */
 export function createStripeRefund(paymentIntentId: string, amountCents: number, refundId: string) {
   return call(

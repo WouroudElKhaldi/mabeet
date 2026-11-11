@@ -168,9 +168,23 @@ describe("formFailure", () => {
   it("gives a message under each wrong field, and none for the whole form", () => {
     const details = { formErrors: [], fieldErrors: { phone: ["Use an international number"] } };
     const caught = new ApiError(400, "VALIDATION", "Invalid input", details);
-    expect(formFailure(caught, fallback)).toEqual({
+    expect(formFailure(caught, fallback, ["name", "phone"])).toEqual({
       error: null,
       fieldErrors: { phone: "Use an international number" },
+    });
+  });
+
+  it("gives the whole form a message when the server named a field the form does not show", () => {
+    const details = { formErrors: [], fieldErrors: { palette: ["Invalid option"] } };
+    const caught = new ApiError(400, "VALIDATION", "Invalid input", details);
+    expect(formFailure(caught, fallback)).toEqual({ error: fallback, fieldErrors: {} });
+    const both = new ApiError(400, "VALIDATION", "Invalid input", {
+      formErrors: [],
+      fieldErrors: { name: ["Too short"], roomId: ["Invalid"] },
+    });
+    expect(formFailure(both, fallback, ["name"])).toEqual({
+      error: fallback,
+      fieldErrors: { name: "Too short" },
     });
   });
 

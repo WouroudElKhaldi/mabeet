@@ -1,5 +1,7 @@
+import type { BookingMode, BookingStatus } from "@prisma/client";
 import { type OnlinePaymentMethod } from "@/config/enums";
 import { recordSystemEvent } from "@/modules/audit/server";
+import { lockSession } from "@/modules/offerings/server";
 import {
   createPaymentCheckout,
   createStripeRefund,
@@ -17,19 +19,23 @@ import { prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { appUrl } from "@/server/email/notices";
 import { conflict, invalid, notFound, unavailable } from "@/server/errors";
 import {
+  type BookingKind,
   notifyBookingRequested,
   notifyBookingStatus,
   notifyHostsNewBooking,
   notifyLatePaymentRefunded,
 } from "./booking-notifications";
-import { amountDueOnline, holdUntil, statusWhenPaid } from "./booking-policy";
+import { amountDueOnline, holdUntil, sessionHoldUntil, statusWhenPaid } from "./booking-policy";
 import * as bookings from "./booking-repository";
 import * as payments from "./payment-repository";
+import type { PaidFor } from "./payment-repository";
+import * as sessionBookings from "./session-booking-repository";
 
 // Guests paying online, always the full total, into Mabeet's Whish or Stripe account, and full refunds when a paid
 // booking ends. A callback, the webhook or a returning guest only makes us ask Whish or Stripe: their answer
 // decides, so a forged callback cannot confirm a booking. Our row is always written first, and the provider is
-// called only after the commit; a refund the provider refuses stays owed and is sent by hand.
+// called only after the commit; a refund the provider refuses stays owed and is sent by hand. Seats in a session are
+// paid, settled and refunded the same way as a stay.
 
 /** A payment still pending this long has probably lost its callback, so housekeeping asks the provider. */
 const STALE_PAYMENT_AGE_MS = 2 * 60_000;
@@ -55,6 +61,45 @@ export function onlinePaymentMethods(currency: string): OnlinePaymentMethod[] {
   return methods;
 }
 
+/** What a guest pays for, a stay or seats, as checkout reads it. */
+interface Payable {
+  id: string;
+  kind: BookingKind;
+  paidFor: PaidFor;
+  businessId: string;
+  status: BookingStatus;
+  bookingMode: BookingMode;
+  totalCents: number;
+  currency: string;
+  holdExpiresAt: Date | null;
+  guestEmail: string | null;
+  publicToken: string;
+  /** What the payment page says it is for: the place, what was booked, the reference. */
+  description: string;
+  payments: ReadonlyArray<{ status: string }>;
+}
+
+/** The guest's own booking by its private link, a stay or seats. Null for anyone else. */
+async function findPayable(token: string, guestUserId: string): Promise<Payable | null> {
+  const stay = await bookings.findBookingByPublicToken(prisma, token, guestUserId);
+  if (stay) {
+    return {
+      ...stay,
+      kind: "stay",
+      paidFor: { bookingId: stay.id },
+      description: `${stay.business.name} · ${stay.room.name} · ${stay.reference}`,
+    };
+  }
+  const seats = await sessionBookings.findSessionBookingByPublicToken(prisma, token, guestUserId);
+  if (!seats) return null;
+  return {
+    ...seats,
+    kind: "session",
+    paidFor: { sessionBookingId: seats.id },
+    description: `${seats.business.name} · ${seats.offering.title} · ${seats.reference}`,
+  };
+}
+
 /** The guest pays their booking that waits for its payment. Returns the Whish or Stripe page to send them to. */
 export async function startBookingCheckout(
   token: string,
@@ -62,7 +107,7 @@ export async function startBookingCheckout(
   method: OnlinePaymentMethod,
   now = new Date(),
 ) {
-  const booking = await bookings.findBookingByPublicToken(prisma, token, guestUserId);
+  const booking = await findPayable(token, guestUserId);
   if (!booking) throw notFound("Booking");
   const amount = amountDueOnline(booking.bookingMode, booking.totalCents);
   if (booking.status !== "AWAITING_PAYMENT" || amount === null) {
@@ -86,13 +131,13 @@ export async function startBookingCheckout(
   }
 
   const payment = await payments.createOnlinePayment(prisma, {
+    ...booking.paidFor,
     businessId: booking.businessId,
-    bookingId: booking.id,
     amountCents: amount,
     currency: booking.currency,
     method: method === "WHISH" ? "WHISH" : "STRIPE",
   });
-  const description = `${booking.business.name} · ${booking.room.name} · ${booking.reference}`;
+  const { description } = booking;
   const back = appUrl(`/b/${booking.publicToken}?payment=${payment.id}`);
 
   if (method === "WHISH") {
@@ -154,6 +199,19 @@ async function verify(payment: {
   return { paid: false, final: false };
 }
 
+/** A booking as settling a payment reads it, under its lock: where it stands and where a payment takes it. */
+interface Settling {
+  id: string;
+  status: BookingStatus;
+  guestName: string;
+  reference: string;
+  /** Where the booking goes once paid, and until when it may then wait for the owner. */
+  next: BookingStatus;
+  holdExpiresAt: Date | null;
+  /** Moves it from AWAITING_PAYMENT; null when it was no longer there. */
+  move: () => Promise<unknown>;
+}
+
 /**
  * Checks a payment with its provider and, once paid, moves the booking on in the same transaction: confirmed in
  * mode 1, to the owner in mode 2. Safe to call any number of times: only the first call that sees it paid changes
@@ -164,7 +222,8 @@ export async function settleOnlinePayment(
   now = new Date(),
 ): Promise<"paid" | "pending" | "failed"> {
   const payment = await payments.findPaymentToSettle(prisma, paymentId);
-  if (!payment?.booking) throw notFound("Payment");
+  const paidFor = payment?.booking ?? payment?.sessionBooking;
+  if (!payment || !paidFor) throw notFound("Payment");
   if (payment.status === "PAID" || payment.status === "REFUNDED") return "paid";
   const verdict = await verify(payment);
   if (!verdict.paid) {
@@ -172,59 +231,100 @@ export async function settleOnlinePayment(
     return verdict.final ? "failed" : "pending";
   }
 
-  const { booking } = payment;
+  const kind: BookingKind = payment.booking ? "stay" : "session";
+  const { businessId } = paidFor;
   const outcome = await runInTransaction(async (tx) => {
-    await bookings.lockActiveRoom(tx, booking.businessId, booking.roomId);
+    const settling = payment.booking
+      ? await settlingStay(tx, payment.booking, now)
+      : payment.sessionBooking && (await settlingSeats(tx, payment.sessionBooking, now));
     const marked = await payments.markPaid(tx, payment.id, {
       paidAt: now,
       providerPaymentId: verdict.providerPaymentId,
       note: verdict.note,
     });
     if (!marked) return null;
-    const current = await bookings.findBooking(tx, booking.businessId, booking.id);
-    if (!current) throw notFound("Booking");
-    const next = statusWhenPaid(current.bookingMode);
+    if (!settling) throw notFound("Booking");
+    const ref: PaidFor = kind === "stay" ? { bookingId: settling.id } : { sessionBookingId: settling.id };
     const takes =
-      current.status === "AWAITING_PAYMENT" &&
-      !(await payments.hasOtherPaidPayment(tx, current.id, payment.id));
-    const moved = takes
-      ? await bookings.changeStatus(tx, booking.businessId, current.id, "AWAITING_PAYMENT", {
-          status: next,
-          holdExpiresAt: holdUntil(next, booking.business.holdHours, now),
-        })
-      : null;
+      settling.status === "AWAITING_PAYMENT" && !(await payments.hasOtherPaidPayment(tx, ref, payment.id));
+    const moved = takes ? await settling.move() : null;
     await recordSystemEvent(tx, {
-      businessId: booking.businessId,
+      businessId,
       action: moved ? "payment.online_confirmed" : "payment.online_late",
-      entity: "booking",
-      entityId: current.id,
+      entity: kind === "stay" ? "booking" : "session_booking",
+      entityId: settling.id,
+      note: { guest: settling.guestName, reference: settling.reference },
     });
     const refunds = moved
       ? []
-      : await refundPayments(tx, current.id, "Paid after the booking had ended or was already paid", [
-          payment.id,
-        ]);
-    return { moved: Boolean(moved), next, refunds };
+      : await refundPayments(tx, ref, "Paid after the booking had ended or was already paid", [payment.id]);
+    return { moved: Boolean(moved), next: settling.next, refunds };
   });
   if (!outcome) return "paid";
 
   if (outcome.moved && outcome.next === "CONFIRMED") {
-    notifyBookingStatus(booking.id);
-    notifyHostsNewBooking(booking.id);
+    notifyBookingStatus(paidFor.id, kind);
+    notifyHostsNewBooking(paidFor.id, kind);
   } else if (outcome.moved) {
-    notifyBookingRequested(booking.id);
+    notifyBookingRequested(paidFor.id, kind);
   } else {
     await sendRefunds(outcome.refunds, now);
-    notifyLatePaymentRefunded(booking.id, payment.id);
+    notifyLatePaymentRefunded(paidFor.id, payment.id, kind);
   }
   return "paid";
 }
 
+/** A stay being paid for, with its room locked: in mode 2 it then waits the owner's answer time. */
+async function settlingStay(
+  tx: Tx,
+  booking: { id: string; businessId: string; roomId: string; business: { holdHours: number } },
+  now: Date,
+): Promise<Settling | null> {
+  await bookings.lockActiveRoom(tx, booking.businessId, booking.roomId);
+  const current = await bookings.findBooking(tx, booking.businessId, booking.id);
+  if (!current) return null;
+  const next = statusWhenPaid(current.bookingMode);
+  const holdExpiresAt = holdUntil(next, booking.business.holdHours, now);
+  return {
+    ...current,
+    next,
+    holdExpiresAt,
+    move: () =>
+      bookings.changeStatus(tx, booking.businessId, current.id, "AWAITING_PAYMENT", {
+        status: next,
+        holdExpiresAt,
+      }),
+  };
+}
+
+/** Seats being paid for, with their session locked: in mode 2 they then wait for the owner, never past the start. */
+async function settlingSeats(
+  tx: Tx,
+  booking: { id: string; businessId: string; sessionId: string; business: { holdHours: number } },
+  now: Date,
+): Promise<Settling | null> {
+  const session = await lockSession(tx, booking.businessId, booking.sessionId);
+  const current = await sessionBookings.findSessionBooking(tx, booking.businessId, booking.id);
+  if (!session || !current) return null;
+  const next = statusWhenPaid(current.bookingMode);
+  const holdExpiresAt = sessionHoldUntil(next, booking.business.holdHours, session.startsAt, now);
+  return {
+    ...current,
+    next,
+    holdExpiresAt,
+    move: () =>
+      sessionBookings.changeSessionStatus(tx, booking.businessId, current.id, "AWAITING_PAYMENT", {
+        status: next,
+        holdExpiresAt,
+      }),
+  };
+}
+
 /** The guest came back from Whish or Stripe: their pending payments are checked at once. */
 export async function refreshGuestPayments(token: string, guestUserId: string, now = new Date()) {
-  const booking = await bookings.findBookingByPublicToken(prisma, token, guestUserId);
+  const booking = await findPayable(token, guestUserId);
   if (!booking) return;
-  const pending = await payments.listPendingForBooking(prisma, booking.id);
+  const pending = await payments.listPendingForBooking(prisma, booking.paidFor);
   for (const payment of pending) {
     await settleOnlinePayment(payment.id, now).catch((error: unknown) =>
       console.error("[payments] check failed", error),
@@ -266,11 +366,11 @@ export interface RefundToSend {
  */
 export async function refundPayments(
   tx: Tx,
-  bookingId: string,
+  paidFor: PaidFor,
   reason: string,
   only?: readonly string[],
 ): Promise<RefundToSend[]> {
-  const paid = await payments.lockPaidPayments(tx, bookingId);
+  const paid = await payments.lockPaidPayments(tx, paidFor);
   const toSend: RefundToSend[] = [];
   for (const payment of paid) {
     if (only && !only.includes(payment.id)) continue;

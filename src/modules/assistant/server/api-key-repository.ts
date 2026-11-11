@@ -12,6 +12,7 @@ export function createApiKey(
     prefix: string;
     hash: string;
     expiresAt: Date | null;
+    canWrite: boolean;
   },
 ) {
   return db.apiKey.create({

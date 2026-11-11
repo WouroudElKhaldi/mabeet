@@ -228,7 +228,8 @@ Tailwind 4: one step = `0.25rem` = 4 pixels. `p-4` = 16px, `gap-6` = 24px. We us
   area (`pb-[env(safe-area-inset-bottom)]`). The page gets `pb-24` so nothing hides behind it. A menu with no tab
   pages (all of someone's places) has no bar: the top bar's menu button opens the same drawer.
 - **Phone menu:** a drawer from the start side, `w-[86%] max-w-80`, over a `bg-ink/40` layer.
-- **Back button:** `BackLink` at the top of every page (`mb-4`). It goes to the parent page.
+- **Back button:** `BackLink` at the top of every page (`mb-4`). It returns to the previous page when that page is
+  ours in this tab (`PageTrail` in the root layout follows the tab's pages), and otherwise goes to the parent page.
 
 How a page uses the frame (`src/components/shell/app-shell.tsx`): the layout builds the menu, already filtered by the
 member's permissions (`can(ctx, ...)`) and already translated, and passes it in:
@@ -414,7 +415,7 @@ the keyboard focus away.
 | `Panel`                                             | `shell/page-header.tsx` | A titled card on a dashboard page (`panelClass` + `text-xl` title + optional intro and action)                                     |
 | `BackLink`                                          | `shell/back-link.tsx`   | The Back button                                                                                                                    |
 | `Pagination`                                        | `shell/pagination.tsx`  | Page numbers for long lists                                                                                                        |
-| `NotificationBell`, `NotificationList`              | `shell/`                | The bell (latest 5) and the full list                                                                                              |
+| `NotificationBell`, `NotificationList`              | `notifications` module  | The bell (latest 5) and the full list; the layout builds the bell and hands it to `AppShell` (`bell`)                              |
 | `StatTile`                                          | `ui/stat-tile.tsx`      | One number with its label (percent, count or money); a long number shrinks to the tile's width (`cqi`) instead of being cut        |
 | `BarChart`, analytics charts                        | `dashboard/`            | Charts, coloured with tokens and `channel-colors.ts`                                                                               |
 | `SiteHeader`, `SiteFooter`, `SearchBar`, `SiteMenu` | `site/`                 | The public site's header, footer and search, and the header's menu on phones                                                       |
@@ -531,8 +532,40 @@ Experiences and services have no tab yet: they come with their module (F8).
 `PhotoGallery` (one large and four small photos, the large one alone on a phone or with fewer than five photos, "Show all photos" in a dialog, a drawn
 postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the rooms of a place booked whole shown
 without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
-`ThingsToKnow` and `BookingBox`. Not built yet: reviews, the map, "Meet your host", the photo tour, share and
-favourite, and "Near your stay".
+`ThingsToKnow`, `MeetHost`, `PlaceMap`, `ReviewList`, `BookingBox`, and the partners part of "Near your stay"
+(`NearbyPartners` from the partners module, the `nearby` section after "Where you'll be" and before `MeetHost`;
+shown without dates, as partners have no sessions). Not built yet: the experiences part of "Near your stay".
+
+The title row carries `ShareButton` (`src/components/site/share-button.tsx`, shared with any page that wants it) and
+`FavoriteButton` on the end side. Share opens the phone's own share sheet where there is one, otherwise it copies
+the link and says "Copied"; both can be refused — the guest closes the sheet, the browser keeps the clipboard shut
+— and then it claims nothing. The heart fills the moment it is tapped and tells the server after (`useOptimistic`),
+because nobody should wait on a heart; if the server refuses, the page's own answer comes back. A visitor who is
+not signed in is sent to sign in and returns to the place they were looking at.
+
+`PlaceMap` (the `where` section, "Where you'll be", between the amenities and the host) is the area's name and a
+Google Maps embed centred on the place's coordinates, with no pin on a door: the coordinates are the host's own and
+are often no more than their town, so the page says the area is approximate and the exact address comes with the
+booking. The embed needs no key, and `frame-src` in `next.config.ts` already allows `maps.google.com` and nothing
+else. A place whose host gave no coordinates shows no section at all, not an empty map.
+
+`RatingLine` (from `reviews`) sits under the title's area line: the stars, the average to one decimal, and how
+many guests gave it. A place nobody has reviewed says "No reviews yet" there instead of showing five empty stars.
+The `reviews` section (between the amenities and "Where you'll be") is `ReviewList`: the four newest in two
+columns, each with its stars, the guest's name ("A guest" once they have closed their account), the month, the
+comment, and the host's reply indented under it when there is one; then "Show all N reviews" in a `ShowAllDialog`.
+
+The gallery's "Show all 11 photos" is a link to the photo tour (it was a dialog of the place's own photos; the tour
+shows the rooms' photos too, grouped, which is what the guest wanted).
+
+`MeetHost` (the `host` section, between the amenities and the things to know) is who hosts this place: the arch
+avatar with their first letter and their name (the place's name while their profile is hidden, so no line is empty),
+the languages they speak, "New on Mabeet" in their first year, then the two figures guests weigh a host by (years
+hosting, response rate) and how quickly they answer as a sentence of its own ("Responds within an hour"). A figure
+nobody can know yet is simply not shown, never a 0 or a dash. Then their bio, "Contact host" and the WhatsApp
+button, each shown only if the host takes questions that way (`HostProfile.contactBy`; a host who chose WhatsApp
+only keeps "Contact host" on a place with no WhatsApp number, so one of the two always shows), and the line asking the
+guest to book and pay through Mabeet. The WhatsApp number is the place's own, never the host's.
 
 `BookingBox` (a client component) holds the room, the dates and the guests; it asks the quote route when both dates are
 picked (`useLiveQuery`, so a late answer to old dates is never shown), and shows the price, or the reason the stay
@@ -547,6 +580,14 @@ On a phone a bar held at the bottom shows the "from" price and leads to the box 
 #### `/p/[slug]/photos` Photo tour (F2)
 
 Photos grouped by area and room, with a Back button to the place.
+
+**Built so far** (`src/app/(site)/p/[slug]/photos/`, with its `loading.tsx`): under the layout's own back link, the
+place's name and "Photo tour", then `PhotoTour` (`src/modules/directory/components/`). `groupPhotos`
+(`photo-groups.ts`, a pure function) puts the place's own photos first, under the part of the house they show, in
+the order of `PHOTO_AREAS`, with the ones the host never placed last under "Additional photos" (`OTHER`); then each
+room that has photos, under its name. A group is never empty and a photo is never in two groups, so the count in
+the gallery's link is exactly what the page holds. A place with no photos at all gets the drawn postcard and "No
+photos yet."
 
 #### `/p/[slug]/book` Book (F4)
 
@@ -572,6 +613,17 @@ host's answer time), or arrange payment with the host.
 2. "What guests usually ask": getting there, price and availability (the full price is paid; no deposit), the
    refund rule, house rules.
 3. "Still have questions?": `ContactHostForm` and the WhatsApp button, depending on the host's choice.
+
+**Built so far** (`src/app/(site)/p/[slug]/contact/`, with its `loading.tsx`): under the layout's own back link, the
+title ("Contact {name}", the host's shown name or the place's) with how quickly they answer under it, and what
+guests usually ask as a two-column list: getting there (the area), the full price and no deposit, the refund rule,
+and the house rules; each one is left out when the place has nothing to say for it. A link leads back to the
+booking box to check dates. Beside it, a `TicketCard` holds `ContactHostForm` (name, the email the host replies to,
+and the question, each checked before sending, with the host named in the placeholder; once sent, a thank-you
+saying where the answer will arrive, and a way to ask something else) and the WhatsApp button, each shown only if
+the host takes questions that way. One of the two always shows: a host who chose WhatsApp only keeps the form on a
+place with no WhatsApp number. A stay carried in the address (`?checkIn=&checkOut=&guests=`, as the place page's links already pass it)
+shows on the ticket's stub and goes with the question, so the host answers about the right nights.
 
 #### `/b/[token]` The guest's booking page (F4; the pay buttons F4a)
 
@@ -717,9 +769,22 @@ All use `AuthPage` (a narrow centred card, `max-w-md`) with `AuthForm`:
 Tabs at the top (`AccountTabs`):
 
 - `/account`: your trips (upcoming and past), and a review form after check-out (one overall star rating and a
-  comment; no separate cleanliness, location or value ratings).
-- `/account/favorites`: a `PlaceGrid` of saved places.
-- `/account/activity`: what you did, newest first.
+  comment; no separate cleanliness, location or value ratings). **Built**: a stay that is over, went ahead and has
+  no review yet carries a "Write a review" button under its card (outside the card's link, which goes to the
+  booking). It opens `ReviewForm` in a compact `SheetDialog`: five stars as real radio buttons (so a keyboard
+  moves between them and a screen reader reads "4 out of 5"; the drawn star is their label), the scale line, and
+  the comment. Once it is in, the button gives way to a thank-you rather than inviting a second one.
+- `/account/favorites`: a grid of saved places. **Built** (`src/app/(site)/account/favorites/`, with its
+  `loading.tsx`): the account's own header and tabs, then `ResultsGrid` of `PlaceCard`s, newest first, each with a
+  filled `FavoriteButton` in the photo's far corner (on its own light disc, or a pale photo swallows it) so one tap
+  takes a place off again. Prices are a night's, never a stay's: a place is saved for later, when the dates are not
+  decided. With nothing saved: "Nothing saved yet", the line about the heart, and a button to the search page.
+- `/account/activity`: what you did, newest first. **Built** (`src/app/(site)/account/activity/`, with its
+  `loading.tsx`): the account's header and tabs (Activity between Saved and Notifications), then `ActivityList`: one
+  row per entry in a `ring-line` card, an accent icon in a `bg-surface-2` circle, the sentence ("You saved Beit
+  Batroun", "Beit Batroun confirmed your stay"), and the date and time with the booking's reference for a stay. A
+  row with a page to go to (the booking, or the place) is a link. With nothing yet: the line about what will show
+  up here, and a button to the search page.
 - `/account/notifications`: notifications on this device (`PhoneAlerts`).
 - `/account/privacy`: download or delete your data (`PrivacyControls`).
 
@@ -729,13 +794,13 @@ Tabs at the top (`AccountTabs`):
 links to its booking page, with the place, the room, the dates, the guests, the price and a status label in the guest's
 words; a long place name gives way to the label. With no trips: "No trips yet. Where to first?" and a button to explore.
 A signed-out visitor signs in and comes back. Every account page starts with `AccountHeader` (`accounts` module: the
-greeting, Sign out and `AccountTabs`, which lists only the pages built: Trips, Notifications and Privacy).
+greeting, Sign out and `AccountTabs`: Trips, Saved, Activity, Notifications and Privacy).
 `/account/notifications` is `PhoneAlerts` (`notifications` module): turn push on or off for this device, or why it
 cannot be (blocked in the browser, not supported, or on iPhone not yet on the Home Screen); when the server has no
 push keys it says updates still come by email. `/account/privacy` is
 `PrivacyControls`: "Download my data" (`GET /api/me/export`, a JSON file) and "Delete my account", behind a
 confirmation where the guest types their email (`POST /api/me/delete`), then signed out to the home page; an only owner
-of a place is told to add another owner first. Favourites, activity and the review form are not built yet.
+of a place is told to add another owner first.
 
 ### 8.4 Host dashboard (`AppShell`, every page starts with `PageHeader`)
 
@@ -763,7 +828,7 @@ reviews are built; the AI report is a later bonus.
 | `/offerings`               | F8 (bonus)  | `OfferingEditor`, `PhotoManager`, `SessionScheduler`. No cancellation-hours field                                                                                                                                                                                                                                                                                                                  |
 | `/reviews`                 | F5 (bonus)  | Average rating; each review with `ReviewControls` (reply, hide with a reason)                                                                                                                                                                                                                                                                                                                      |
 | `/payouts`                 | F12a        | `StatTile`s (available, upcoming, paid out); `PayoutRequestForm`; payout history; online payments                                                                                                                                                                                                                                                                                                  |
-| `/billing`                 | F15 (bonus) | Current plan, `PlanCards`, `UpgradeButton`, `WhishPlanButton`                                                                                                                                                                                                                                                                                                                                      |
+| `/billing`                 | F15 (bonus) | Current plan and renewal date, with `ManageBillingButton` for a place paying by card; 3 `StatTile`s (rooms, experiences, team members against the plan's limits); `PlanCards` with `UpgradeButton` and `WhishPlanButton` (owners only)                                                                                                                                                             |
 | `/team`                    | F13         | Members (`MemberControls`: role and Remove, both confirmed; "you" on your own row), the invitation form (`AddMemberForm`, the owner role last), the invitations sent (status, `CancelInvitation`), then the roles as `DisclosurePanel`s (`RoleEditor`; the owner role only described) and "New role". Members and invitations need `team.manage`, the roles `roles.manage`                         |
 | `/assistant`               | F14 (bonus) | `TeamAssistant`: New chat, History, Temporary chat; the chat; `ActionCard`s under replies                                                                                                                                                                                                                                                                                                          |
 | `/keys`                    | F14 (bonus) | `KeyManager` (create, list, revoke keys; how to connect Claude, Cursor or Codex; the apps connected by signing in, with the server address and Disconnect) and the audit list                                                                                                                                                                                                                      |

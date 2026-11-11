@@ -1,4 +1,17 @@
-import type { BookingMode, BookingStatus, BookingUnit, FeedSource, PhotoArea } from "@prisma/client";
+import type {
+  ActivityLevel,
+  BookingMode,
+  BookingStatus,
+  BookingUnit,
+  BusinessStatus,
+  ListingKind,
+  FeedSource,
+  HostContact,
+  PayoutMethod,
+  PhotoArea,
+  PriceUnit,
+  SkillLevel,
+} from "@prisma/client";
 
 // Value lists shared by validation, the AI tools and the screens. `satisfies` checks them against the
 // database enums, so adding a status in the schema cannot silently miss a list here.
@@ -56,6 +69,33 @@ export const CURRENCIES = ["USD", "LBP", "EUR"] as const;
 /** How a guest pays online: with Whish, or by card (Stripe Checkout). */
 export const ONLINE_PAYMENT_METHODS = ["WHISH", "CARD"] as const;
 export type OnlinePaymentMethod = (typeof ONLINE_PAYMENT_METHODS)[number];
+
+/** Where Mabeet sends a host's payout: a bank account (IBAN) or a Whish number. Never a card. */
+export const PAYOUT_METHODS = ["BANK_TRANSFER", "WHISH"] as const satisfies readonly PayoutMethod[];
+
+/** A business is live, or suspended by a platform admin (hidden everywhere until reactivated). */
+export const BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies readonly BusinessStatus[];
+
+/** What a browse category is for: places, experiences or services. */
+export const LISTING_KINDS = ["HOME", "EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
+
+/** What a host sells by the session rather than by the night. */
+export const OFFERING_KINDS = ["EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
+export type OfferingKind = (typeof OFFERING_KINDS)[number];
+
+/** A session's price is for each guest, or once for the whole group. */
+export const PRICE_UNITS = ["PER_PERSON", "PER_GROUP"] as const satisfies readonly PriceUnit[];
+
+/** How hard an experience is, and how much the guest needs to know already. */
+export const ACTIVITY_LEVELS = [
+  "LIGHT",
+  "MODERATE",
+  "CHALLENGING",
+] as const satisfies readonly ActivityLevel[];
+export const SKILL_LEVELS = ["BEGINNER", "INTERMEDIATE", "ADVANCED"] as const satisfies readonly SkillLevel[];
+
+/** How guests may reach a host: WhatsApp and the Contact host page, or only one of them. */
+export const HOST_CONTACT_OPTIONS = ["BOTH", "WHATSAPP", "MESSAGE"] as const satisfies readonly HostContact[];
 
 /** Calendars we read taken nights from. */
 export const FEED_SOURCES = ["AIRBNB", "BOOKING", "OTHER"] as const satisfies readonly FeedSource[];

@@ -33,7 +33,7 @@ export async function signUp(name: string): Promise<Caller> {
 
 export interface CallOptions {
   as?: Caller;
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   params?: Record<string, string>;
   body?: unknown;
   query?: Record<string, string>;

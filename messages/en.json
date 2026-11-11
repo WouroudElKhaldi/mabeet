@@ -202,6 +202,9 @@
       "pets": "Pets welcome",
       "generator": "24/7 electricity"
     },
+    "whereYoullBe": "Where you'll be",
+    "mapOf": "Map of the area around {place}",
+    "approximate": "The area, not the door. The host sends the exact address with your booking.",
     "houseRules": "House rules",
     "cancellation": "Cancellation",
     "reviews": "What guests say",
@@ -211,7 +214,6 @@
     "noRooms": "This place is not taking bookings right now.",
     "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
     "baths": "{count, plural, one {# bath} other {# baths}}",
-    "showAllPhotos": "Show all photos",
     "whereYoullSleep": "Where you'll sleep",
     "wholePlaceIntro": "You book the whole place, for up to {guests} guests. These are its rooms.",
     "wholeHomeIn": "Entire home in {area}",
@@ -221,6 +223,15 @@
     "guestsCount": "{count, plural, one {# guest} other {# guests}}",
     "showAllReviews": "Show all {count} reviews",
     "showAllAmenities": "Show all {count} amenities"
+  },
+  "reviews": {
+    "none": "No reviews yet",
+    "count": "{count, plural, one {# review} other {# reviews}}",
+    "anonymous": "A guest",
+    "hostReply": "Reply from the host",
+    "write": "Write a review",
+    "sending": "Posting…",
+    "done": "Thank you. Your review is up."
   },
   "booking": {
     "perNight": "a night",
@@ -586,7 +597,8 @@
       "billing": "Billing",
       "payouts": "Payouts",
       "place": "Your place",
-      "analytics": "Analytics"
+      "analytics": "Analytics",
+      "profile": "My profile"
     },
     "overview": {
       "title": "Today",
@@ -768,7 +780,12 @@
         "AIRBNB": "Airbnb",
         "BOOKING": "Booking.com",
         "OTHER": "Other"
-      }
+      },
+      "readHint": "We read each platform's calendar every 10 minutes, again just before a guest books, and again just before you confirm a request. Paste your own link into each platform too, so they close the nights you sell here.",
+      "noRooms": "Add a room first: each room gets its own calendar link.",
+      "noFeeds": "No platform calendar connected to this room yet.",
+      "roomOff": "Switched off: guests can't book it, but its nights stay in step.",
+      "stale": "Not read for over an hour. Press Sync now, or check the link on the platform."
     },
     "team": {
       "title": "Team",
@@ -824,7 +841,10 @@
       "hide": "Hide",
       "show": "Show again",
       "hideReason": "Why hide this review? Guests won't see it, and the reason is logged.",
-      "hiddenBecause": "Hidden: {reason}"
+      "hiddenBecause": "Hidden: {reason}",
+      "intro": "What guests wrote after their stays. Answer them in public, or hide one that breaks the rules.",
+      "hidden": "Hidden",
+      "replyHint": "Shown under the review on your place's page. Empty it to take it away."
     },
     "settings": {
       "title": "Settings",
@@ -1004,6 +1024,13 @@
         "REQUESTED": "Requested",
         "PAID": "Sent",
         "REJECTED": "Refused"
+      },
+      "errors": {
+        "amount": "Enter an amount up to what is available.",
+        "accountName": "Enter the account holder's full name.",
+        "whishPhone": "Enter the Whish number with its country code, like +96170123456.",
+        "bankName": "Enter the bank's name.",
+        "iban": "Check the IBAN: it starts with two letters, like LB62."
       }
     },
     "navGroups": {
@@ -1056,25 +1083,19 @@
       "scale": "1 = poor · 5 = wonderful"
     },
     "activity": {
-      "empty": "Nothing here yet.",
-      "booking": {
-        "requested": "You requested a booking",
-        "confirmed": "The host confirmed your booking",
-        "awaiting_payment": "Your booking is waiting for your payment",
-        "declined": "The host declined your request",
-        "cancelled": "The host cancelled your booking",
-        "cancelled_by_guest": "You cancelled a booking",
-        "expired": "Your request ran out before the host answered"
-      },
-      "favorite": {
-        "added": "You saved a place",
-        "removed": "You removed a saved place"
-      },
-      "review": {
-        "submitted": "You posted a review"
-      },
-      "member": {
-        "invitation_accepted": "You joined a team"
+      "empty": "Nothing here yet. What you book, save and review will show up here.",
+      "aPlace": "a place",
+      "actions": {
+        "booking_requested": "You asked to stay at {place}",
+        "booking_confirmed": "{place} confirmed your stay",
+        "booking_declined": "{place} declined your request",
+        "booking_cancelled": "{place} cancelled your stay",
+        "booking_cancelled_by_guest": "You cancelled your stay at {place}",
+        "booking_expired": "Your request at {place} ran out of time",
+        "review_written": "You reviewed your stay at {place}",
+        "favorite_saved": "You saved {place}",
+        "favorite_removed": "You removed {place} from your saved places",
+        "member_invitation_accepted": "You joined the team of {place}"
       }
     },
     "experiences": "Experiences & services",
@@ -1183,7 +1204,7 @@
       "days": "{count} days",
       "never": "Never",
       "allowWrite": "Allow changes",
-      "allowWriteHint": "Lets the AI confirm or decline bookings and close dates, if your role allows. Your AI app asks you before each change.",
+      "allowWriteHint": "Lets your AI app confirm, decline or cancel bookings, close and reopen dates, open or close rooms and sync your calendars, as far as your role allows. It asks you before each change. Bookings paid online can only be ended by an owner, with extra checks.",
       "generate": "Create key",
       "copyNow": "Copy this key now. For your safety it won't be shown again.",
       "secret": "Your key",
@@ -1275,7 +1296,49 @@
       "new": "New category",
       "delete": "Delete category",
       "deleteTitle": "Delete “{name}”?",
-      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first"
+      "inUse": "Used by {count, plural, one {# listing} other {# listings}}: move them first",
+      "slug": "Slug"
+    },
+    "partners": {
+      "title": "Partners",
+      "hint": "Restaurants, cafés, parks and other places near our guesthouses. Guests see the ones in their stay's region under \"Things to do near your stay\". Sponsored ones come first, always marked \"Sponsored\".",
+      "new": "New partner",
+      "add": "Add partner",
+      "save": "Save",
+      "name": "Name",
+      "kind": "Type",
+      "region": "Region",
+      "area": "Town or area",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "pinHint": "Optional. With the guesthouse's pin, guests see how far it is.",
+      "photoUrl": "Photo link",
+      "websiteUrl": "Website or social page",
+      "phone": "Phone",
+      "linkHint": "A full link starting with https://",
+      "remove": "Remove",
+      "removeTitle": "Remove «{name}»?",
+      "removeBody": "Guests stop seeing it. You can bring it back later, with its sponsored days.",
+      "restore": "Bring back",
+      "removedTitle": "Removed partners",
+      "sponsoredNow": "Sponsored now",
+      "empty": "No partners yet. Add the first one below.",
+      "sponsorships": "Sponsored days",
+      "sponsorshipsHint": "On these days it comes first near every stay in its region, marked \"Sponsored\".",
+      "noSponsorships": "Not sponsored.",
+      "firstDay": "First day",
+      "lastDay": "Last day",
+      "sponsor": "Sponsor",
+      "endSponsorship": "End sponsorship",
+      "endTitle": "End this sponsorship of «{name}»?",
+      "errors": {
+        "name": "Write a name of 2 to 80 letters.",
+        "pin": "Give both numbers of the map pin, or leave both empty.",
+        "link": "Use a full link that starts with https://",
+        "phone": "Write a phone number, like +961 70 123 456.",
+        "lastDay": "The last day must be on or after the first."
+      },
+      "socialHint": "A full link starting with https://, such as their Instagram page."
     },
     "ai": {
       "title": "AI this month",
@@ -1291,7 +1354,7 @@
     "sync": {
       "title": "Calendar sync",
       "summary": "{total, plural, one {# feed} other {# feeds}} connected · {problems, plural, =0 {all healthy} one {# needs attention} other {# need attention}}",
-      "allGood": "Every feed synced in the last two hours.",
+      "allGood": "Every calendar link was read in the last hour.",
       "lastSynced": "Last synced {when}",
       "never": "Never synced"
     },
@@ -1335,20 +1398,23 @@
       "users": "Users",
       "money": "Money",
       "categories": "Categories",
+      "partners": "Partners",
       "appearance": "Appearance",
       "health": "Health",
       "groups": {
         "platform": "Platform",
         "money": "Money",
         "content": "Content",
-        "operations": "Operations"
+        "operations": "Operations",
+        "account": "Account"
       },
-      "hosts": "Hosts"
+      "hosts": "Hosts",
+      "profile": "My profile"
     },
     "overviewIntro": "The platform at a glance, and what needs you today.",
     "businessesIntro": "Every business on Mabeet. Suspending one hides it everywhere at once.",
     "usersIntro": "The newest accounts: guests, hosts and staff.",
-    "healthIntro": "What runs on its own: calendar sync with the platforms, and AI spending.",
+    "healthIntro": "What runs on its own: the calendar links each room reads from Airbnb and Booking.com.",
     "newestBusinesses": "Newest businesses",
     "seeAll": "See all",
     "attention": {
@@ -1841,10 +1907,14 @@
     "usage": {
       "rooms": "Rooms",
       "offerings": "Experiences and services",
-      "members": "Team members"
+      "members": "Team members",
+      "title": "What your place uses",
+      "allowed": "Your plan allows {count}"
     },
     "payWhish": "Pay a month with Whish",
-    "whishPending": "We're waiting for Whish to confirm your payment. Refresh in a minute."
+    "whishPending": "We're waiting for Whish to confirm your payment. Refresh in a minute.",
+    "cardOff": "Paying by card isn't set up yet. You can pay a month at a time with Whish.",
+    "whishFailed": "Whish didn't take the payment, so nothing was charged. You can try again."
   },
   "oauth": {
     "kicker": "Connect an AI app",
@@ -1960,10 +2030,14 @@
     "password": "Password",
     "currentPassword": "Current password",
     "newPassword": "New password",
-    "passwordRules": "At least 8 characters.",
+    "passwordRules": "At least 10 characters.",
     "passwordWrong": "Your current password isn't right.",
     "changePassword": "Change password",
-    "passwordChanged": "Password changed. Other devices were signed out."
+    "passwordChanged": "Password changed. Other devices were signed out.",
+    "errors": {
+      "name": "Write your name, 2 to 80 letters.",
+      "phone": "Write the number in international format, e.g. +96171123456."
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -1991,7 +2065,9 @@
       "member_role_changed": "{actor} changed someone's role",
       "member_invited": "{actor} invited someone to the team",
       "member_invitation_accepted": "{actor} accepted the invitation and joined the team",
-      "member_invitation_cancelled": "{actor} cancelled an invitation"
+      "member_invitation_cancelled": "{actor} cancelled an invitation",
+      "payout_sent": "Mabeet sent your payout",
+      "payout_refused": "Mabeet couldn't send your payout; the money is available again"
     },
     "viewAll": "View all notifications",
     "failed": "Couldn't load notifications. Try again.",
@@ -2019,9 +2095,8 @@
   },
   "photoTour": {
     "title": "Photo tour",
-    "showAll": "Show all photos",
+    "showAll": "Show all {count} photos",
     "none": "No photos yet.",
-    "photos": "{count, plural, one {# photo} other {# photos}}",
     "areas": {
       "LIVING_ROOM": "Living room",
       "KITCHEN": "Kitchen",
@@ -2038,14 +2113,7 @@
   },
   "share": {
     "button": "Share",
-    "title": "Share this place",
-    "close": "Close",
-    "copyLink": "Copy link",
-    "copied": "Copied",
-    "email": "Email",
-    "messages": "Messages",
-    "embed": "Embed",
-    "more": "More options"
+    "copied": "Copied"
   },
   "overviewAll": {
     "title": "All my places",
@@ -2142,17 +2210,26 @@
     "location": "The place is in {area}.",
     "priceAvailability": "Price and availability",
     "fullPayment": "You pay the full price to confirm your booking; there is no deposit.",
+    "checkAvailability": "Check availability",
     "stillQuestions": "Still have questions? Message the host",
     "stillQuestionsBody": "{name} gets your message by email and replies to the address you give.",
+    "yourStay": "Your dates",
     "name": "Your name",
     "email": "Your email",
     "emailHint": "The host replies here.",
     "message": "Message",
     "placeholder": "Hi {name}, I'd like to know…",
     "send": "Send message",
+    "sending": "Sending…",
     "sentTitle": "Message sent",
     "sentBody": "{name} will reply to your email. Keep an eye on your inbox, and your spam folder just in case.",
-    "checkAvailability": "Check availability"
+    "another": "Ask something else",
+    "orWhatsapp": "Or message them on WhatsApp",
+    "errors": {
+      "name": "Please give your name, 2 characters or more.",
+      "email": "Please check your email address; the host replies to it.",
+      "message": "Please write at least a few words, so the host can answer."
+    }
   },
   "regions": {
     "label": "Region",
@@ -2361,6 +2438,27 @@
         "email": "Please enter a valid email address.",
         "message": "Please write at least a few words."
       }
+    }
+  },
+  "partners": {
+    "nearby": {
+      "title": "Things to do near your stay",
+      "intro": "Places to eat, shop and explore around this place.",
+      "sponsored": "Sponsored",
+      "distance": "{km} km away",
+      "website": "Website",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "kinds": {
+      "RESTAURANT": "Restaurant",
+      "CAFE": "Café",
+      "SUPERMARKET": "Supermarket",
+      "PARK": "Park",
+      "MUSEUM": "Museum",
+      "BEACH": "Beach",
+      "WINERY": "Winery",
+      "OTHER": "Other"
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { Plan } from "@prisma/client";
+import type { PaymentMethod, Plan } from "@prisma/client";
 import { type Db, moneyNumber, type Tx } from "@/server/db/client";
 
 // Plan payments: a host paying for a plan, by card (a Stripe invoice) or by Whish (a month at a time).
@@ -84,6 +84,39 @@ export async function sumPaidPlans(db: Db, businessId: string) {
   const rows = await db.planPayment.groupBy({
     by: ["currency"],
     where: { businessId, status: "PAID", isDeleted: false },
+    _sum: { amountCents: true },
+  });
+  return rows.map((row) => ({ currency: row.currency, cents: moneyNumber(row._sum.amountCents ?? 0) }));
+}
+
+/**
+ * What the platform earned from plans, by month (UTC), currency and way of paying, from `since`. Paid payments only:
+ * a refunded one no longer counts.
+ */
+export async function sumPlanRevenueByMonth(db: Db, since: Date) {
+  const rows = await db.$queryRaw<
+    Array<{ month: string; currency: string; method: PaymentMethod; cents: bigint; payments: bigint }>
+  >`
+    SELECT to_char(date_trunc('month', "paidAt" AT TIME ZONE 'UTC'), 'YYYY-MM') AS month, currency, method,
+           SUM("amountCents")::bigint AS cents, COUNT(*)::bigint AS payments
+    FROM "PlanPayment"
+    WHERE status = 'PAID' AND NOT "isDeleted" AND "paidAt" >= ${since}
+    GROUP BY 1, 2, 3
+    ORDER BY 1`;
+  return rows.map((row) => ({
+    month: row.month,
+    currency: row.currency,
+    method: row.method,
+    cents: moneyNumber(row.cents),
+    payments: Number(row.payments),
+  }));
+}
+
+/** Everything the platform earned from plans, by currency. */
+export async function sumPlanRevenue(db: Db) {
+  const rows = await db.planPayment.groupBy({
+    by: ["currency"],
+    where: { status: "PAID", isDeleted: false },
     _sum: { amountCents: true },
   });
   return rows.map((row) => ({ currency: row.currency, cents: moneyNumber(row._sum.amountCents ?? 0) }));

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { BusinessStatus, Prisma } from "@prisma/client";
 import { areasMatching, regionNamed } from "@/config/regions";
 import type { Db, Tx } from "@/server/db/client";
 
@@ -142,6 +142,14 @@ export function findBookableBusinessBySlug(db: Db, slug: string) {
   });
 }
 
+/** For calendar sync: the place's name and time zone, and how it is booked. */
+export function findPlaceForCalendar(db: Db, businessId: string) {
+  return db.business.findFirst({
+    where: { id: businessId, isDeleted: false },
+    select: { id: true, name: true, timezone: true, bookingUnit: true },
+  });
+}
+
 /** For analytics: what the reports need of each place, live ones only. */
 export function findPlacesForReports(db: Db, businessIds: readonly string[]) {
   return db.business.findMany({
@@ -180,6 +188,33 @@ function inArea(text: string): Prisma.BusinessWhereInput {
  * Places in search: live, listed by their owner, and matching every filter, oldest first. Only what a result card
  * shows, never the owner's settings.
  */
+/** What a place shows as a card: in search, and in a guest's saved places. */
+const LISTED_BUSINESS_FIELDS = {
+  id: true,
+  slug: true,
+  name: true,
+  area: true,
+  currency: true,
+  bookingUnit: true,
+  categories: {
+    where: { isDeleted: false },
+    select: { categorySlug: true },
+    orderBy: { categorySlug: "asc" },
+  },
+} satisfies Prisma.BusinessSelect;
+
+/**
+ * The same fields as a search result, for places named by id: a guest's saved places. A place its owner has
+ * unlisted is still here (its page still works, and the guest chose it), but a paused or deleted one is not.
+ */
+export function findBusinessesByIds(db: Db, businessIds: readonly string[]) {
+  if (businessIds.length === 0) return Promise.resolve([]);
+  return db.business.findMany({
+    where: { id: { in: [...businessIds] }, status: "ACTIVE", isDeleted: false },
+    select: LISTED_BUSINESS_FIELDS,
+  });
+}
+
 export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number) {
   return db.business.findMany({
     where: {
@@ -204,20 +239,52 @@ export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number
           : {},
       ],
     },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      area: true,
-      currency: true,
-      bookingUnit: true,
-      categories: {
-        where: { isDeleted: false },
-        select: { categorySlug: true },
-        orderBy: { categorySlug: "asc" },
-      },
-    },
+    select: LISTED_BUSINESS_FIELDS,
     orderBy: { createdAt: "asc" },
     take,
   });
+}
+
+/**
+ * Every business on the platform for the admin, the newest first: its status, its owners and how big it is. Deleted
+ * businesses stay out; a suspended one stays in, so it can be brought back.
+ */
+export function listPlatformBusinesses(db: Db, take: number) {
+  return db.business.findMany({
+    where: { isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      area: true,
+      status: true,
+      plan: true,
+      createdAt: true,
+      memberships: {
+        where: {
+          status: "ACTIVE",
+          isDeleted: false,
+          role: { isOwner: true, isDeleted: false },
+          user: { isDeleted: false },
+        },
+        select: { user: { select: { id: true, name: true, email: true, phone: true } } },
+      },
+      _count: { select: { rooms: { where: { isDeleted: false } }, bookings: true } },
+    },
+  });
+}
+
+export function countPlatformBusinesses(db: Db) {
+  return db.business.count({ where: { isDeleted: false } });
+}
+
+/** Suspends or reactivates a business. False when there is no such business. */
+export async function setBusinessStatus(db: Db, businessId: string, status: BusinessStatus) {
+  const { count } = await db.business.updateMany({
+    where: { id: businessId, isDeleted: false },
+    data: { status },
+  });
+  return count > 0;
 }

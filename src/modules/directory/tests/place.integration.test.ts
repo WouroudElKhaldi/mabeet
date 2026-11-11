@@ -20,7 +20,14 @@ describe("a place's page", () => {
     const { business } = await createPlace("Beit Cedar");
     await prisma.business.update({
       where: { id: business.id },
-      data: { description: "Under the cedars", area: "Bsharri", houseRules: "No smoking", currency: "USD" },
+      data: {
+        description: "Under the cedars",
+        area: "Bsharri",
+        houseRules: "No smoking",
+        currency: "USD",
+        latitude: 34.2512,
+        longitude: 36.0107,
+      },
     });
     const room = await addRoom(business.id, { capacity: 3, baseRateCents: 9_500, minNights: 2 });
     await prisma.room.update({ where: { id: room.id }, data: { amenities: ["wifi", "view"] } });
@@ -38,6 +45,9 @@ describe("a place's page", () => {
       currency: "USD",
       bookingUnit: "ROOMS",
       checkInTime: "14:00",
+      // What the map is centred on; a place whose host gave none keeps both null and shows no map.
+      latitude: 34.2512,
+      longitude: 36.0107,
     });
     expect(place?.photos.map((picture) => picture.id)).toEqual([own.id]);
     expect(place?.units.map((unit) => unit.id)).toEqual([room.id]);

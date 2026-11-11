@@ -27,11 +27,20 @@ describe("dashboardNav", () => {
           { href: "/dashboard/b1/bookings", label: "bookings", icon: "bookings", tab: true, end: false },
         ],
       },
+      {
+        group: "business",
+        items: [{ href: "/dashboard/b1/profile", label: "profile", icon: "profile", end: false }],
+      },
     ]);
   });
 
-  it("hides a page the member's role does not open, and the group left empty", () => {
-    expect(dashboardNav(member(["guests.contact"]))).toEqual([]);
+  it("hides a page the member's role does not open, and the group left empty, but always shows their own profile", () => {
+    expect(dashboardNav(member(["guests.contact"]))).toEqual([
+      {
+        group: "business",
+        items: [{ href: "/dashboard/b1/profile", label: "profile", icon: "profile", end: false }],
+      },
+    ]);
   });
 
   it("reads the same permissions the page itself checks", () => {
