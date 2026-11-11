@@ -163,9 +163,22 @@ erDiagram
     String businessId FK
     String paidById FK
     Plan plan
+    String offerId FK
     PaymentMethod method
     PaymentStatus status
     String providerRef UK
+  }
+  PlanOffer {
+    String id PK
+    Plan plan
+    OfferKind kind
+    String businessId FK
+    String createdById FK
+  }
+  PlanOfferClaim {
+    String id PK
+    String offerId FK
+    String businessId FK
   }
   WhishSandboxPayment {
     String externalId PK
@@ -290,6 +303,11 @@ erDiagram
   User |o--o{ Payout : "decidedBy"
   Business ||--o{ PlanPayment : "business"
   User |o--o{ PlanPayment : "paidBy"
+  PlanOffer |o--o{ PlanPayment : "offer"
+  Business |o--o{ PlanOffer : "business"
+  User ||--o{ PlanOffer : "createdBy"
+  PlanOffer ||--o{ PlanOfferClaim : "offer"
+  Business ||--o{ PlanOfferClaim : "business"
   User ||--o{ Favorite : "user"
   Business ||--o{ Favorite : "business"
   Business ||--o{ Review : "business"
@@ -643,6 +661,7 @@ erDiagram
     String paidById FK
     Plan plan
     Int months
+    String offerId FK
     BigInt amountCents
     String currency
     PaymentMethod method
@@ -650,6 +669,28 @@ erDiagram
     String providerRef UK
     String checkoutUrl
     DateTime paidAt
+    Boolean isDeleted
+    DateTime createdAt
+  }
+  PlanOffer {
+    String id PK
+    String name
+    Plan plan
+    OfferKind kind
+    Int percentOff
+    String businessId FK
+    Int firstMonths
+    DateTime startsAt
+    DateTime endsAt
+    String createdById FK
+    Boolean isDeleted
+    DateTime createdAt
+  }
+  PlanOfferClaim {
+    String id PK
+    String offerId FK
+    String businessId FK
+    DateTime endsAt
     Boolean isDeleted
     DateTime createdAt
   }
@@ -873,6 +914,11 @@ erDiagram
   User |o--o{ Payout : "decidedBy"
   Business ||--o{ PlanPayment : "business"
   User |o--o{ PlanPayment : "paidBy"
+  PlanOffer |o--o{ PlanPayment : "offer"
+  Business |o--o{ PlanOffer : "business"
+  User ||--o{ PlanOffer : "createdBy"
+  PlanOffer ||--o{ PlanOfferClaim : "offer"
+  Business ||--o{ PlanOfferClaim : "business"
   User ||--o{ Favorite : "user"
   Business ||--o{ Favorite : "business"
   Business ||--o{ Review : "business"

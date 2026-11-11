@@ -68,6 +68,7 @@ model User {
   payoutDecidedBy         Payout[]            @relation("PayoutDecidedBy")
   sessionBookingDecidedBy SessionBooking[]    @relation("SessionBookingDecidedBy")
   sponsorshipsCreated     Sponsorship[]       @relation("SponsorshipCreatedBy")
+  planOffersCreated       PlanOffer[]         @relation("PlanOfferCreatedBy")
   invitationsTaken        Invitation[]        @relation("InvitationsAccepted")
 }
 
@@ -197,6 +198,12 @@ enum Plan {
   BUSINESS
 }
 
+/// What a plan offer gives: the plan with nothing to pay, or a share off its price.
+enum OfferKind {
+  FREE
+  PERCENT_OFF
+}
+
 /// What guests book at a place: one of its rooms, or the whole place at once.
 enum BookingUnit {
   ROOMS
@@ -318,6 +325,8 @@ model Business {
   refunds         Refund[]
   payouts         Payout[]
   planPayments    PlanPayment[]
+  planOffers      PlanOffer[]
+  planOfferClaims PlanOfferClaim[]
   aiChats         AiChat[]
   rateOverrides   RateOverride[]
   invitations     Invitation[]
@@ -755,6 +764,9 @@ model PlanPayment {
   plan        Plan
   /// Months of the plan this payment buys. A Whish payment buys one; Stripe renews by itself.
   months      Int           @default(1)
+  /// The percent-off offer this payment was made under, if any.
+  offerId     String?
+  offer       PlanOffer?    @relation(fields: [offerId], references: [id], onDelete: Restrict)
   amountCents BigInt
   currency    String
   method      PaymentMethod
@@ -767,6 +779,53 @@ model PlanPayment {
 
   @@index([businessId])
   @@index([status, paidAt])
+}
+
+/// A platform admin's offer on a paid plan: the plan free, or a share off its price. For every place or one host's
+/// place, and either for each place's first months (counted from the day it joined) or between two dates. The
+/// database refuses a half-filled offer (plan_offer_shape). Ending one early sets isDeleted.
+model PlanOffer {
+  id          String           @id @default(cuid())
+  /// The admin's name for it, also shown to the host ("Launch offer").
+  name        String
+  /// PRO or BUSINESS: an offer is never on FREE.
+  plan        Plan
+  kind        OfferKind
+  /// 1 to 99, for PERCENT_OFF only.
+  percentOff  Int?
+  /// One host's place, or null for every place.
+  businessId  String?
+  business    Business?        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  /// "The first N months" of each place, counted from the day it joined. Null for an offer between two dates.
+  firstMonths Int?
+  /// An offer between two dates, from startsAt until endsAt. Both null for a first-months offer.
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdById String
+  createdBy   User             @relation("PlanOfferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  isDeleted   Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  claims      PlanOfferClaim[]
+  payments    PlanPayment[]
+
+  @@index([businessId])
+}
+
+/// A place taking a free offer, once per offer: the plan is the offer's until endsAt, then housekeeping puts the place
+/// back on Free unless it pays.
+model PlanOfferClaim {
+  id         String    @id @default(cuid())
+  offerId    String
+  offer      PlanOffer @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  /// When the free plan it gave ends.
+  endsAt     DateTime
+  isDeleted  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@unique([offerId, businessId])
+  @@index([businessId])
 }
 
 /// TEST ONLY: the Whish simulator's own records, written only when WHISH_MODE=simulator (local development, tests,

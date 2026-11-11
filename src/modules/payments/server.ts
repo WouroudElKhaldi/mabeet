@@ -11,6 +11,7 @@ export {
 export {
   createBillingPortalSession,
   createPaymentCheckout,
+  createPlanCoupon,
   createStripeRefund,
   createSubscriptionCheckout,
   getStripeAvailableCents,
