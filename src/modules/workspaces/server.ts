@@ -10,5 +10,10 @@ export {
   listListedPlaces,
   listPlacesByIds,
 } from "./server/place-lookup";
-export { getPlatformHost, listPlatformBusinesses, setBusinessStatus } from "./server/platform-service";
+export {
+  getPlatformHost,
+  listPlatformBusinesses,
+  listPlatformHosts,
+  setBusinessStatus,
+} from "./server/platform-service";
 export { getPlaceBasics, getSettings, saveBookingUnit, updateSettings } from "./server/settings-service";

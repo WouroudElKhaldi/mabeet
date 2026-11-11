@@ -13,3 +13,6 @@ export const PARTNER_KINDS = [
   "WINERY",
   "OTHER",
 ] as const satisfies readonly PartnerKind[];
+
+/** The partners shown in the admin's table: the live ones, or the removed ones to bring back. */
+export const PARTNER_LIST_STATES = ["live", "removed"] as const;

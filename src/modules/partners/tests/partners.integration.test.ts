@@ -11,6 +11,7 @@ import {
   createPartner,
   endSponsorship,
   listNearbyPartners,
+  listPartnerPage,
   listPartnersForAdmin,
   removePartner,
   restorePartner,
@@ -238,5 +239,29 @@ describe("partners near a stay", () => {
     });
 
     expect(await listNearbyPartners({ region: null, ...pin })).toEqual([]);
+  });
+});
+
+describe("the admin's partners table", () => {
+  it("finds partners by name or town, filters by kind and region, and shows the removed ones apart", async () => {
+    const admin = await createPlatformAdmin();
+    const word = `Zx${Math.random().toString(36).slice(2, 8)}`;
+    const { pin } = ownSpotAndDay();
+    const kept = await createPartner(admin, { ...partner(`Cafe ${word}`, pin), kind: "CAFE" });
+    const gone = await createPartner(admin, { ...partner(`Grill ${word}`, pin, 0.01), region: "south" });
+    await removePartner(admin, gone.id);
+
+    const names = async (filters: Partial<Parameters<typeof listPartnerPage>[1]>) =>
+      (await listPartnerPage(admin, { q: word, removed: false, ...filters })).partners.map((row) => row.id);
+    expect(await names({})).toEqual([kept.id]);
+    expect(await names({ removed: true })).toEqual([gone.id]);
+    expect(await names({ kind: "RESTAURANT" })).toEqual([]);
+    expect(await names({ region: "north", kind: "CAFE" })).toEqual([kept.id]);
+    expect(await names({ q: word.toUpperCase(), region: "south", removed: true })).toEqual([gone.id]);
+    expect(await listPartnerPage(admin, { q: word, removed: false }, 3)).toMatchObject({
+      total: 1,
+      page: 1,
+      pages: 1,
+    });
   });
 });

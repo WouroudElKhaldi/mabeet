@@ -1,4 +1,4 @@
-import type { HostContact } from "@prisma/client";
+import type { BusinessStatus, HostContact, Plan, Prisma } from "@prisma/client";
 import type { Db } from "@/server/db/client";
 
 /**
@@ -79,6 +79,9 @@ export function findHostForAdmin(db: Db, userId: string) {
               slug: true,
               area: true,
               status: true,
+              plan: true,
+              planRenewsAt: true,
+              stripeSubscriptionId: true,
               isDeleted: true,
               createdAt: true,
               _count: {
@@ -130,4 +133,64 @@ export function saveHostProfile(db: Db, userId: string, fields: HostProfileField
     update: { ...fields, isDeleted: false },
     select: OWN_PROFILE,
   });
+}
+
+export interface HostFilters {
+  /** Words in the host's name, email or phone, or in one of their places' names. */
+  q: string;
+  /** Hosts with at least one place in this status. */
+  status?: BusinessStatus;
+  /** Hosts with at least one place on this plan. */
+  plan?: Plan;
+}
+
+/** A place the person owns and is still on the team of. */
+const ownedPlace = {
+  status: "ACTIVE",
+  isDeleted: false,
+  role: { isOwner: true, isDeleted: false },
+} as const satisfies Prisma.MembershipWhereInput;
+
+function hostWhere({ q, status, plan }: HostFilters): Prisma.UserWhereInput {
+  const business = { isDeleted: false, ...(status ? { status } : {}), ...(plan ? { plan } : {}) };
+  const words = { contains: q, mode: "insensitive" } as const;
+  return {
+    isDeleted: false,
+    memberships: { some: { ...ownedPlace, business } },
+    ...(q
+      ? {
+          OR: [
+            { name: words },
+            { email: words },
+            { phone: words },
+            { memberships: { some: { ...ownedPlace, business: { ...business, name: words } } } },
+          ],
+        }
+      : {}),
+  };
+}
+
+/** One page of the hosts for the platform admin, the newest first, each with the live places they own. */
+export function listHostsForAdmin(db: Db, filters: HostFilters, page: { skip: number; take: number }) {
+  return db.user.findMany({
+    where: hostWhere(filters),
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    ...page,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      createdAt: true,
+      memberships: {
+        where: { ...ownedPlace, business: { isDeleted: false } },
+        orderBy: { createdAt: "asc" },
+        select: { business: { select: { id: true, name: true, status: true, plan: true } } },
+      },
+    },
+  });
+}
+
+export function countHostsForAdmin(db: Db, filters: HostFilters) {
+  return db.user.count({ where: hostWhere(filters) });
 }

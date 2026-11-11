@@ -1,7 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createPlace, createPlatformAdmin, prisma } from "@tests/integration/helpers";
-import { createCategory, deleteCategory, listCategoriesForAdmin, updateCategory } from "../server";
+import {
+  createCategory,
+  deleteCategory,
+  listCategoriesForAdmin,
+  listCategoryPage,
+  updateCategory,
+} from "../server";
 
 // Browse categories: a slug is created once (a deleted one comes back instead of a copy), and a category still in use
 // cannot be deleted, so no place silently loses it.
@@ -44,5 +50,24 @@ describe("browse categories", () => {
       position: 1,
       isDeleted: false,
     });
+  });
+});
+
+describe("the admin's categories table", () => {
+  it("finds categories by slug or name, filters by kind, and pages", async () => {
+    const admin = await createPlatformAdmin();
+    const word = randomUUID().slice(0, 8);
+    await createCategory(admin, { ...newCategory(`home-${word}`), nameEn: `Hills ${word}` });
+    await createCategory(admin, { ...newCategory(`trip-${word}`), kind: "EXPERIENCE" });
+
+    const slugs = async (kind?: "HOME" | "EXPERIENCE" | "SERVICE") =>
+      (await listCategoryPage(admin, { q: word, kind })).categories.map((category) => category.slug);
+    expect(new Set(await slugs())).toEqual(new Set([`home-${word}`, `trip-${word}`]));
+    expect(await slugs("EXPERIENCE")).toEqual([`trip-${word}`]);
+    expect(await slugs("SERVICE")).toEqual([]);
+    expect((await listCategoryPage(admin, { q: `HILLS ${word}` })).categories).toEqual([
+      expect.objectContaining({ slug: `home-${word}`, uses: 0 }),
+    ]);
+    expect(await listCategoryPage(admin, { q: word }, 5)).toMatchObject({ total: 2, page: 1, pages: 1 });
   });
 });

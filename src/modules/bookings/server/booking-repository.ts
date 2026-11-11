@@ -279,11 +279,12 @@ export function listBookings(db: Db, businessId: string, filters: BookingFilters
   });
 }
 
-/** The guest's own stays, newest first, with where and what they booked. */
-export function listGuestBookings(db: Db, guestUserId: string) {
+/** The guest's own stays, newest first, with where and what they booked; the latest `take` when it is given. */
+export function listGuestBookings(db: Db, guestUserId: string, take?: number) {
   return db.booking.findMany({
     where: { guestUserId, isDeleted: false },
     orderBy: { checkIn: "desc" },
+    take,
     include: {
       room: { select: { name: true } },
       business: { select: { name: true, slug: true } },
@@ -375,6 +376,15 @@ export function createManualBlock(
       note: block.note,
     },
     select: { id: true, roomId: true, checkIn: true, checkOut: true, note: true },
+  });
+}
+
+/** A room's live closed dates that touch a range, earliest first. Bookings and platform stays are not among them. */
+export function listManualBlocks(db: Db, businessId: string, roomId: string, range: DateRange) {
+  return db.occupancy.findMany({
+    where: { businessId, roomId, kind: "MANUAL", active: true, isDeleted: false, ...overlapsRange(range) },
+    orderBy: { checkIn: "asc" },
+    select: { id: true, checkIn: true, checkOut: true, note: true },
   });
 }
 

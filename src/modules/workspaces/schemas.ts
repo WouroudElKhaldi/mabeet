@@ -2,7 +2,8 @@ import { z } from "zod";
 import { BOOKING_MODES, BUSINESS_STATUSES, CURRENCIES, HOST_CONTACT_OPTIONS } from "@/config/enums";
 import { ACCESSIBILITY, LANGUAGES, TAGS } from "@/config/listing";
 import { REGION_KEYS } from "@/config/regions";
-import { id, phone } from "@/lib/schemas";
+import { PLANS } from "@/config/plans";
+import { id, listChoice, listQuery, phone } from "@/lib/schemas";
 
 /** Creating a place: the person who creates it becomes its owner. */
 export const workspaceInput = z.object({
@@ -86,4 +87,10 @@ export const hostProfileInput = z.object({
   hostingSince: z.number().int().min(1950).max(2100).nullish(),
   showOnListings: z.boolean(),
   contactBy: z.enum(HOST_CONTACT_OPTIONS).default("BOTH"),
+});
+
+/** The admin's hosts table: words, and their places' status or plan. */
+export const platformHostsQuery = listQuery.extend({
+  status: listChoice(BUSINESS_STATUSES),
+  plan: listChoice(PLANS),
 });

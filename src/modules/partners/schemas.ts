@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { PARTNER_KINDS } from "@/config/partner-kinds";
+import { PARTNER_KINDS, PARTNER_LIST_STATES } from "@/config/partner-kinds";
 import { REGION_KEYS } from "@/config/regions";
-import { id, isoDate, phone } from "@/lib/schemas";
+import { id, isoDate, listChoice, listQuery, phone } from "@/lib/schemas";
 
 // Input checks for featured partners (F23). Platform admins write them; guests only ever read partners.
 
@@ -42,3 +42,10 @@ export const sponsorshipInput = z
 
 export const partnerParams = z.object({ partnerId: id });
 export const sponsorshipParams = z.object({ partnerId: id, sponsorshipId: id });
+
+/** The admin's partners table: words, kind, region, and live or removed. */
+export const partnersQuery = listQuery.extend({
+  kind: listChoice(PARTNER_KINDS),
+  region: listChoice(REGION_KEYS),
+  shown: listChoice(PARTNER_LIST_STATES),
+});

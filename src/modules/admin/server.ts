@@ -5,6 +5,7 @@ export {
   deleteCategory,
   listCategories,
   listCategoriesForAdmin,
+  listCategoryPage,
   updateCategory,
 } from "./server/categories";
 export { getSitePalette, setSitePalette } from "./server/site-settings";
