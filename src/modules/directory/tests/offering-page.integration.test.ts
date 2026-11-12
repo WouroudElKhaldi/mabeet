@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { getSessionBookingForGuest, requestSessionBooking } from "@/modules/bookings/server";
-import { createPlace, createUser, prisma } from "@tests/integration/helpers";
+import sharp from "sharp";
+import { listPlacePhotos, uploadPhoto } from "@/modules/rooms/server";
+import { createPlace, createUser, memberWith, prisma } from "@tests/integration/helpers";
 import { browseOfferings } from "../server";
 import { getOfferingPage } from "../server/offering-page-service";
 
@@ -116,5 +118,59 @@ describe("the seats' private link", () => {
       offering: { title: "Cedar hike" },
     });
     expect(await getSessionBookingForGuest(booking.publicToken, stranger.id)).toBeNull();
+  });
+});
+
+describe("an experience's photos, reviews and host", () => {
+  it("shows the photos uploaded to it, its own reviews, and the place's host", async () => {
+    const place = await placeWithOffering();
+    const guest = await createUser("Rami Khoury");
+    const session = await place.sessionAt(2);
+    const png = await sharp({
+      create: { width: 8, height: 8, channels: 3, background: { r: 20, g: 120, b: 80 } },
+    })
+      .png()
+      .toBuffer();
+    const photo = await uploadPhoto(place.ctx, {
+      roomId: null,
+      offeringId: place.offering.id,
+      bytes: new Uint8Array(png),
+      alt: "On the trail",
+      area: null,
+    });
+    const booked = await seats(place.offering.slug, session.id, 2, guest.id);
+    await prisma.review.create({
+      data: {
+        businessId: place.business.id,
+        offeringId: place.offering.id,
+        sessionBookingId: booked.id,
+        authorId: guest.id,
+        rating: 5,
+        comment: "A beautiful walk",
+      },
+    });
+
+    const page = await getOfferingPage(place.offering.slug);
+    expect(page?.photos.map((shown) => shown.id)).toEqual([photo.id]);
+    expect(page?.reviews).toMatchObject([
+      { rating: 5, comment: "A beautiful walk", authorName: "Rami Khoury" },
+    ]);
+    expect(page?.host).toMatchObject({ response: null });
+    // The place's own gallery stays the place's: an experience's photo is never shown on the place.
+    expect(await listPlacePhotos(place.business.id)).toEqual([]);
+  });
+
+  it("refuses an experience photo to a member without offerings.manage", async () => {
+    const place = await placeWithOffering();
+    const member = await memberWith(place.business.id, ["rooms.manage"]);
+    await expect(
+      uploadPhoto(member, {
+        roomId: null,
+        offeringId: place.offering.id,
+        bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
+        alt: null,
+        area: null,
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

@@ -56,9 +56,10 @@ export const bookingUnitInput = z.object({ bookingUnit: z.enum(BOOKING_UNITS) })
 /** /api/workspaces/{businessId}/photos/{photoId} */
 export const photoParams = workspaceParams.extend({ photoId: id });
 
-/** The form fields sent with a photo's file: a room's photo, or (no room) the place's own. */
+/** The form fields sent with a photo's file: a room's photo, an experience's, or (neither) the place's own. */
 export const photoUploadFields = z.object({
   roomId: id.nullable().default(null),
+  offeringId: id.nullable().default(null),
   alt: z.string().trim().max(160).nullable().default(null),
   area: z.enum(PHOTO_AREAS).nullable().default(null),
 });

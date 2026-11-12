@@ -1028,11 +1028,12 @@
       "edit": "Edit",
       "status": "Status",
       "actions": "Actions",
-      "sessionCount": "{count, plural, =0 {No dates yet} one {# upcoming date} other {# upcoming dates}}"
+      "sessionCount": "{count, plural, =0 {No dates yet} one {# upcoming date} other {# upcoming dates}}",
+      "photosCount": "{count, plural, =0 {Photos} one {# photo} other {# photos}}"
     },
     "photos": {
-      "title": "Photos",
-      "hint": "The first photo is the cover on cards. Photos are shrunk before upload, so they load fast on phones.",
+      "placeTitle": "Photos",
+      "placeHint": "The first photo is the cover on cards. Photos are shrunk before upload, so they load fast on phones.",
       "upload": "Add photos",
       "uploading": "Uploading {done} of {total}…",
       "cover": "Cover",
@@ -1043,7 +1044,10 @@
       "roomTitle": "Photos of this room",
       "roomHint": "Shown when a guest opens this room. The first one is its cover.",
       "area": "What it shows",
-      "noArea": "Part of the place…"
+      "noArea": "Part of the place…",
+      "offeringTitle": "Photos",
+      "offeringHint": "Show the moment guests come for. The first photo is the cover on cards.",
+      "offeringEmpty": "No photos yet. Guests book what they can see: add a few."
     },
     "phoneAlerts": "Phone notifications",
     "payouts": {

@@ -17,7 +17,7 @@ import * as rooms from "./room-repository";
 export async function getSetupChecklist(ctx: TenantContext) {
   const settings = await getSettings(ctx);
   const [photoCount, units] = await Promise.all([
-    photos.countPhotos(prisma, { businessId: ctx.businessId, roomId: null }),
+    photos.countPhotos(prisma, { businessId: ctx.businessId, roomId: null, offeringId: null }),
     rooms.countActiveUnits(prisma, ctx.businessId, BOOKABLE_ROOM_KIND[settings.bookingUnit]),
   ]);
   const done: Record<SetupStep, boolean> = {

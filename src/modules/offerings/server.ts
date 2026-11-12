@@ -8,5 +8,6 @@ export {
   findPublicOffering,
   listPublicOfferings,
   lockSession,
+  offeringExists,
   priceSession,
 } from "./server/offering-lookup";

@@ -34,6 +34,22 @@ export function listPublishedReviews(db: Db, businessId: string) {
   });
 }
 
+/** An experience or service's published reviews, newest first, as a place's are. */
+export function listPublishedOfferingReviews(db: Db, offeringId: string) {
+  return db.review.findMany({
+    where: { offeringId, status: "PUBLISHED", isDeleted: false },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      ownerReply: true,
+      createdAt: true,
+      author: { select: { name: true, isDeleted: true } },
+    },
+  });
+}
+
 /** Every published rating of a place, for its average. */
 export async function listRatings(db: Db, businessId: string): Promise<number[]> {
   const reviews = await db.review.findMany({

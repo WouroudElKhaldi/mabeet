@@ -46,3 +46,8 @@ export async function listPublicOfferings(
     (first, second) => Number(second.sessions.length > 0) - Number(first.sessions.length > 0),
   );
 }
+
+/** Whether the business has this offering (not removed), for the photos of its gallery. */
+export async function offeringExists(businessId: string, offeringId: string): Promise<boolean> {
+  return (await offerings.findOffering(prisma, businessId, offeringId)) !== null;
+}
