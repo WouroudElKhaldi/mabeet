@@ -3445,6 +3445,9 @@ paths:
                     - POOL
                     - VIEW
                     - OTHER
+                offeringId:
+                  type: string
+                  description: An experience or service's gallery (needs offerings.manage). Never with roomId.
               required:
                 - file
   /api/workspaces/{businessId}/photos/{photoId}:

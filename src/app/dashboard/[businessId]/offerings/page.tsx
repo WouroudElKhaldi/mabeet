@@ -1,4 +1,4 @@
-import { CalendarPlus, Compass, Pencil } from "lucide-react";
+import { CalendarPlus, Compass, Images, Pencil } from "lucide-react";
 import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
@@ -11,6 +11,7 @@ import { listCategories } from "@/modules/admin/server";
 import { countTakenSeats } from "@/modules/bookings/server";
 import { OfferingEditor, SessionScheduler } from "@/modules/offerings";
 import { listOfferings } from "@/modules/offerings/server";
+import { PhotoManager } from "@/modules/rooms";
 import { getPlaceBasics } from "@/modules/workspaces/server";
 import { requirePageAccess } from "@/server/http/session";
 import { formatMoney } from "@/utils/format";
@@ -19,8 +20,8 @@ type PageProps = { params: Promise<{ businessId: string }> };
 
 /**
  * The place's experiences and services as a table: each with its price, its upcoming dates and whether guests can
- * book it. Editing one, scheduling its dates (with the seats taken in each) and adding a new one open in pop-ups,
- * so the list stays a list. Who booked which seats is on the Bookings page.
+ * book it. Editing one, its photos, scheduling its dates (with the seats taken in each) and adding a new one open in
+ * pop-ups, so the list stays a list. Who booked which seats is on the Bookings page.
  */
 export default async function OfferingsPage({ params }: PageProps) {
   const { businessId } = await params;
@@ -108,6 +109,19 @@ export default async function OfferingsPage({ params }: PageProps) {
                       size="lg"
                     >
                       <OfferingEditor businessId={businessId} offering={offering} categories={categories} />
+                    </FormDialog>
+                    <FormDialog
+                      label={t("photosCount", { count: offering.photos.length })}
+                      title={offering.title}
+                      icon={<Images className="size-4" aria-hidden />}
+                      variant="ghost"
+                      size="lg"
+                    >
+                      <PhotoManager
+                        businessId={businessId}
+                        offeringId={offering.id}
+                        photos={offering.photos}
+                      />
                     </FormDialog>
                     <FormDialog
                       label={t("schedule")}

@@ -2,16 +2,19 @@ import { Clock, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { PlaceArt } from "@/components/brand/place-art";
 import { Section } from "@/components/site/section";
 import { ShareButton } from "@/components/site/share-button";
 import { ButtonLink } from "@/components/ui/button";
+import { ShowAllDialog } from "@/components/ui/show-all-dialog";
 import type { Locale } from "@/config/appearance";
 import { isOnlineMode } from "@/config/enums";
 import { ACCESSIBILITY, LANGUAGES, TAGS } from "@/config/listing";
+import { ReviewList } from "@/modules/reviews";
 import { formatMoney } from "@/utils/format";
 import { durationText } from "../offering-text";
 import type { PublicOffering } from "../types";
+import { MeetHost } from "./meet-host";
+import { PhotoGallery } from "./photo-gallery";
 import { PlaceMap } from "./place-map";
 import { SessionBookingCard } from "./session-booking-card";
 
@@ -21,8 +24,8 @@ function known<Key extends string>(allowed: readonly Key[], values: readonly str
 }
 
 /**
- * An experience or service's page, laid out like a place's: the title row, its photo, what it is and what to know,
- * where you meet, and the card where the guest picks a session and books. On a phone the card comes after the text,
+ * An experience or service's page, laid out like a place's: the title row, its photos, what it is and what to know,
+ * where you meet, its reviews and its host, and the card where the guest picks a session and books. On a phone the card comes after the text,
  * and a bar held at the bottom leads to it.
  */
 export async function OfferingView({
@@ -39,12 +42,14 @@ export async function OfferingView({
   /** Where a signed-out visitor signs in first; null once signed in. */
   signInHref: string | null;
 }) {
-  const [t, tOffer, tKnow, tListing, tRefund, locale] = await Promise.all([
+  const [t, tOffer, tKnow, tListing, tRefund, tPlace, tHost, locale] = await Promise.all([
     getTranslations("offeringPage"),
     getTranslations("offering"),
     getTranslations("thingsToKnow"),
     getTranslations("listing"),
     getTranslations("refundPolicy"),
+    getTranslations("placePage"),
+    getTranslations("meetHost"),
     getLocale(),
   ]);
   const service = offering.kind === "SERVICE";
@@ -53,7 +58,6 @@ export async function OfferingView({
   const languages = known(LANGUAGES, offering.languages);
   const activity = offering.activityLevel ? tListing(`activity.${offering.activityLevel}`) : null;
   const skill = offering.skillLevel ? tListing(`skill.${offering.skillLevel}`) : null;
-  const cover = offering.photos[0];
   const facts = [
     durationText(tOffer, offering.durationMinutes),
     t("upTo", { count: offering.maxGuests }),
@@ -116,20 +120,27 @@ export async function OfferingView({
         </div>
       </header>
 
-      <div className="relative mt-6 aspect-4/3 overflow-hidden rounded-2xl bg-surface-2 sm:aspect-video">
-        {cover ? (
-          <Image
-            src={cover.url}
-            alt={cover.alt ?? offering.title}
-            fill
-            priority
-            sizes="(min-width: 1120px) 1120px, 100vw"
-            className="object-cover"
-          />
-        ) : (
-          <PlaceArt seed={offering.slug} className="size-full" />
-        )}
-      </div>
+      <PhotoGallery
+        place={{ name: offering.title, slug: offering.slug, photos: offering.photos }}
+        photoCount={offering.photos.length}
+        showAll={
+          <ShowAllDialog label={t("showAllPhotos")} title={offering.title}>
+            <ul className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
+              {offering.photos.map((photo) => (
+                <li key={photo.id} className="relative aspect-4/3 overflow-hidden rounded-xl bg-surface-2">
+                  <Image
+                    src={photo.url}
+                    alt={photo.alt ?? offering.title}
+                    fill
+                    sizes="(min-width: 640px) 45vw, 100vw"
+                    className="object-cover"
+                  />
+                </li>
+              ))}
+            </ul>
+          </ShowAllDialog>
+        }
+      />
 
       <div className="mt-8 grid gap-12 lg:grid-cols-[1fr_380px] lg:gap-20">
         <div className="flex min-w-0 flex-col gap-10">
@@ -191,6 +202,25 @@ export async function OfferingView({
               />
             </Section>
           ) : null}
+
+          <Section id="reviews" title={tPlace("reviews")}>
+            {offering.reviews.length > 0 ? (
+              <ReviewList reviews={offering.reviews} placeName={offering.title} />
+            ) : (
+              <p className="text-muted">{t("noReviews")}</p>
+            )}
+          </Section>
+
+          <Section id="host" title={tHost("title")}>
+            <MeetHost
+              place={{
+                slug: offering.business.slug,
+                name: offering.business.name,
+                whatsapp: offering.whatsapp,
+                host: offering.host,
+              }}
+            />
+          </Section>
         </div>
 
         <aside id="booking" className="scroll-mt-28 lg:sticky lg:top-28 lg:self-start">

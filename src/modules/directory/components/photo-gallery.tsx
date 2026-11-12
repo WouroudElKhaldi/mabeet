@@ -1,9 +1,12 @@
 import clsx from "clsx";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
+import type { ReactNode } from "react";
 import { PlaceArt } from "@/components/brand/place-art";
 import { ArrowLink } from "@/components/ui/arrow-link";
-import type { PublicPhoto, PublicPlace } from "../types";
+import type { PublicPhoto } from "../types";
+
+type GalleryPhoto = Pick<PublicPhoto, "id" | "url" | "alt">;
 
 const MOSAIC_PHOTOS = 5;
 
@@ -14,7 +17,7 @@ function Photo({
   priority = false,
   className,
 }: {
-  photo: PublicPhoto;
+  photo: GalleryPhoto;
   fallbackAlt: string;
   sizes: string;
   priority?: boolean;
@@ -36,16 +39,20 @@ function Photo({
 
 /**
  * The place's photos: one large and four small on a wide screen, the large one alone on a phone or with fewer than
- * five photos, and a link to the photo tour, which holds every photo of the place and its rooms, grouped. A place
- * without photos gets a drawn postcard, never an empty space.
+ * five photos, and a link to the photo tour, which holds every photo of the place and its rooms, grouped. An
+ * experience has no tour: it passes its own "Show all photos" instead. Without photos it is a drawn postcard, never an
+ * empty space.
  */
 export async function PhotoGallery({
   place,
   photoCount,
+  showAll,
 }: {
-  place: Pick<PublicPlace, "name" | "slug" | "photos">;
+  place: { name: string; slug: string; photos: readonly GalleryPhoto[] };
   /** Every photo of the place, its rooms included, which is what the photo tour shows. */
   photoCount: number;
+  /** In place of the link to the photo tour. */
+  showAll?: ReactNode;
 }) {
   const t = await getTranslations("photoTour");
   const { name, photos } = place;
@@ -78,7 +85,9 @@ export async function PhotoGallery({
           <Photo key={photo.id} photo={photo} fallbackAlt={name} sizes="25vw" className="hidden lg:block" />
         ))}
       </div>
-      {photoCount > 1 ? (
+      {showAll && photoCount > 1 ? (
+        <div className="mt-3">{showAll}</div>
+      ) : photoCount > 1 ? (
         <p className="mt-3">
           <ArrowLink href={`/p/${place.slug}/photos`}>{t("showAll", { count: photoCount })}</ArrowLink>
         </p>

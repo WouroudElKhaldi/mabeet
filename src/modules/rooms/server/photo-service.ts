@@ -1,5 +1,6 @@
 import type { PhotoArea } from "@prisma/client";
 import { recordAction } from "@/modules/audit/server";
+import { offeringExists } from "@/modules/offerings/server";
 import { requirePermission, type TenantContext } from "@/server/auth/tenant-context";
 import { prisma, runInTransaction } from "@/server/db/client";
 import { invalid, notFound } from "@/server/errors";
@@ -9,8 +10,9 @@ import { secureToken } from "@/utils/tokens";
 import * as photos from "./photo-repository";
 import * as rooms from "./room-repository";
 
-// The host's photos: the place's own gallery and each room's. They need rooms.manage, the same permission as rooms
-// and prices. A file is checked by its own bytes, shrunk to WebP, then kept in R2 (or in Postgres without R2). R2 is
+// The host's photos: the place's own gallery, each room's, and each experience or service's. The place's and the
+// rooms' need rooms.manage, the same permission as rooms and prices; an offering's needs offerings.manage, like the
+// offering itself. A file is checked by its own bytes, shrunk to WebP, then kept in R2 (or in Postgres without R2). R2 is
 // never called inside the transaction: the file goes up first, and if its rows cannot be saved it is removed again.
 
 const MAX_BYTES = 2_500_000;
@@ -33,27 +35,41 @@ const SIGNATURES: Array<{ mimeType: string; matches: (bytes: Uint8Array) => bool
 
 const isImage = (bytes: Uint8Array) => SIGNATURES.some((signature) => signature.matches(bytes));
 
-/** Whose gallery: a room's, or (no room) the place's own. The room must be this place's. */
-async function galleryOf(ctx: TenantContext, roomId: string | null): Promise<photos.Gallery> {
+/** Which gallery a photo goes in: a room's, an offering's, or (neither) the place's own. */
+interface GalleryOwner {
+  roomId: string | null;
+  offeringId: string | null;
+}
+
+/** Whose gallery, checked: the room or the offering must be this place's. */
+async function galleryOf(ctx: TenantContext, owner: GalleryOwner): Promise<photos.Gallery> {
+  const gallery = { businessId: ctx.businessId, roomId: owner.roomId, offeringId: owner.offeringId };
+  if (owner.offeringId) {
+    requirePermission(ctx, "offerings.manage");
+    if (owner.roomId) throw invalid("A photo belongs to a room or to an experience, not both");
+    if (!(await offeringExists(ctx.businessId, owner.offeringId))) throw notFound("Experience");
+    return gallery;
+  }
   requirePermission(ctx, "rooms.manage");
-  if (roomId && !(await rooms.findRoomForBooking(prisma, ctx.businessId, roomId))) throw notFound("Room");
-  return { businessId: ctx.businessId, roomId };
+  if (owner.roomId && !(await rooms.findRoomForBooking(prisma, ctx.businessId, owner.roomId))) {
+    throw notFound("Room");
+  }
+  return gallery;
 }
 
 /** A gallery in the host's order, for the photos screen. */
 export async function listGallery(ctx: TenantContext, roomId: string | null) {
-  return photos.listPhotos(prisma, await galleryOf(ctx, roomId));
+  return photos.listPhotos(prisma, await galleryOf(ctx, { roomId, offeringId: null }));
 }
 
-interface Upload {
-  roomId: string | null;
+interface Upload extends GalleryOwner {
   bytes: Uint8Array<ArrayBuffer>;
   alt: string | null;
   area: PhotoArea | null;
 }
 
 export async function uploadPhoto(ctx: TenantContext, upload: Upload) {
-  const gallery = await galleryOf(ctx, upload.roomId);
+  const gallery = await galleryOf(ctx, upload);
   if (upload.bytes.byteLength === 0) throw invalid("The file is empty");
   if (upload.bytes.byteLength > MAX_BYTES) throw invalid("Photos must be smaller than 2.5 MB");
   if (!isImage(upload.bytes)) throw invalid("Upload a JPEG, PNG or WebP photo");
@@ -93,7 +109,7 @@ export async function uploadPhoto(ctx: TenantContext, upload: Upload) {
 async function loadPhoto(ctx: TenantContext, photoId: string) {
   const photo = await photos.findPhoto(prisma, ctx.businessId, photoId);
   if (!photo) throw notFound("Photo");
-  return { photo, gallery: await galleryOf(ctx, photo.roomId) };
+  return { photo, gallery: await galleryOf(ctx, photo) };
 }
 
 export async function removePhoto(ctx: TenantContext, photoId: string) {

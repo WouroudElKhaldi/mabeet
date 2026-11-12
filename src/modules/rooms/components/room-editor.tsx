@@ -67,7 +67,7 @@ export function RoomEditor({
     const saved = await run(async () => {
       if (room) return api.patch(`/api/workspaces/${businessId}/rooms/${room.id}`, body);
       const created = await api.post<{ id: string }>(`/api/workspaces/${businessId}/rooms`, body);
-      if (photos.length > 0) await uploadPhotos(businessId, photos, created.id);
+      if (photos.length > 0) await uploadPhotos(businessId, photos, { roomId: created.id });
       return created;
     });
     if (saved && !room) {

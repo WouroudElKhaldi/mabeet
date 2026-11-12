@@ -116,7 +116,7 @@ export async function getPlace(slug: string, now: Date = new Date()): Promise<Pu
  * A place's host as guests meet them: how to reach them, their profile if they show it, and how they answered
  * requests over the past year. The answer figures are only given with enough requests to mean something.
  */
-async function getPublicHost(businessId: string, now: Date): Promise<PublicHost> {
+export async function getPublicHost(businessId: string, now: Date): Promise<PublicHost> {
   const [section, stats] = await Promise.all([
     getHostSection(businessId),
     getResponseStats(businessId, addDays(now, -RESPONSE_WINDOW_DAYS)),

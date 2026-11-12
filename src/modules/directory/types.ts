@@ -250,6 +250,12 @@ export interface PublicOffering {
   languages: string[];
   tags: string[];
   photos: { id: string; url: string; alt: string | null }[];
+  /** Its own published reviews, newest first. */
+  reviews: PlaceReview[];
+  /** The place's host, met as on the place's page. */
+  host: PublicHost;
+  /** The place's WhatsApp, the only number guests are given. */
+  whatsapp: string | null;
   business: { name: string; slug: string; area: string | null; timezone: string; currency: string };
   /** Whether the guest pays online as they book (modes 1 and 2) or waits for the host (mode 3). */
   bookingMode: BookingMode;

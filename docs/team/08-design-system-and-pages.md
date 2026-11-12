@@ -676,13 +676,16 @@ Like the place page: title row, gallery, summary, what is included, `ThingsToKno
 The card shows the total, which is what is paid: no deposit line.
 
 **Built so far** (`OfferingView` and `SessionBookingCard` in `src/modules/directory/components/`): the title row
-(category, town, length, `ShareButton`), the cover photo or the drawn `PlaceArt`, the summary ("Experience in …",
+(category, town, length, `ShareButton`), `PhotoGallery` (as on the place page, its "Show all photos" in a
+`ShowAllDialog`; the drawn `PlaceArt` without photos), the summary ("Experience in …",
 length, group size, languages, "Hosted by" linking to the place), the description and tags, "Things to know" (guest
 requirements, activity level, included, not included, accessibility, the refund rule), and "Where you'll meet"
 (`PlaceMap`). The card groups the sessions by day in the place's time, each with its spots left (a full one is
 greyed out), six days then "Show more dates" in a `SheetDialog`; then guests, the total, and the guest's details.
 Signed out, it offers "Sign in to book". On a phone a bar held at the bottom leads to it. The layout in `/o/[slug]`
-answers a real 404. Not built yet: the photo gallery and "Show all photos", reviews and `MeetHost`.
+answers a real 404. After "Where you'll meet": its own reviews (`ReviewList`, or "No reviews yet") and the
+place's `MeetHost`. The host adds its photos from the Offerings page ("Photos" opens `PhotoManager` for the
+offering, without the photo-tour tags).
 
 #### `/assistant` Use Mabeet from your AI app (F6)
 

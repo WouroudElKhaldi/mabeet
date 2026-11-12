@@ -3,6 +3,7 @@
 export {
   findReviewedBookings,
   getPlaceRating,
+  listOfferingReviews,
   listPlaceReviews,
   listTeamReviews,
   replyToReview,

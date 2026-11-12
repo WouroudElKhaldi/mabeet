@@ -56,7 +56,7 @@ export function listOfferings(db: Db, businessId: string, now: Date) {
       photos: {
         where: { isDeleted: false },
         orderBy: { position: "asc" },
-        select: { id: true, url: true, alt: true },
+        select: { id: true, url: true, alt: true, area: true },
       },
       sessions: {
         where: { isDeleted: false, active: true, startsAt: { gt: now } },
@@ -170,7 +170,16 @@ const publicFields = {
     select: { id: true, url: true, alt: true },
   },
   business: {
-    select: { name: true, slug: true, area: true, timezone: true, currency: true, bookingMode: true },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      area: true,
+      whatsapp: true,
+      timezone: true,
+      currency: true,
+      bookingMode: true,
+    },
   },
 } as const satisfies Prisma.OfferingSelect;
 
