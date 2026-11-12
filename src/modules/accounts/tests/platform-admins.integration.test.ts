@@ -54,6 +54,7 @@ describe("platform admins", () => {
     await ensurePlatformAdmin({ name: "Fatima", email: user.email, password: "chosen-password-3" });
     expect(await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).toMatchObject({
       platformRole: "SUPER_ADMIN",
+      emailVerified: true,
     });
     expect(await signsIn(user.email, "chosen-password-3")).toBe(true);
   });
