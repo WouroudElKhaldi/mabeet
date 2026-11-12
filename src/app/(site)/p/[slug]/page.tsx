@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { placeParams } from "@/modules/bookings";
 import { initialStay, PlaceView } from "@/modules/directory";
 import { isPlaceSaved, listOfferingsNearStay, loadPlace } from "@/modules/directory/server";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { getCurrentUser } from "@/server/http/session";
 import { toDateRange } from "@/utils/dates";
 
@@ -36,7 +37,9 @@ export default async function PlacePage({ params, searchParams }: PageProps) {
   const initial = initialStay(await searchParams);
   const { checkIn, checkOut } = initial;
   const thingsToDo =
-    checkIn && checkOut ? await listOfferingsNearStay(slug, toDateRange({ checkIn, checkOut })) : [];
+    OFFERINGS_SHOWN && checkIn && checkOut
+      ? await listOfferingsNearStay(slug, toDateRange({ checkIn, checkOut }))
+      : [];
   return (
     <PlaceView
       place={place}

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MAX_STAY_NIGHTS } from "@/config/booking-limits";
 import { AMENITIES } from "@/config/amenities";
-import { ACCESSIBILITY, BROWSE_TABS, TAGS } from "@/config/listing";
+import { ACCESSIBILITY, BROWSE_TABS, TAGS, SHOWN_BROWSE_TABS } from "@/config/listing";
 import { id, isoDate, stayDates } from "@/lib/schemas";
 import { placeParams } from "@/modules/bookings";
 import {
@@ -116,7 +116,11 @@ export const searchParams = z
     maxPrice: price,
     checkIn: isoDate.optional().catch(undefined),
     checkOut: isoDate.optional().catch(undefined),
-    tab: z.enum(BROWSE_TABS).catch("homes"),
+    // A hidden tab (`OFFERINGS_SHOWN`) reads as the places tab, so an old link still lands somewhere.
+    tab: z
+      .enum(BROWSE_TABS)
+      .catch("homes")
+      .transform((tab) => (SHOWN_BROWSE_TABS.includes(tab) ? tab : "homes")),
   })
   .transform(({ checkIn, checkOut, ...search }) => {
     const range = optionalDateRange(checkIn, checkOut);

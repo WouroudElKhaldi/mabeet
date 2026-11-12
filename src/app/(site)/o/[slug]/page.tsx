@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { categoryName } from "@/config/appearance";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { listCategories } from "@/modules/admin/server";
 import { experienceParams } from "@/modules/bookings";
 import { OfferingView } from "@/modules/directory";
@@ -12,6 +13,7 @@ import { signInUrl } from "@/utils/sign-in-url";
 type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  if (!OFFERINGS_SHOWN) return {};
   const offering = await loadOffering(experienceParams.parse(await params).slug);
   if (!offering) return {};
   return { title: offering.title, description: offering.description?.slice(0, 160) };
@@ -22,6 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  * seats left in each. Booking needs an account, so a signed-out visitor is offered to sign in and come back here.
  */
 export default async function OfferingPage({ params }: PageProps) {
+  if (!OFFERINGS_SHOWN) notFound();
   const { slug } = experienceParams.parse(await params);
   const [offering, user, locale] = await Promise.all([loadOffering(slug), getCurrentUser(), getLocale()]);
   if (!offering) notFound();

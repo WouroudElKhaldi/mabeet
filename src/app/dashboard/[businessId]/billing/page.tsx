@@ -8,6 +8,7 @@ import { ManageBillingButton, PlanOffers, UpgradeButton, WhishPlanButton } from 
 import { getBilling, settlePlanPayment } from "@/modules/billing/server";
 import { requirePageAccess } from "@/server/http/session";
 import { toIsoDate } from "@/utils/dates";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { formatDate } from "@/utils/format";
 
 type PageProps = {
@@ -33,7 +34,9 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
     max === null ? t("unlimited") : t("usage.allowed", { count: max });
   const usage = [
     { label: t("usage.rooms"), used: billing.usage.rooms, max: billing.limits.rooms },
-    { label: t("usage.offerings"), used: billing.usage.offerings, max: billing.limits.offerings },
+    ...(OFFERINGS_SHOWN
+      ? [{ label: t("usage.offerings"), used: billing.usage.offerings, max: billing.limits.offerings }]
+      : []),
     { label: t("usage.members"), used: billing.usage.members, max: billing.limits.members },
   ];
   const higher = (plan: PlanName) => PLANS.indexOf(plan) > PLANS.indexOf(billing.plan);

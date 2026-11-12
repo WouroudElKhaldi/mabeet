@@ -5,7 +5,7 @@ import { SearchBar } from "@/components/site/search-bar";
 import { ButtonLink } from "@/components/ui/button";
 import { ChoiceLinks } from "@/components/ui/choice-links";
 import { categoryName } from "@/config/appearance";
-import { BROWSE_TABS, type BrowseTab } from "@/config/listing";
+import { type BrowseTab, SHOWN_BROWSE_TABS } from "@/config/listing";
 import { searchHref } from "@/lib/search-url";
 import type { SearchState } from "../schemas";
 import type { OfferingCard as OfferingCardData, PlaceCard as PlaceCardData } from "../types";
@@ -53,7 +53,7 @@ export async function Browse({
   const tabs = (
     <ChoiceLinks
       label={t("tabsLabel")}
-      choices={BROWSE_TABS.map((tab) => ({
+      choices={SHOWN_BROWSE_TABS.map((tab) => ({
         href: tabHref(tab),
         label: tTabs(tab),
         current: tab === search.tab,
@@ -80,7 +80,7 @@ export async function Browse({
           <SearchBar search={search} />
         </div>
       ) : null}
-      <div className="mt-6">{tabs}</div>
+      {SHOWN_BROWSE_TABS.length > 1 ? <div className="mt-6">{tabs}</div> : null}
       {search.tab !== "homes" ? (
         <OfferingResults
           tab={search.tab}

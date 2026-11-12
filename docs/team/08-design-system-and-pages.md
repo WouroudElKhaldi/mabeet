@@ -673,6 +673,12 @@ region, as on its page), and for a stay the experiences and services on during i
 
 #### `/o/[slug]` Experience or service (F8, bonus)
 
+**Hidden for now (decided 2026-11-12):** `OFFERINGS_SHOWN` in `src/config/listing.ts` is `false`, so guests and hosts see
+no experiences or services: no browse tabs, `/o/[slug]` and the dashboard's Experiences page answer 404, "Near your
+stay" shows partners only, Bookings shows no seats and the plans list no experience limit. They come back as their
+own businesses (a business of kind experience or service, not hung off a guesthouse); the data, API and booking
+engine stay as they are.
+
 Like the place page: title row, gallery, summary, what is included, `ThingsToKnow`, "Where you meet" map,
 `MeetHost`, reviews, and the `SessionBookingCard` (pick a session and seats) on the end side. `ThingsToKnow`'s
 "Cancellation" is the same refund rule as the place page (an experience has no "cancel up to N hours" setting).
