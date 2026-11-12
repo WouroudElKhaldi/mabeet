@@ -53,7 +53,7 @@ test("the phone menu: the tabs and More", { tag: "@phone" }, async ({ page }) =>
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   }
   for (const [item, title] of [
-    ["Users", "Users"],
+    ["Users", "People"],
     ["Categories", "Categories"],
     ["Appearance", "Appearance"],
     ["My profile", "My profile"],
@@ -68,14 +68,12 @@ test("hosts: a host's page, opening a business, and suspending then reactivating
   page,
   browser,
 }) => {
-  await page.goto("/admin/hosts");
-  const host = page.getByRole("region", { name: "Demo Host" });
-  await host.getByRole("link", { name: "Host profile" }).click();
+  await page.goto("/admin/hosts?q=Demo+Host");
+  await page.getByRole("table").getByRole("link", { name: "Open Demo Host" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Demo Host" })).toBeVisible();
   await expectNoSidewaysScroll(page);
 
-  await page.goto("/admin/hosts");
-  const business = host.getByRole("listitem").filter({ hasText: PLACES.wholePlace.name });
+  const business = page.getByRole("listitem").filter({ hasText: PLACES.wholePlace.name });
   const reactivate = business.getByRole("button", { name: "Reactivate" });
   const visitor = await newContext(browser);
   const guestPage = await visitor.newPage();
@@ -116,8 +114,11 @@ test("a host's own page: suspending their place from there, and reactivating it"
   await newHost(hostPage, name);
   await newcomer.close();
 
-  await page.goto("/admin/hosts");
-  await page.getByRole("region", { name }).getByRole("link", { name: "Host profile" }).click();
+  await page.goto(`/admin/hosts?q=${encodeURIComponent(name)}`);
+  await page
+    .getByRole("table")
+    .getByRole("link", { name: `Open ${name}` })
+    .click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   await page.getByRole("button", { name: "Suspend" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Suspend" }).click();
@@ -130,26 +131,26 @@ test("a host's own page: suspending their place from there, and reactivating it"
 test("categories: add one, rename it, and delete it", async ({ page }) => {
   await page.goto("/admin/categories");
   const slug = `rooftop-${Date.now() % 100_000}`;
-  await page.getByRole("textbox", { name: "Slug" }).fill(slug);
-  await page.getByRole("combobox", { name: "Type" }).selectOption({ label: "Experiences" });
-  // The form to add one is the last on the page; it needs both names.
-  await page.getByRole("textbox", { name: "English name" }).last().fill("Rooftop");
-  await page.getByRole("textbox", { name: "Arabic name" }).last().fill("سطح");
-  await page.getByRole("button", { name: "Add category" }).click();
+  await page.getByRole("button", { name: "New category" }).click();
+  const form = page.getByRole("dialog");
+  await form.getByRole("textbox", { name: "Slug" }).fill(slug);
+  await form.getByRole("combobox", { name: "Type" }).selectOption({ label: "Experiences" });
+  await form.getByRole("textbox", { name: "English name" }).fill("Rooftop");
+  await form.getByRole("textbox", { name: "Arabic name" }).fill("سطح");
+  await form.getByRole("button", { name: "Add category" }).click();
 
-  const row = page.getByRole("listitem").filter({ has: page.getByText(slug, { exact: true }) });
+  await page.goto(`/admin/categories?q=${slug}`);
+  const row = page.getByRole("row").filter({ hasText: slug });
   await expect(row).toBeVisible();
-  await row.getByRole("textbox", { name: "English name" }).fill("Rooftop dinners");
-  await row.getByRole("textbox", { name: "Arabic name" }).fill("عشاء على السطح");
-  await row.getByRole("button", { name: "Save" }).click();
-  await page.reload();
-  await expect(row.getByRole("textbox", { name: "English name" })).toHaveValue("Rooftop dinners");
+  await row.getByRole("button", { name: "Edit" }).click();
+  const edit = page.getByRole("dialog");
+  await edit.getByRole("textbox", { name: "English name" }).fill("Rooftop dinners");
+  await edit.getByRole("textbox", { name: "Arabic name" }).fill("عشاء على السطح");
+  await edit.getByRole("button", { name: "Save" }).click();
+  await expect(row.getByText("Rooftop dinners")).toBeVisible();
 
-  await row.getByRole("button", { name: "Delete category" }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: /Delete/ })
-    .click();
+  await row.getByRole("button", { name: "Delete “Rooftop dinners”?" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete category" }).click();
   await expect(row).toBeHidden();
 });
 
@@ -178,7 +179,7 @@ test("money, users and health show their sections", async ({ page }) => {
     await expect(page.getByRole("search", { name: "Search and filter" })).toBeVisible();
   }
   await page.goto("/admin/users?q=Demo+Guest");
-  await expect(page.getByRole("table").getByText("Demo Guest")).toBeVisible();
+  await expect(page.getByRole("table").getByRole("link", { name: "Open Demo Guest" })).toBeVisible();
   await page.goto("/admin/health");
   await expect(page.getByRole("heading", { level: 1, name: "Health" })).toBeVisible();
 });

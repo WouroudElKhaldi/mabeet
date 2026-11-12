@@ -92,56 +92,59 @@ test("rooms: add a room, change its price, take it off the site, and the plan's 
   const ownProblems = watchForErrors(page);
   const dashboard = await newHost(page, "Karim Daher");
   await page.goto(`${dashboard}/rooms`);
-  const add = page.getByRole("region", { name: "Add a room" });
+  const rooms = page.getByRole("table", { name: "Rooms" });
+  const row = (name: string) => rooms.getByRole("row").filter({ hasText: name });
+  const add = page.getByRole("dialog");
 
-  async function addRoom(name: string, rate: string) {
+  async function addRoom(name: string, rate: string, amenity?: string) {
+    await page.getByRole("button", { name: "Add a room" }).click();
     await add.getByRole("textbox", { name: "Room name" }).fill(name);
     await add.getByRole("spinbutton", { name: "Nightly rate" }).fill(rate);
+    if (amenity) await add.getByText(amenity, { exact: true }).click();
     await add.getByRole("button", { name: "Add room" }).click();
   }
 
-  await add.getByText("Wi-Fi", { exact: true }).click();
-  await addRoom("Cedar loft", "95");
-  const room = page.getByRole("group").filter({ hasText: "Cedar loft" });
-  await expect(room).toBeVisible();
-  await room.click();
-  await room.getByRole("spinbutton", { name: "Nightly rate" }).fill("110");
-  await room.getByRole("button", { name: /Save/ }).first().click();
-  await page.reload();
-  const saved = page.getByRole("group").filter({ hasText: "Cedar loft" });
-  await saved.click();
-  await expect(saved.getByRole("spinbutton", { name: "Nightly rate" })).toHaveValue("110");
+  await addRoom("Cedar loft", "95", "Wi-Fi");
+  await expect(row("Cedar loft")).toBeVisible();
+  const editor = page.getByRole("dialog");
+  await row("Cedar loft").getByRole("button", { name: "Edit" }).click();
+  await editor.getByRole("spinbutton", { name: "Nightly rate" }).fill("110");
+  await editor.getByRole("button", { name: "Save room" }).click();
+  await expect(row("Cedar loft")).toContainText("$110.00");
 
   // A special price for a few nights (a holiday), then back to the base rate.
   const holiday = new Date();
   holiday.setUTCDate(holiday.getUTCDate() + 30);
   const firstNight = holiday.toISOString().slice(0, 10);
   holiday.setUTCDate(holiday.getUTCDate() + 2);
-  await saved.getByLabel("First night").fill(firstNight);
-  await saved.getByLabel("Last night").fill(holiday.toISOString().slice(0, 10));
-  await saved.getByLabel("Price a night (USD)").fill("150");
-  await saved.getByRole("button", { name: "Set price" }).click();
-  await expect(saved.getByText("$150.00 a night")).toBeVisible();
-  await saved.getByRole("button", { name: "Back to the base rate" }).click();
-  await expect(saved.getByText("No special prices coming up.")).toBeVisible();
-
-  // The room's own photos, shown when a guest opens this room.
-  await saved
-    .locator('input[type="file"]')
-    .setInputFiles({ name: "loft.png", mimeType: "image/png", buffer: await samplePhoto(page) });
-  await expect(saved.getByRole("button", { name: "Delete photo" })).toHaveCount(1, { timeout: 30_000 });
+  await row("Cedar loft").getByRole("button", { name: "Edit" }).click();
+  await editor.getByLabel("First night").fill(firstNight);
+  await editor.getByLabel("Last night").fill(holiday.toISOString().slice(0, 10));
+  await editor.getByLabel("Price a night (USD)").fill("150");
+  await editor.getByRole("button", { name: "Set price" }).click();
+  await expect(editor.getByText("$150.00 a night")).toBeVisible();
+  await editor.getByRole("button", { name: "Back to the base rate" }).click();
+  await expect(editor.getByText("No special prices coming up.")).toBeVisible();
 
   // Not bookable any more: it says so, and guests are not offered it.
-  await saved.getByText("Bookable by guests", { exact: true }).click();
-  await saved.getByRole("button", { name: /Save/ }).first().click();
-  await page.reload();
-  await expect(page.getByRole("group").filter({ hasText: "Cedar loft" })).toContainText("Hidden");
+  await editor.getByText("Bookable by guests", { exact: true }).click();
+  await editor.getByRole("button", { name: "Save room" }).click();
+  await expect(row("Cedar loft")).toContainText("Hidden");
+
+  // The room's own photos, shown when a guest opens this room.
+  await row("Cedar loft").getByRole("button", { name: "Photos" }).click();
+  const photos = page.getByRole("dialog");
+  await photos
+    .locator('input[type="file"]')
+    .setInputFiles({ name: "loft.png", mimeType: "image/png", buffer: await samplePhoto(page) });
+  await expect(photos.getByRole("button", { name: "Delete photo" })).toHaveCount(1, { timeout: 30_000 });
+  await photos.getByRole("button", { name: "Close" }).click();
 
   // The Free plan holds three rooms; a fourth is refused with the reason and a way to upgrade.
   await addRoom("Garden room", "80");
-  await expect(page.getByRole("group").filter({ hasText: "Garden room" })).toBeVisible();
+  await expect(row("Garden room")).toBeVisible();
   await addRoom("Terrace room", "85");
-  await expect(page.getByRole("group").filter({ hasText: "Terrace room" })).toBeVisible();
+  await expect(row("Terrace room")).toBeVisible();
   await addRoom("Attic room", "70");
   await expect(add.getByRole("alert")).toHaveText("Your plan allows up to 3 rooms. Upgrade to add more.");
   await expectNoSidewaysScroll(page);
@@ -153,19 +156,20 @@ test("rooms: add a room, change its price, take it off the site, and the plan's 
 test("your place: adding a photo, then deleting it", async ({ page }) => {
   base ||= await placeDashboard(page, place.name);
   await page.goto(`${base}/place`);
-  await expect(page.getByRole("button", { name: "Add photos" })).toBeVisible();
-  const deletes = page.getByRole("button", { name: "Delete photo" });
+  await page.getByRole("button", { name: "Manage photos" }).click();
+  const gallery = page.getByRole("dialog");
+  await expect(gallery.getByRole("button", { name: "Add photos" })).toBeVisible();
+  const deletes = gallery.getByRole("button", { name: "Delete photo" });
   const before = await deletes.count();
   // "Add photos" opens the computer's file picker; the test hands the picker's input a photo directly.
-  await page
+  await gallery
     .locator('input[type="file"]')
     .first()
     .setInputFiles({ name: "terrace.png", mimeType: "image/png", buffer: await samplePhoto(page) });
   await expect(deletes).toHaveCount(before + 1, { timeout: 30_000 });
 
   await deletes.last().click();
-  const confirm = page.getByRole("dialog");
-  if (await confirm.isVisible()) await confirm.getByRole("button", { name: /Delete/ }).click();
+  await gallery.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
   await expect(deletes).toHaveCount(before);
 });
 
@@ -221,16 +225,14 @@ test("settings: switching how guests book, with the payment policy, and back", a
 test("team: inviting someone, then taking the invitation back", async ({ page }) => {
   base ||= await placeDashboard(page, place.name);
   await page.goto(`${base}/team`);
-  const invite = page.getByRole("region", { name: "Invite someone to the team" });
+  await page.getByRole("button", { name: "Invite someone" }).click();
+  const invite = page.getByRole("dialog");
   const name = `Tarek Saliba ${Date.now() % 100_000}`;
   await invite.getByRole("textbox", { name: "Full name" }).fill(name);
   await invite.getByRole("textbox", { name: "Email" }).fill(newEmail("tarek"));
   await invite.getByRole("textbox", { name: "Phone" }).fill("+96171555123");
   await invite.getByRole("button", { name: "Send invitation" }).click();
-  const invitation = page
-    .getByRole("region", { name: "Invitations" })
-    .getByRole("listitem")
-    .filter({ hasText: name });
+  const invitation = page.getByRole("row").filter({ hasText: name });
   await expect(invitation).toBeVisible();
   await invitation.getByRole("button", { name: /Revoke|Cancel|Withdraw/ }).click();
   const confirm = page.getByRole("dialog");
@@ -269,18 +271,21 @@ test("calendar: closing nights for real, and opening them again", async ({ brows
   const ownProblems = watchForErrors(page);
   const dashboard = await newHost(page, "Rana Khalil");
   await page.goto(`${dashboard}/rooms`);
-  const add = page.getByRole("region", { name: "Add a room" });
+  await page.getByRole("button", { name: "Add a room" }).click();
+  const add = page.getByRole("dialog");
   await add.getByRole("textbox", { name: "Room name" }).fill("Olive room");
   await add.getByRole("spinbutton", { name: "Nightly rate" }).fill("90");
   await add.getByRole("button", { name: "Add room" }).click();
-  await expect(page.getByRole("group").filter({ hasText: "Olive room" })).toBeVisible();
+  await expect(
+    page.getByRole("table", { name: "Rooms" }).getByRole("row", { name: /Olive room/ }),
+  ).toBeVisible();
 
   await page.goto(`${dashboard}/calendar`);
   const days = page.getByRole("button", { name: /^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, / });
   await page.getByRole("button", { name: "Close dates" }).click();
   await days.nth(24).click();
-  await page.getByRole("button", { name: "Close these dates" }).click();
-  await expect(page.getByRole("button", { name: "Close these dates" })).toBeHidden();
+  await page.getByRole("dialog").getByRole("button", { name: "Close these dates" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
   const closed = page.getByRole("button", { name: "Closed · Olive room" }).first();
   await expect(closed).toBeVisible();
 

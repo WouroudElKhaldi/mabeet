@@ -8,6 +8,7 @@ import {
   pickFreeStay,
   PLACES,
   signedIn,
+  signIn,
   signUp,
   test,
   watchForErrors,
@@ -67,18 +68,19 @@ test("a new account: sign up, sign out, sign back in, and a forgotten password",
   await page.goto("/account");
   await expect(page).toHaveURL(/\/sign-in/);
 
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await signIn(page, email);
   await expect(page.getByRole("heading", { level: 1, name: `Hello, ${name}` })).toBeVisible();
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).not.toHaveURL(/\/account/);
   await page.goto("/sign-in");
   await page.getByRole("link", { name: "Forgot password?" }).click();
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Send reset link" }).click();
-  await expect(page.getByRole("status")).toContainText(email);
+  // A press before the page has finished loading sends nothing: press again until the link is on its way.
+  await expect(async () => {
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("button", { name: "Send reset link" }).click();
+    await expect(page.getByRole("status")).toContainText(email, { timeout: 3_000 });
+  }).toPass({ intervals: [1_000, 3_000, 10_000], timeout: 30_000 });
 
   // A reset link that is not ours, or no longer valid, says so instead of changing anything.
   await page.goto("/reset-password?token=not-a-real-token");
@@ -205,7 +207,10 @@ test("the account pages: trips, notifications, downloading my data, and deleting
 });
 
 test("becoming a host: a new account makes its own place and lands in its dashboard", async ({ page }) => {
-  await newHost(page, "Nour Hayek");
+  const dashboard = await newHost(page, "Nour Hayek");
+  // A new place opens on its guided setup; its home is one step away.
+  await expect(page.getByRole("heading", { level: 1, name: "How do guests book your place?" })).toBeVisible();
+  await page.goto(dashboard);
   await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
   await expectNoSidewaysScroll(page);
 });

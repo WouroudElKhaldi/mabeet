@@ -215,12 +215,22 @@ export async function signUp(page: Page, name: string): Promise<string> {
   // No one is signed in before confirming their email: the account waits for its link.
   await expect(page.getByText("Check your inbox")).toBeVisible({ timeout: 15_000 });
   await confirmEmail(email);
-  await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).not.toHaveURL(/\/sign-in/, { timeout: 15_000 });
+  await signIn(page, email);
   return email;
+}
+
+/**
+ * Signs in on the sign-in page. Many tests sign in at once from the same address, so the sign-in limit (a few tries
+ * in ten seconds) can refuse one: it waits and tries again, as a person would.
+ */
+export async function signIn(page: Page, email: string) {
+  await expect(async () => {
+    if (!new URL(page.url()).pathname.startsWith("/sign-in")) await page.goto("/sign-in");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).not.toHaveURL(/\/sign-in/, { timeout: 5_000 });
+  }).toPass({ intervals: [3_000, 5_000, 10_000], timeout: 45_000 });
 }
 
 /**
