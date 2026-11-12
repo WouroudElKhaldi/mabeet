@@ -84,6 +84,13 @@ export const BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies read
 /** What a browse category is for: places, experiences or services. */
 export const LISTING_KINDS = ["HOME", "EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
 
+/** Where an AI tool call came from: a host's own AI app (the host MCP), the dashboard chat, or the public guest MCP. */
+export const AI_CALL_CHANNELS = ["mcp", "chat", "guest"] as const;
+export type AiCallChannel = (typeof AI_CALL_CHANNELS)[number];
+
+/** The periods the platform's AI usage page counts over, in days ending now. */
+export const AI_USAGE_PERIODS = ["7", "30", "90"] as const;
+
 /** What a host sells by the session rather than by the night. */
 export const OFFERING_KINDS = ["EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
 export type OfferingKind = (typeof OFFERING_KINDS)[number];

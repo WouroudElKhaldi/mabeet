@@ -26,6 +26,7 @@ const ADMIN_PAGES = {
   partners: { group: "content", path: "partners", icon: "partners" },
   appearance: { group: "content", path: "appearance", icon: "appearance" },
   health: { group: "operations", path: "health", icon: "health", tab: true },
+  aiApps: { group: "operations", path: "ai-apps", icon: "assistant" },
   profile: { group: "account", path: "profile", icon: "profile" },
 } as const satisfies Partial<Record<AdminNavLabel, AdminPage>>;
 

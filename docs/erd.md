@@ -786,7 +786,7 @@ erDiagram
   Business ||--o{ ApiKey : "business"
   Membership ||--o{ ApiKey : "membership"
   User ||--o{ ApiKey : "createdBy"
-  Business ||--o{ McpAuditLog : "business"
+  Business |o--o{ McpAuditLog : "business"
   Business ||--o{ Offering : "business"
   Category |o--o{ Offering : "category"
   Business ||--o{ OfferingSession : "business"
@@ -890,6 +890,7 @@ bookings.
 | ApiKey              | `hash`                                | unique |
 | ApiKey              | `businessId`                          | index  |
 | McpAuditLog         | `businessId,createdAt`                | index  |
+| McpAuditLog         | `createdAt`                           | index  |
 | Offering            | `slug`                                | unique |
 | Offering            | `businessId`                          | index  |
 | Offering            | `kind,active`                         | index  |

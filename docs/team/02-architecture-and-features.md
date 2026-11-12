@@ -470,7 +470,9 @@ Its one `Occupancy` row takes the nights.
   trail read it.
 - `ActivityLog`: one person's own timeline (their requests, favourites and reviews, and what happened to them),
   shown on their account's Activity page.
-- `McpAuditLog`: every AI tool call (tool, result, time taken, channel).
+- `McpAuditLog`: every AI tool call (tool, result, time taken, channel: `mcp`, `chat` or `guest`). A guest MCP call has
+  no place and no person. `getAiUsage` (`ai-usage-service.ts`, platform admins only) counts them by tool and channel
+  for `/admin/ai-apps`.
 - `AiUsage`: tokens and cost of each AI answer, for the monthly budget.
 - `AiChat` and `AiChatMessage`: saved AI chats, per person.
 - `JobProgress`: what a queued AI answer has written so far, shown live; deleted when the job ends.
@@ -717,7 +719,8 @@ ones too. `POST /api/mcp` (`answerHostMcp`, `host-mcp.ts`): 401 without a workin
 the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_rooms`, `check_availability`
 (`findFreeRooms`), `get_calendar` and `list_bookings`, each with the optional `place` (`resolvePlaceContext`: by
 id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
-come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. `get_report`
+come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background; the guest MCP logs its calls too, as
+channel `guest` with no place. `get_report`
 (`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give
 the same numbers as the analytics page. Tests: `mcp-isolation.integration.test.ts` and
 `mcp-oauth.integration.test.ts` (assistant).
