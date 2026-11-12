@@ -257,6 +257,7 @@ erDiagram
     String id PK
     String partnerPlaceId FK
     String offeringId FK
+    String businessId FK
     String createdById FK
   }
   User ||--o{ AiChat : "user"
@@ -343,6 +344,7 @@ erDiagram
   User ||--o{ PushSubscription : "user"
   PartnerPlace |o--o{ Sponsorship : "partnerPlace"
   Offering |o--o{ Sponsorship : "offering"
+  Business |o--o{ Sponsorship : "business"
   User ||--o{ Sponsorship : "createdBy"
 ```
 
@@ -864,6 +866,7 @@ erDiagram
     String id PK
     String partnerPlaceId FK
     String offeringId FK
+    String businessId FK
     DateTime startsOn
     DateTime endsOn
     String createdById FK
@@ -954,6 +957,7 @@ erDiagram
   User ||--o{ PushSubscription : "user"
   PartnerPlace |o--o{ Sponsorship : "partnerPlace"
   Offering |o--o{ Sponsorship : "offering"
+  Business |o--o{ Sponsorship : "business"
   User ||--o{ Sponsorship : "createdBy"
 ```
 

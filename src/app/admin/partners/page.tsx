@@ -1,13 +1,14 @@
 import { getTranslations } from "next-intl/server";
-import { PageHeader } from "@/components/shell/page-header";
+import { PageHeader, Panel } from "@/components/shell/page-header";
 import { DataCell, DataRow, DataTable } from "@/components/ui/data-table";
 import { ListFilters } from "@/components/ui/list-filters";
 import { Pagination } from "@/components/ui/pagination";
 import { Pill } from "@/components/ui/pill";
 import { PARTNER_KINDS, PARTNER_LIST_STATES } from "@/config/partner-kinds";
 import { REGION_KEYS } from "@/config/regions";
-import { NewPartnerButton, PartnerActions, partnersQuery } from "@/modules/partners";
-import { listPartnerPage } from "@/modules/partners/server";
+import { FeaturedPlaces, NewPartnerButton, PartnerActions, partnersQuery } from "@/modules/partners";
+import { listFeaturedPlacesForAdmin, listPartnerPage } from "@/modules/partners/server";
+import { listPlatformBusinesses } from "@/modules/workspaces/server";
 import { requirePageAdmin } from "@/server/http/session";
 import { todayUtc, toIsoDate } from "@/utils/dates";
 import { listHref } from "@/utils/paging";
@@ -16,18 +17,27 @@ type PageProps = { searchParams: Promise<Record<string, string | string[] | unde
 
 const PATH = "/admin/partners";
 
-/** The partner places near our guesthouses as a table, and the days each is sponsored; adding and editing pop up. */
+/**
+ * The guesthouses featured in search, then the partner places near our guesthouses as a table with the days each is
+ * sponsored; adding and editing pop up.
+ */
 export default async function AdminPartnersPage({ searchParams }: PageProps) {
   const actor = await requirePageAdmin();
   const now = new Date();
   const today = toIsoDate(todayUtc(now));
   const { page, q, kind, region, shown } = partnersQuery.parse(await searchParams);
-  const [t, kinds, regions, list] = await Promise.all([
+  const [t, kinds, regions, list, featured, platform] = await Promise.all([
     getTranslations("admin.partners"),
     getTranslations("partners.kinds"),
     getTranslations("regions.names"),
     listPartnerPage(actor, { q, kind, region, removed: shown === "removed" }, page, now),
+    listFeaturedPlacesForAdmin(actor, now),
+    listPlatformBusinesses(actor),
   ]);
+  const openPlaces = platform.businesses
+    .filter((business) => business.status === "ACTIVE")
+    .map(({ id, name }) => ({ id, name }))
+    .sort((first, second) => first.name.localeCompare(second.name));
   const filtered = Boolean(q || kind || region || shown);
   // Every partner's region was checked against the list when it was saved; the database only knows it as text.
   const regionName = (key: string) => {
@@ -38,6 +48,9 @@ export default async function AdminPartnersPage({ searchParams }: PageProps) {
   return (
     <>
       <PageHeader title={t("title")} intro={t("hint")} actions={<NewPartnerButton />} />
+      <Panel title={t("featuredTitle")} intro={t("featuredHint")}>
+        <FeaturedPlaces featured={featured} places={openPlaces} />
+      </Panel>
       <ListFilters
         label={t("filters")}
         path={PATH}

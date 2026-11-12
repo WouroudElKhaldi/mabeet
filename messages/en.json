@@ -114,7 +114,8 @@
     "specialPrices": "Special prices",
     "specialPricesCount": "{count, plural, =0 {None} one {# period} other {# periods}}",
     "mapPin": "Map pin",
-    "checkInOut": "Check-in – check-out"
+    "checkInOut": "Check-in – check-out",
+    "featured": "Featured"
   },
   "home": {
     "eyebrow": "No platform fees. Ever.",
@@ -1390,7 +1391,16 @@
       "sponsoredLater": "Later",
       "actions": "Actions",
       "edit": "Edit",
-      "editTitle": "Edit “{name}”"
+      "editTitle": "Edit “{name}”",
+      "featuredTitle": "Featured guesthouses",
+      "featuredHint": "A featured guesthouse comes first in search and on the home page, marked \"Featured\", on the days you pick. It is paid for outside Mabeet, like a sponsored partner.",
+      "featuredPlace": "Guesthouse",
+      "pickPlace": "Pick a guesthouse",
+      "feature": "Feature",
+      "noFeatured": "No guesthouse is featured from today on.",
+      "endFeature": "End",
+      "endFeatureTitle": "Stop featuring {name}?",
+      "closedPlace": "A place that has closed"
     },
     "ai": {
       "title": "AI this month",

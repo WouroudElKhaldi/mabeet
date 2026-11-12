@@ -7383,6 +7383,149 @@ paths:
                       const: false
                   required:
                     - hidden
+  /api/admin/featured-places:
+    get:
+      tags:
+        - Platform
+      summary: Guesthouses featured from today on
+      description: Platform admins only (anyone else gets 404). Answers [{ id, placeName, placeSlug, startsOn, endsOn }], soonest first; endsOn is the day after the last one. placeName and placeSlug are null once the place has closed.
+      security:
+        - session: []
+      parameters: []
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+    post:
+      tags:
+        - Platform
+      summary: Feature a guesthouse for a set of days
+      description: Platform admins only (anyone else gets 404). The place comes first in search and on the home page, marked "Featured", on these days. endsOn is the day after the last one; days already over are refused (400), a closed or unknown place is 404. Answers { id }.
+      security:
+        - session: []
+      parameters: []
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                businessId:
+                  type: string
+                startsOn:
+                  type: string
+                  format: date
+                endsOn:
+                  type: string
+                  format: date
+              required:
+                - businessId
+                - startsOn
+                - endsOn
+  /api/admin/featured-places/{sponsorshipId}:
+    delete:
+      tags:
+        - Platform
+      summary: End a guesthouse's featured days
+      description: Platform admins only (anyone else gets 404). The place stays listed, no longer first or marked.
+      security:
+        - session: []
+      parameters:
+        - name: sponsorshipId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Conflict, e.g. dates or seats just taken
+        "429":
+          description: Rate limited
   /api/admin/offers:
     get:
       tags:

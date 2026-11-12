@@ -170,6 +170,8 @@ export interface PlaceFilters {
   tags?: readonly string[];
   /** The place has every one of these accessibility features. */
   accessibility?: readonly string[];
+  /** Only these places (the featured ones, read on their own so they are never left out of a page). */
+  ids?: readonly string[];
 }
 
 /**
@@ -230,6 +232,7 @@ export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number
       listedPublicly: true,
       status: "ACTIVE",
       isDeleted: false,
+      id: filters.ids ? { in: [...filters.ids] } : undefined,
       tags: filters.tags?.length ? { hasSome: [...filters.tags] } : undefined,
       accessibility: filters.accessibility?.length ? { hasEvery: [...filters.accessibility] } : undefined,
       categories: filters.categories?.length

@@ -114,7 +114,8 @@
     "specialPrices": "أسعار خاصة",
     "specialPricesCount": "{count, plural, =0 {لا شيء} one {فترة واحدة} two {فترتان} few {# فترات} other {# فترة}}",
     "mapPin": "الموقع على الخريطة",
-    "checkInOut": "الوصول – المغادرة"
+    "checkInOut": "الوصول – المغادرة",
+    "featured": "مميّز"
   },
   "home": {
     "eyebrow": "بلا عمولات. أبدًا.",
@@ -1390,7 +1391,16 @@
       "sponsoredLater": "لاحقًا",
       "actions": "الإجراءات",
       "edit": "تعديل",
-      "editTitle": "تعديل «{name}»"
+      "editTitle": "تعديل «{name}»",
+      "featuredTitle": "بيوت ضيافة مميّزة",
+      "featuredHint": "يظهر بيت الضيافة المميّز أولًا في البحث وعلى الصفحة الرئيسية، مع علامة \"مميّز\"، في الأيام التي تختارها. يُدفع ثمنه خارج مبيت، مثل الشريك المموَّل.",
+      "featuredPlace": "بيت الضيافة",
+      "pickPlace": "اختر بيت ضيافة",
+      "feature": "ميّزه",
+      "noFeatured": "لا يوجد بيت ضيافة مميّز من اليوم فصاعدًا.",
+      "endFeature": "إنهاء",
+      "endFeatureTitle": "إيقاف تمييز {name}؟",
+      "closedPlace": "مكان أُغلق"
     },
     "ai": {
       "title": "الذكاء الاصطناعي هذا الشهر",

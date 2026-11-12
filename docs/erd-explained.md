@@ -282,10 +282,11 @@ staying in its region see it under "Things to do near your stay". It is never bo
 
 ### 28b. Sponsorship
 
-"From this day to that day, this partner (or this experience) is sponsored." While it lasts, it comes first near
-guests' stays and is always marked "Sponsored".
+"From this day to that day, this partner (or this experience, or this guesthouse) is sponsored." While it lasts, a
+partner or an experience comes first near guests' stays, marked "Sponsored"; a guesthouse comes first in search and
+on the home page, marked "Featured".
 
-- It belongs to **one partner place** _or_ **one offering**, never both and never neither.
+- It belongs to exactly **one partner place**, **one offering** or **one business**.
 - `endsOn` is the day after the last sponsored day, like a check-out.
 - It remembers the admin who made it.
 

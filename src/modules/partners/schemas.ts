@@ -40,6 +40,15 @@ export const sponsorshipInput = z
     path: ["endsOn"],
   });
 
+/** A guesthouse on the platform featured for a set of days, the last one `endsOn - 1`, as for a partner. */
+export const featureInput = z
+  .object({ businessId: id, startsOn: isoDate, endsOn: isoDate })
+  .refine((dates) => dates.endsOn > dates.startsOn, {
+    message: "The last day must be on or after the first",
+    path: ["endsOn"],
+  });
+
+export const featureParams = z.object({ sponsorshipId: id });
 export const partnerParams = z.object({ partnerId: id });
 export const sponsorshipParams = z.object({ partnerId: id, sponsorshipId: id });
 

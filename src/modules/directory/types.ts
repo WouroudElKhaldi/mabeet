@@ -151,6 +151,8 @@ export interface PlaceCard {
   /** The cheapest whole stay, or null without dates. */
   stayTotalFromCents: number | null;
   offers: SearchOffer[];
+  /** Featured by the platform today: shown first, and always marked so. */
+  featured: boolean;
 }
 
 /** One unit of a place over the stay a guest asked about: free or not, whether it fits, and its price. */

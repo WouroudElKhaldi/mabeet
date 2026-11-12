@@ -240,9 +240,13 @@ and the `OfferingSession` dates that exist.
 3. `Sponsorship`: the dates during which a partner place, or an experience or service (`Offering`), is sponsored.
    Exactly one of `partnerPlaceId` and `offeringId` (the `CHECK` `sponsorship_one_target`), `startsOn` and `endsOn`
    as dates with `endsOn` after `startsOn` (`sponsorship_valid_dates`; `endsOn` is the day after the last one, like a
-   check-out), who created it, `isDeleted`. Indexed by dates, by partner and by offering. Sponsoring an offering is
+   check-out), who created it, `isDeleted`. Indexed by dates, by partner and by offering (and by business, item 4). Sponsoring an offering is
    built with experiences (F8); the table already takes it.
-4. How a sponsor pays is not decided yet, so there is no money column. If it is paid through the platform, it is paid
+4. **Featured guesthouses** (approved by Sami on 10 November; migration `20261110172855_featured_places`):
+   `Sponsorship.businessId` (optional, indexed, deleted with its business) for a guesthouse on the platform
+   featured for a set of days. `sponsorship_one_target` became `num_nonnulls("partnerPlaceId", "offeringId",
+"businessId") = 1`: exactly one of the three. Every older row already had one of the first two.
+5. How a sponsor pays is not decided yet, so there is no money column. If it is paid through the platform, it is paid
    instantly with Stripe or Whish like plans, and its money is `BigInt` minor units with a line in `moneyAsNumbers`.
 
 ## 6. Plan offers (applied)
