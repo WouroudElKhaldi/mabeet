@@ -77,7 +77,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                   <p className="font-semibold">
                     <bdi>{person.name}</bdi>
                   </p>
-                  <p className="max-w-56 truncate text-muted">
+                  <p className="max-w-40 truncate text-muted md:max-w-56">
                     <bdi dir="ltr">{person.email}</bdi>
                   </p>
                 </DataCell>
