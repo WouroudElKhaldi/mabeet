@@ -77,7 +77,7 @@ export default async function TeamPage({ params }: PageProps) {
                         <bdi>{member.user.name}</bdi>
                         {member.id === ctx.membershipId && <Pill>{t("you")}</Pill>}
                       </p>
-                      <p className="max-w-64 truncate text-muted">
+                      <p className="max-w-40 truncate text-muted md:max-w-64">
                         <bdi dir="ltr">{member.user.email}</bdi>
                       </p>
                     </DataCell>
@@ -123,7 +123,7 @@ export default async function TeamPage({ params }: PageProps) {
                       <p className="font-semibold">
                         <bdi>{invitation.name}</bdi>
                       </p>
-                      <p className="max-w-64 truncate text-muted">
+                      <p className="max-w-40 truncate text-muted md:max-w-64">
                         <bdi dir="ltr">{invitation.email}</bdi>
                       </p>
                     </DataCell>

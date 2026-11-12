@@ -25,7 +25,9 @@ export function DataTable({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl bg-surface ring-1 ring-line">
+    // Relative, so the screen-reader-only labels (absolutely placed) stay inside the box: otherwise a row wider than a
+    // phone pushes them past the page's edge, in Arabic most of all, and the whole page moves sideways.
+    <div className="relative overflow-x-auto rounded-xl bg-surface ring-1 ring-line">
       <table className="w-full text-sm">
         <caption className="sr-only">{label}</caption>
         <thead className="text-xs tracking-wide text-muted uppercase">

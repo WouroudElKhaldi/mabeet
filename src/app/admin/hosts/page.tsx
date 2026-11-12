@@ -78,7 +78,7 @@ export default async function AdminHostsPage({ searchParams }: PageProps) {
                 <p className="font-semibold">
                   <bdi>{host.name}</bdi>
                 </p>
-                <p className="max-w-56 truncate text-muted">
+                <p className="max-w-40 truncate text-muted md:max-w-56">
                   <bdi dir="ltr">{host.email}</bdi>
                 </p>
               </DataCell>
