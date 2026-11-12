@@ -734,7 +734,7 @@
       "allRooms": "All rooms",
       "closeDates": "Close dates",
       "hint": "Double-click a day (or use Close dates), then click the last night.",
-      "pickLastNight": "Now click the last night to close, or pick it below.",
+      "pickLastNight": "Now click the last night to close.",
       "closeRange": "Close {from} to {to} (nights included)",
       "lastNight": "Last night",
       "cancel": "Cancel",
