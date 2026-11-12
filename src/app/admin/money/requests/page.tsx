@@ -92,7 +92,7 @@ export default async function AdminPayoutRequestsPage({ searchParams }: PageProp
                     label={t("decide")}
                     title={t("decideTitle", { amount, place: payout.business.name })}
                     intro={`${tMethods(payout.method)} · ${payout.accountName} · ${account}`}
-                    icon={Send}
+                    icon={<Send className="size-4" aria-hidden />}
                     variant="secondary"
                   >
                     <PayoutDecision payoutId={payout.id} />
