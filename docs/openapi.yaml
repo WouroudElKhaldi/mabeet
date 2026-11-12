@@ -6598,6 +6598,71 @@ paths:
           description: Rate limited
         "503":
           description: No team inbox is set
+  /api/workspaces/{businessId}/archive:
+    put:
+      tags:
+        - Workspaces
+      summary: Archive the place, or bring it back
+      description: The business's own owners only (403 for anyone else on the team, including a visiting platform admin). Archived, the place is closed to guests (its page, search, the assistant and new bookings), while its team keeps the dashboard; bookings already made stay. 409 when it is already in that state, or the platform admin suspended it. Non-members get 404.
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                archived:
+                  type: boolean
+              required:
+                - archived
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  archived:
+                    type: boolean
+                required:
+                  - archived
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details: {}
+                    required:
+                      - code
+                      - message
+        "401":
+          description: Sign-in or key required
+        "403":
+          description: Missing permission
+        "404":
+          description: Not found, or not yours
+        "409":
+          description: Already archived, not archived, or suspended by the platform
+        "429":
+          description: Rate limited
+      security:
+        - session: []
   /api/workspaces/{businessId}/booking-unit:
     put:
       tags:

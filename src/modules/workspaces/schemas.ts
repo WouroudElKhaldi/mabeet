@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { BOOKING_MODES, BUSINESS_STATUSES, CURRENCIES, HOST_CONTACT_OPTIONS } from "@/config/enums";
+import {
+  ADMIN_BUSINESS_STATUSES,
+  BOOKING_MODES,
+  BUSINESS_STATUSES,
+  CURRENCIES,
+  HOST_CONTACT_OPTIONS,
+} from "@/config/enums";
 import { ACCESSIBILITY, LANGUAGES, TAGS } from "@/config/listing";
 import { REGION_KEYS } from "@/config/regions";
 import { PLANS } from "@/config/plans";
@@ -66,7 +72,10 @@ export const settingsInput = z
 export const platformBusinessParams = z.object({ businessId: id });
 
 /** A platform admin suspends a business, or brings it back. */
-export const businessStatusInput = z.object({ status: z.enum(BUSINESS_STATUSES) });
+export const businessStatusInput = z.object({ status: z.enum(ADMIN_BUSINESS_STATUSES) });
+
+/** The owner archives the place (closed to guests, kept for the team) or brings it back. */
+export const placeArchiveInput = z.object({ archived: z.boolean() });
 
 // ---------- Host profile ----------
 

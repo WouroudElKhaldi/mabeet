@@ -2,6 +2,7 @@
 // code lives behind ./server.ts.
 export {
   businessStatusInput,
+  placeArchiveInput,
   hostProfileInput,
   platformBusinessParams,
   platformHostsQuery,
@@ -9,6 +10,7 @@ export {
   settingsInput,
   workspaceInput,
 } from "./schemas";
+export { ArchivePlaceButton } from "./components/archive-place-button";
 export { BusinessStatusToggle } from "./components/business-status-toggle";
 export { RegionSelect } from "./components/region-select";
 export { CreateWorkspaceForm } from "./components/create-workspace-form";

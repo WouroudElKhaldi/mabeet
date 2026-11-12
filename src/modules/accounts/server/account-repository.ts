@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import type { PersonKind } from "@/config/enums";
+import { type PersonKind, TEAM_OPEN_STATUSES } from "@/config/enums";
 import type { Db, Tx } from "@/server/db/client";
 
 // Everything held about one person, for "download my data", and the checks before deleting an account.
@@ -103,10 +103,15 @@ export function findMyData(db: Db, userId: string) {
   });
 }
 
-/** Active businesses where this person is the only active owner: deleting them would orphan the place. */
+/** Open or archived businesses where this person is the only active owner: deleting them would orphan the place. */
 export async function listSoleOwnedBusinesses(db: Db, userId: string): Promise<string[]> {
   const owned = await db.membership.findMany({
-    where: { userId, status: "ACTIVE", role: { isOwner: true }, business: { status: "ACTIVE" } },
+    where: {
+      userId,
+      status: "ACTIVE",
+      role: { isOwner: true },
+      business: { status: { in: [...TEAM_OPEN_STATUSES] } },
+    },
     select: { businessId: true, business: { select: { name: true } } },
   });
   const sole: string[] = [];

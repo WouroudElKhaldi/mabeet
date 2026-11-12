@@ -4,9 +4,14 @@ import { isOnlineMode } from "@/config/enums";
 import { type RegionKey, regionOfArea } from "@/config/regions";
 import { listCategories } from "@/modules/admin/server";
 import { recordAction } from "@/modules/audit/server";
-import { requireOwner, requirePermission, type TenantContext } from "@/server/auth/tenant-context";
+import {
+  requireBusinessOwner,
+  requireOwner,
+  requirePermission,
+  type TenantContext,
+} from "@/server/auth/tenant-context";
 import { prisma, runInTransaction, type Tx } from "@/server/db/client";
-import { invalid, notFound } from "@/server/errors";
+import { conflict, invalid, notFound } from "@/server/errors";
 import type { settingsInput } from "../schemas";
 import * as businesses from "./business-repository";
 
@@ -90,9 +95,32 @@ export async function saveBookingUnit(businessId: string, bookingUnit: BookingUn
 
 /**
  * What every dashboard page may show of the place, to any of its members: its name, the currency its prices are in,
- * the time zone its sessions start in, and whether it is booked room by room or as a whole.
+ * the time zone its sessions start in, whether it is booked room by room or as a whole, and whether it is archived.
  */
 export async function getPlaceBasics(ctx: TenantContext) {
-  const { name, currency, timezone, bookingUnit, bookingMode } = await loadSettings(ctx.businessId);
-  return { name, currency, timezone, bookingUnit, bookingMode };
+  const { name, currency, timezone, bookingUnit, bookingMode, status } = await loadSettings(ctx.businessId);
+  return { name, currency, timezone, bookingUnit, bookingMode, status };
+}
+
+/**
+ * The owner archives the place, or brings it back. Archived, it is closed to guests everywhere at once (its page,
+ * search, the assistant and new bookings all ask for `ACTIVE`), while its team keeps the dashboard. Bookings already
+ * made stay as they are: the guests keep their links and the host still answers them. Only the business's own owners
+ * decide this, never a visiting admin, whose own tool is suspending.
+ */
+export async function setPlaceArchived(ctx: TenantContext, archived: boolean) {
+  requireBusinessOwner(ctx, "Only an owner can archive this place");
+  const [from, to] = archived ? (["ACTIVE", "ARCHIVED"] as const) : (["ARCHIVED", "ACTIVE"] as const);
+  await runInTransaction(async (tx) => {
+    if (!(await businesses.changeBusinessStatus(tx, ctx.businessId, from, to))) {
+      throw conflict(archived ? "This place is already archived" : "This place is not archived");
+    }
+    await recordAction(
+      ctx,
+      archived ? "business.archived" : "business.restored",
+      "business",
+      ctx.businessId,
+      tx,
+    );
+  });
 }

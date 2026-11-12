@@ -71,7 +71,8 @@ The main thing on the site: a guesthouse, a hotel, a chalet, a tour company. It 
 - `bookingMode`: one of three modes. **Automatic**: the guest pays online and the booking is confirmed by the payment. **Online with approval**: the guest pays online, then the owner confirms. **Offline**: no payment through the site; the owner confirms by hand. Guests always pay the full price (no deposits), and every online refund is full
 - `onlineTermsAcceptedAt`: when the owner accepted "online payments are always refunded in full" (needed for the two online modes)
 - `plan`: which subscription the business pays for
-- `status`: for example active or suspended
+- `status`: active, suspended by the platform admin (closed to guests and team), or archived by its owner (closed
+  to guests only, so the team can bring it back)
 
 The business is the "parent" of almost everything:
 

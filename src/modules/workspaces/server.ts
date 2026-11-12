@@ -17,4 +17,10 @@ export {
   listPlatformHosts,
   setBusinessStatus,
 } from "./server/platform-service";
-export { getPlaceBasics, getSettings, saveBookingUnit, updateSettings } from "./server/settings-service";
+export {
+  getPlaceBasics,
+  getSettings,
+  saveBookingUnit,
+  setPlaceArchived,
+  updateSettings,
+} from "./server/settings-service";
