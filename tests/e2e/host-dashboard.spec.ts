@@ -170,25 +170,26 @@ test(
     expect(main?.width ?? 0).toBeGreaterThan(Math.min(width - 300, 900));
 
     // Closing dates: each field is wide enough to show the room's name and the whole date.
-    const hint = page.getByText("Now click the last night to close, or pick it below.");
+    const hint = page.getByText("Now click the last night to close.");
     await expect(async () => {
       await page.getByRole("button", { name: "Close dates" }).click();
       await expect(hint).toBeVisible({ timeout: 2_000 });
     }).toPass();
-    // The hint is the bar's first line; the fields sit beside it.
-    const bar = hint.locator("..");
+    const days = page.getByRole("button", { name: /^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day, / });
+    await days.nth(25).click();
+    const form = page.getByRole("dialog");
     const fields = {
-      Room: bar.getByRole("combobox", { name: "Room" }),
-      From: bar.getByRole("textbox", { name: "From" }),
-      "Last night": bar.getByRole("textbox", { name: "Last night" }),
-      Note: bar.getByRole("textbox", { name: "Note" }),
+      Room: form.getByRole("combobox", { name: "Room" }),
+      From: form.getByRole("textbox", { name: "From" }),
+      "Last night": form.getByRole("textbox", { name: "Last night" }),
+      Note: form.getByRole("textbox", { name: "Note" }),
     };
     for (const [name, field] of Object.entries(fields)) {
       const box = await field.boundingBox();
       expect(box?.width ?? 0, `the ${name} field's width`).toBeGreaterThanOrEqual(150);
     }
-    await bar.getByRole("button", { name: "Cancel" }).click();
-    await expect(bar).toBeHidden();
+    await form.getByRole("button", { name: "Cancel" }).click();
+    await expect(form).toBeHidden();
 
     await page.goto(`${base}/bookings`);
     const show = page.getByRole("navigation", { name: "Show" });
