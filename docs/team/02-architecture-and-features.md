@@ -393,8 +393,8 @@ the website, never through AI keys. Their actions are logged under their own nam
 
 Nobody becomes an admin by signing up: `platformRole` is not something a sign-up can set. Admins are made only with
 `pnpm admins:create "Name <email>" …` (`scripts/create-admins.ts`, which calls `ensurePlatformAdmin` in
-`src/modules/accounts/server/platform-admin.ts`). It creates a verified account, or makes an existing one an admin, gives each a
-new random password, and writes the sign-in details to `.admin-credentials`, which git ignores. Running it again
+`src/modules/accounts/server/platform-admin.ts`). It creates a verified account, or makes an existing one an admin (and marks its email
+confirmed, as sign-in needs it), gives each a new random password, and writes the sign-in details to `.admin-credentials`, which git ignores. Running it again
 never makes a copy.
 
 ---

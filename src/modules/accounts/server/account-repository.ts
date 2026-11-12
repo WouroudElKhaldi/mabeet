@@ -156,11 +156,14 @@ export async function softDeleteUser(tx: Tx, userId: string, now: Date) {
   await tx.oauthConsent.deleteMany({ where: { userId } });
 }
 
-/** Gives this person the platform admin role: every business, on the website only. */
+/**
+ * Gives this person the platform admin role: every business, on the website only. Their email counts as confirmed:
+ * whoever runs `pnpm admins:create` vouches for the address, and sign-in refuses an unconfirmed one.
+ */
 export function makePlatformAdmin(db: Db, userId: string) {
   return db.user.update({
     where: { id: userId },
-    data: { platformRole: "SUPER_ADMIN" },
+    data: { platformRole: "SUPER_ADMIN", emailVerified: true },
     select: { id: true },
   });
 }
