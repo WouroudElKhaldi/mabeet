@@ -71,7 +71,9 @@ Four parts, in this order: the server, GitHub, the domain, then the first deploy
 ### 1. The server (DigitalOcean droplet)
 
 1. **Create the droplet.** Ubuntu 24.04 LTS, at least **2 GB of memory** (Postgres, Redis, the website and the
-   worker together do not fit in 1 GB). Add your own SSH key when you create it.
+   worker together do not fit in 1 GB). Add your own SSH key when you create it. Our droplet has 1 GB for now, so
+   `docker-compose.prod.yml` keeps the worker's memory small (`NODE_OPTIONS` on the `worker` service) and step 7's
+   swap takes the rest.
 2. **Log in as root** from your computer (Git Bash on Windows):
 
    ```bash
