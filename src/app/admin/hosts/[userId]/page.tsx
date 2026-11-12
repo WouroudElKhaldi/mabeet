@@ -103,7 +103,7 @@ export default async function AdminHostPage({ params }: PageProps) {
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 font-semibold">
                     <bdi>{business.name}</bdi>
-                    {business.status === "SUSPENDED" && <Pill>{t("statuses.SUSPENDED")}</Pill>}
+                    {business.status !== "ACTIVE" && <Pill>{t(`statuses.${business.status}`)}</Pill>}
                   </p>
                   <p className="text-sm text-muted">
                     {t("counts", {

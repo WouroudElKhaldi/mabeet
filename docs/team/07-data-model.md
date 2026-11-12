@@ -275,3 +275,13 @@ Approved by the user (the database keeper) for the platform's AI usage page, in 
    person; a call to the public guest MCP has neither, and is logged with `channel` `"guest"`. The channels are
    `AI_CALL_CHANNELS` in `src/config/enums.ts` (`mcp`, `chat`, `guest`).
 2. A new index on `McpAuditLog.createdAt`, because the usage page counts every place's calls over a period.
+
+## 8. Archived places (applied)
+
+Approved by the user (the database keeper) so an owner can archive their own place from its settings, in the
+migration `20261112150000_archived_places`. How it is used is in `02` ("Archiving a place").
+
+1. `BusinessStatus` has a third value, `ARCHIVED`: closed to guests like `SUSPENDED` (every public read asks for
+   `ACTIVE`), but its team keeps the dashboard (`TEAM_OPEN_STATUSES` in `src/config/enums.ts`, read by
+   `findActiveMembership`). Only the owner moves a place between `ACTIVE` and `ARCHIVED`; only the platform admin
+   sets `SUSPENDED` (`ADMIN_BUSINESS_STATUSES`). No existing row changes.

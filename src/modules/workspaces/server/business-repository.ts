@@ -79,6 +79,7 @@ const settingsFields = {
   whatsapp: true,
   currency: true,
   timezone: true,
+  status: true,
   lbpRate: true,
   commissionRateBps: true,
   holdHours: true,
@@ -291,6 +292,23 @@ export function listPlatformBusinesses(db: Db, take: number) {
 
 export function countPlatformBusinesses(db: Db) {
   return db.business.count({ where: { isDeleted: false } });
+}
+
+/**
+ * Moves the place from one status to another, only if it is still in the first: an owner archiving a place the
+ * admin suspended a moment earlier changes nothing. False when it was not in `from`.
+ */
+export async function changeBusinessStatus(
+  tx: Tx,
+  businessId: string,
+  from: BusinessStatus,
+  to: BusinessStatus,
+) {
+  const { count } = await tx.business.updateMany({
+    where: { id: businessId, status: from, isDeleted: false },
+    data: { status: to },
+  });
+  return count === 1;
 }
 
 /** Suspends or reactivates a business. False when there is no such business. */

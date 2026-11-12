@@ -1,11 +1,17 @@
 import type { Prisma } from "@prisma/client";
+import { TEAM_OPEN_STATUSES } from "@/config/enums";
 import type { Db } from "@/server/db/client";
 
 const membershipWithRole = { role: true } satisfies Prisma.MembershipInclude;
 
 export function findMembershipById(db: Db, businessId: string, membershipId: string) {
   return db.membership.findFirst({
-    where: { id: membershipId, businessId, status: "ACTIVE", business: { status: "ACTIVE" } },
+    where: {
+      id: membershipId,
+      businessId,
+      status: "ACTIVE",
+      business: { status: { in: [...TEAM_OPEN_STATUSES] } },
+    },
     include: membershipWithRole,
   });
 }

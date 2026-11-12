@@ -254,9 +254,12 @@ enum BookingMode {
   OFFLINE
 }
 
+/// ACTIVE: open to guests and its team. SUSPENDED: closed by the platform admin, to guests and team alike.
+/// ARCHIVED: closed to guests by its own owner, who can still open the dashboard and bring it back.
 enum BusinessStatus {
   ACTIVE
   SUSPENDED
+  ARCHIVED
 }
 
 model Business {

@@ -79,7 +79,20 @@ export const DECIDED_PAYOUT_STATUSES = ["PAID", "REJECTED"] as const satisfies r
 export type DecidedPayoutStatus = (typeof DECIDED_PAYOUT_STATUSES)[number];
 
 /** A business is live, or suspended by a platform admin (hidden everywhere until reactivated). */
-export const BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies readonly BusinessStatus[];
+export const BUSINESS_STATUSES = [
+  "ACTIVE",
+  "SUSPENDED",
+  "ARCHIVED",
+] as const satisfies readonly BusinessStatus[];
+
+/** What the platform admin sets: suspend or reactivate. Archiving is the owner's own, from the place's settings. */
+export const ADMIN_BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies readonly BusinessStatus[];
+
+/** Where the team can still work: an archived place is closed to guests, not to the people who run it. */
+export const TEAM_OPEN_STATUSES = ["ACTIVE", "ARCHIVED"] as const satisfies readonly BusinessStatus[];
+
+export const isTeamOpen = (status: BusinessStatus): boolean =>
+  (TEAM_OPEN_STATUSES as readonly BusinessStatus[]).includes(status);
 
 /** What a browse category is for: places, experiences or services. */
 export const LISTING_KINDS = ["HOME", "EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];

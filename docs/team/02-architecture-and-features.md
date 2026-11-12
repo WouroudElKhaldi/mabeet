@@ -605,7 +605,7 @@ new kind of bell entry (all four steps, or it shows a raw key or nothing):
 
 ### A. Admin area
 
-`/admin`, for platform admins: businesses (suspend or reactivate), hosts, AI spending against the budget, calendar
+`/admin`, for platform admins: businesses (suspend or reactivate; an owner's archived place shows "Archived"), hosts, AI spending against the budget, calendar
 sync health, payouts and refunds to send by hand, plan offers, categories, and the
 site's colour palette. Code: `src/app/admin/**`.
 
@@ -1242,6 +1242,17 @@ Shared pieces:
   can never receive email. The demo accounts (`host@mabeet.test`) use them.
 - Emails only reach other people's inboxes after the sending domain is verified on Resend. The live site needs it:
   every new account confirms its email before it can sign in, so with Resend's test sender no one else could.
+
+### Archiving a place
+
+The owner archives their own place from Settings (`setPlaceArchived` in `workspaces/settings-service.ts`, route
+`PUT /api/workspaces/{businessId}/archive`), or brings it back. Archived (`BusinessStatus` `ARCHIVED`), it is closed
+to guests everywhere at once, because every public read and every new booking asks for `ACTIVE`: its page, search,
+the guest MCP and the booking routes. Unlike a suspension, its team keeps the dashboard (`TEAM_OPEN_STATUSES`, read by
+`findActiveMembership`), where a line above every page says it is archived. Bookings already made stay as they are.
+Only the business's own owners decide, never a visiting platform admin; the status moves only from `ACTIVE` to
+`ARCHIVED` and back, so an owner can never reopen a place the admin suspended (409). Logged as `business.archived` and
+`business.restored`. Tests: `src/modules/workspaces/tests/archive-place.integration.test.ts`.
 
 ### E. Experiences and services
 

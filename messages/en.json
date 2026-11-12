@@ -956,7 +956,14 @@
       },
       "stayRules": "Arrival and house rules",
       "saved": "Saved.",
-      "generalIntro": "How guests reach you, whether your place is listed, the currency, how long a request waits, and how guests pay."
+      "generalIntro": "How guests reach you, whether your place is listed, the currency, how long a request waits, and how guests pay.",
+      "archive": {
+        "title": "Archive this place",
+        "intro": "Guests can no longer find or book it: its page, search and AI apps drop it. Your team keeps this dashboard, and bookings already made stay as they are. You can bring it back any time.",
+        "archivedIntro": "This place is archived: guests can't find or book it. Bring it back to show it and take bookings again.",
+        "archive": "Archive place",
+        "restore": "Bring it back"
+      }
     },
     "offerings": {
       "title": "Experiences & services",
@@ -1094,7 +1101,9 @@
       "ai": "AI"
     },
     "findBusiness": "Find a business",
-    "allPlaces": "All my places"
+    "allPlaces": "All my places",
+    "archivedNotice": "This place is archived: guests can't find or book it.",
+    "archivedLink": "Bring it back in Settings"
   },
   "account": {
     "eyebrow": "Your account",
@@ -1565,7 +1574,8 @@
       "plan": "Plan",
       "statuses": {
         "ACTIVE": "Active",
-        "SUSPENDED": "Suspended"
+        "SUSPENDED": "Suspended",
+        "ARCHIVED": "Archived"
       },
       "empty": "No hosts match. Try other words or clear the filters.",
       "details": "Details",
@@ -2113,6 +2123,11 @@
       "title": "Disconnect “{name}”?",
       "body": "It stops working in this place at once. You can connect it again by signing in.",
       "confirm": "Disconnect"
+    },
+    "archivePlace": {
+      "title": "Archive this place?",
+      "body": "Guests can no longer find or book it. Bookings already made stay as they are.",
+      "confirm": "Archive place"
     }
   },
   "plans": {

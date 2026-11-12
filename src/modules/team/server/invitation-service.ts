@@ -7,6 +7,7 @@ import { requirePermission, type TenantContext } from "@/server/auth/tenant-cont
 import { prisma, runInTransaction } from "@/server/db/client";
 import { conflict, forbidden, notFound } from "@/server/errors";
 import { addDays } from "@/utils/dates";
+import { isTeamOpen } from "@/config/enums";
 import { secureToken } from "@/utils/tokens";
 import type { invitationInput } from "../schemas";
 import * as invitations from "./invitation-repository";
@@ -84,8 +85,9 @@ type FoundInvitation = NonNullable<Awaited<ReturnType<typeof invitations.findInv
 
 async function findInvitation(token: string) {
   const invitation = await invitations.findInvitationByToken(prisma, token);
-  // A suspended business takes no one in; its invitations look like any unknown link.
-  if (!invitation || invitation.business.status !== "ACTIVE") return null;
+  // A suspended business takes no one in; its invitations look like any unknown link. An archived one still does:
+  // its team keeps working on it.
+  if (!invitation || !isTeamOpen(invitation.business.status)) return null;
   return invitation;
 }
 

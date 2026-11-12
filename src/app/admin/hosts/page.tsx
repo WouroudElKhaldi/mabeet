@@ -88,7 +88,7 @@ export default async function AdminHostsPage({ searchParams }: PageProps) {
                   {host.places.map((place) => (
                     <li key={place.id} className="flex flex-wrap items-center gap-2">
                       <bdi>{place.name}</bdi>
-                      {place.status === "SUSPENDED" && <Pill>{tStatus("SUSPENDED")}</Pill>}
+                      {place.status !== "ACTIVE" && <Pill>{tStatus(place.status)}</Pill>}
                     </li>
                   ))}
                 </ul>
