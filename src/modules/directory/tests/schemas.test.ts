@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toIsoDate, todayUtc } from "@/utils/dates";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { AVAILABILITY_DAYS, availabilityWindow } from "../availability-window";
 import { searchParams, toPlaceSearch } from "..";
 import { availabilityQuery, quoteQuery } from "../schemas";
@@ -74,7 +75,8 @@ describe("searchParams", () => {
       maxPrice: 150,
       checkIn: "2026-12-04",
       checkOut: "2026-12-06",
-      tab: "experiences",
+      // Experiences and services are hidden for now (OFFERINGS_SHOWN), so their tab reads as the places tab.
+      tab: OFFERINGS_SHOWN ? "experiences" : "homes",
     });
   });
 

@@ -1,6 +1,7 @@
 import type { Messages } from "next-intl";
 import type { NavIconName } from "@/components/shell/nav-icons";
 import type { Permission } from "@/config/permissions";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { can, isBusinessOwner, type TenantContext } from "@/server/auth/tenant-context";
 
 // The host dashboard's menu: one line per page, added with the page itself, in the order the side menu shows them.
@@ -76,6 +77,7 @@ export function dashboardNav(ctx: TenantContext): DashboardNavGroup[] {
       .filter(
         ({ page }) =>
           page.group === group &&
+          (OFFERINGS_SHOWN || page !== DASHBOARD_PAGES.offerings) &&
           (page.everyone ||
             (page.ownerOnly ? isBusinessOwner(ctx) : page.anyOf.some((permission) => can(ctx, permission)))),
       )

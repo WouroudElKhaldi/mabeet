@@ -1,11 +1,13 @@
 import { CalendarPlus, Compass, Images, Pencil } from "lucide-react";
 import Image from "next/image";
+import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
 import { PageHeader } from "@/components/shell/page-header";
 import { ArrowLink } from "@/components/ui/arrow-link";
 import { DataCell, DataRow, DataTable } from "@/components/ui/data-table";
 import { FormDialog } from "@/components/ui/form-dialog";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { Pill } from "@/components/ui/pill";
 import { listCategories } from "@/modules/admin/server";
 import { countTakenSeats } from "@/modules/bookings/server";
@@ -24,6 +26,7 @@ type PageProps = { params: Promise<{ businessId: string }> };
  * pop-ups, so the list stays a list. Who booked which seats is on the Bookings page.
  */
 export default async function OfferingsPage({ params }: PageProps) {
+  if (!OFFERINGS_SHOWN) notFound();
   const { businessId } = await params;
   const ctx = await requirePageAccess(businessId, DASHBOARD_PAGES.offerings.anyOf);
   const [t, locale, offerings, place, experiences, services] = await Promise.all([

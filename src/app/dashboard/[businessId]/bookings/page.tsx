@@ -7,6 +7,7 @@ import { listBookings, listSessionBookings } from "@/modules/bookings/server";
 import { getPlaceBasics } from "@/modules/workspaces/server";
 import { can } from "@/server/auth/tenant-context";
 import { requirePageAccess } from "@/server/http/session";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { todayUtc } from "@/utils/dates";
 
 type PageProps = {
@@ -48,7 +49,9 @@ export default async function BookingsPage({ params, searchParams }: PageProps) 
   const [t, bookings, seats, place] = await Promise.all([
     getTranslations("dashboard.bookings"),
     listBookings(ctx, { ...filtersFor(tab, todayUtc(now)), take: PAGE_SIZE, skip: 0 }),
-    listSessionBookings(ctx, { ...seatFiltersFor(tab, now), take: PAGE_SIZE, skip: 0 }),
+    OFFERINGS_SHOWN
+      ? listSessionBookings(ctx, { ...seatFiltersFor(tab, now), take: PAGE_SIZE, skip: 0 })
+      : [],
     getPlaceBasics(ctx),
   ]);
   const canDecide = can(ctx, "bookings.decide");

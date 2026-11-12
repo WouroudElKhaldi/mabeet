@@ -5,6 +5,7 @@ import { CheckList } from "@/components/ui/check-list";
 import { Pill } from "@/components/ui/pill";
 import { PLAN_LIMITS, PLANS, type PlanName } from "@/config/plans";
 import { formatMoney } from "@/utils/format";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { stagger } from "@/utils/motion";
 
 /**
@@ -54,7 +55,9 @@ export async function PlanCards({
               missingLabel={t("notIncluded")}
               items={[
                 { text: t("rooms", { count: limit(limits.rooms) }), included: true },
-                { text: t("offerings", { count: limit(limits.offerings) }), included: true },
+                ...(OFFERINGS_SHOWN
+                  ? [{ text: t("offerings", { count: limit(limits.offerings) }), included: true }]
+                  : []),
                 { text: t("members", { count: limit(limits.members) }), included: true },
                 { text: t("basics"), included: true },
                 { text: t("ai"), included: limits.ai },
