@@ -88,7 +88,7 @@ export default async function AdminRefundsPage({ searchParams }: PageProps) {
                     label={t("markSent")}
                     title={t("refundTitle", { amount, guest: booking?.guestName ?? "" })}
                     intro={[paidWith, booking?.guestPhone, booking?.guestEmail].filter(Boolean).join(" · ")}
-                    icon={Undo2}
+                    icon={<Undo2 className="size-4" aria-hidden />}
                     variant="secondary"
                   >
                     <RefundSent refundId={refund.id} />

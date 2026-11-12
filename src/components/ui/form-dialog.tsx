@@ -1,6 +1,6 @@
 "use client";
 
-import { type LucideIcon, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { Button, type ButtonVariant } from "./button";
 import { SheetDialog } from "./sheet-dialog";
@@ -50,15 +50,19 @@ export function FormDialog({
   label,
   title,
   intro,
-  icon: Icon = Plus,
+  icon = <Plus className="size-4" aria-hidden />,
   size = "md",
   variant = "primary",
   children,
 }: {
   /** The button's text: "Add a room", "Edit". */
   label: string;
-  /** The button's icon: a plus by default, for adding. */
-  icon?: LucideIcon;
+  /**
+   * The button's icon, as an element (`<Pencil className="size-4" aria-hidden />`): a plus by default, for adding.
+   * An element, not the icon component itself, because server pages render this dialog and a component cannot be
+   * passed from the server to the browser.
+   */
+  icon?: ReactNode;
   title: string;
   intro?: string;
   size?: "md" | "lg";
@@ -70,7 +74,7 @@ export function FormDialog({
   return (
     <>
       <Button size="sm" variant={variant} onClick={() => setOpen(true)}>
-        <Icon className="size-4" aria-hidden />
+        {icon}
         {label}
       </Button>
       <SheetDialog open={open} onClose={close} title={title} size={size}>

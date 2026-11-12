@@ -68,7 +68,7 @@ export function PartnerActions({ partner }: { partner: AdminPartner }) {
       <FormDialog
         label={t("edit")}
         title={t("editTitle", { name: partner.name })}
-        icon={Pencil}
+        icon={<Pencil className="size-4" aria-hidden />}
         variant="secondary"
         size="lg"
       >

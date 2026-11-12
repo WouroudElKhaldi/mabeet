@@ -111,7 +111,7 @@ export default async function RoomsPage({ params }: PageProps) {
                       <FormDialog
                         label={canEdit ? t("edit") : t("view")}
                         title={room.name}
-                        icon={Pencil}
+                        icon={<Pencil className="size-4" aria-hidden />}
                         variant="secondary"
                         size="lg"
                       >
@@ -134,7 +134,7 @@ export default async function RoomsPage({ params }: PageProps) {
                         <FormDialog
                           label={t("photosCount", { count: photos.length })}
                           title={t("photos")}
-                          icon={Images}
+                          icon={<Images className="size-4" aria-hidden />}
                           variant="ghost"
                           size="lg"
                         >

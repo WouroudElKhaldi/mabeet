@@ -84,7 +84,7 @@ export function AdminPlanButton({
       label={t("change")}
       title={t("title", { name: businessName })}
       intro={t("intro")}
-      icon={CreditCard}
+      icon={<CreditCard className="size-4" aria-hidden />}
       variant="secondary"
     >
       <AdminPlanForm businessId={businessId} plan={plan} />

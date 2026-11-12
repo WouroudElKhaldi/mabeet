@@ -68,7 +68,13 @@ export default async function PlacePage({ params }: PageProps) {
 
   /** The "Edit" button of one part, opening that part's fields in a pop-up. */
   const edit = (title: string, form: ReactNode, size: "md" | "lg" = "md") => (
-    <FormDialog label={t("edit")} title={title} icon={Pencil} variant="secondary" size={size}>
+    <FormDialog
+      label={t("edit")}
+      title={title}
+      icon={<Pencil className="size-4" aria-hidden />}
+      variant="secondary"
+      size={size}
+    >
       {form}
     </FormDialog>
   );
@@ -132,7 +138,7 @@ export default async function PlacePage({ params }: PageProps) {
                 <FormDialog
                   label={t("managePhotos")}
                   title={t("photosTitle")}
-                  icon={Images}
+                  icon={<Images className="size-4" aria-hidden />}
                   variant="secondary"
                   size="lg"
                 >
