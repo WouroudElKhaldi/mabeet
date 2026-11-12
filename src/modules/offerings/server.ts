@@ -5,6 +5,8 @@ export {
   closeSession,
   findBookableOffering,
   findOpenSession,
+  findPublicOffering,
+  listPublicOfferings,
   lockSession,
   priceSession,
 } from "./server/offering-lookup";

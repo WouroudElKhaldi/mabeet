@@ -1,4 +1,14 @@
-import type { BookingMode, BookingStatus, BookingUnit, HostContact, PhotoArea } from "@prisma/client";
+import type {
+  ActivityLevel,
+  BookingMode,
+  BookingStatus,
+  BookingUnit,
+  HostContact,
+  PhotoArea,
+  PriceUnit,
+  SkillLevel,
+} from "@prisma/client";
+import type { OfferingKind } from "@/config/enums";
 import type { PlaceRating, PlaceReview } from "@/modules/reviews";
 import type { StayIssue } from "@/config/booking-limits";
 import type { NearbyPartner } from "@/modules/partners";
@@ -189,4 +199,59 @@ export interface ActivityItem {
   href: string | null;
   /** The booking's reference, for a stay. */
   reference: string | null;
+}
+
+/** One experience or service in a browse grid: its cover, price and next date. */
+export interface OfferingCard {
+  slug: string;
+  kind: OfferingKind;
+  title: string;
+  categorySlug: string | null;
+  area: string | null;
+  durationMinutes: number;
+  priceCents: number;
+  priceUnit: PriceUnit;
+  currency: string;
+  /** Where the business is, for showing the next date in its own time. */
+  timezone: string;
+  photo: { url: string; alt: string | null } | null;
+  /** When its next session starts, or null when none is scheduled. */
+  nextStartsAt: Date | null;
+}
+
+/** A session a guest can still pick, with how many seats are left in it now. */
+export interface OpenSession {
+  id: string;
+  startsAt: string;
+  seatsLeft: number;
+}
+
+/** An experience or service's public page: what it is, where you meet, and its next sessions. */
+export interface PublicOffering {
+  slug: string;
+  kind: OfferingKind;
+  title: string;
+  description: string | null;
+  categorySlug: string | null;
+  area: string | null;
+  meetingPoint: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  durationMinutes: number;
+  priceCents: number;
+  priceUnit: PriceUnit;
+  maxGuests: number;
+  minAge: number | null;
+  activityLevel: ActivityLevel | null;
+  skillLevel: SkillLevel | null;
+  included: string[];
+  notIncluded: string[];
+  accessibility: string[];
+  languages: string[];
+  tags: string[];
+  photos: { id: string; url: string; alt: string | null }[];
+  business: { name: string; slug: string; area: string | null; timezone: string; currency: string };
+  /** Whether the guest pays online as they book (modes 1 and 2) or waits for the host (mode 3). */
+  bookingMode: BookingMode;
+  sessions: OpenSession[];
 }

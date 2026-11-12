@@ -23,3 +23,4 @@ export { splitTrips } from "./trips";
 export { searchParams } from "./schemas";
 export { toPlaceSearch } from "./search-query";
 export { Browse } from "./components/browse";
+export { OfferingView } from "./components/offering-view";

@@ -501,7 +501,11 @@ bar itself is narrower than 32rem (a phone, or the home hero's column on a small
 stack in one card. Every link is built by `searchHref` (`src/lib/search-url.ts`) and read back by
 `searchParams` (`directory/schemas.ts`). The home page's bands are `DirectReceipts` and `AiAppBand`
 (`components/brand`: the sample postcard, the places a real search for it finds, and a button to `/assistant`).
-Experiences and services have no tab yet: they come with their module (F8).
+The tabs (`BROWSE_TABS` in `src/config/listing.ts`: places to stay, experiences, services) are `ChoiceLinks` above
+the categories, kept in the address as `?tab=` (on the home page `/?tab=experiences`). The experiences and services
+tabs show `OfferingCard`s (the same square photo and three lines as `PlaceCard`: title, town and length, next date,
+price per person or group) from `browseOfferings`, without the categories bar; empty state: "Nothing to book here
+yet" and a button back to places to stay.
 
 #### `/p/[slug]` Place page (F2)
 
@@ -633,6 +637,9 @@ shows on the ticket's stub and goes with the question, so the host answers about
 
 #### `/b/[token]` The guest's booking page (F4; the pay buttons F4a)
 
+The same page shows seats in a session of an experience or service: the headings and the waiting lines speak of
+spots instead of nights, and the pass reads When (in the place's time), Guests, Name, Meeting point and Host.
+
 1. **Title** (`font-poster`) and a numbered step bar (sent, paid, confirmed) with check marks for done steps.
 2. **Pay** (online modes, while not paid): "Pay {amount}", the `HoldCountdown` (10 minutes), and `PayOnline`
    (Whish and card buttons).
@@ -667,6 +674,15 @@ Like the place page: title row, gallery, summary, what is included, `ThingsToKno
 `MeetHost`, reviews, and the `SessionBookingCard` (pick a session and seats) on the end side. `ThingsToKnow`'s
 "Cancellation" is the same refund rule as the place page (an experience has no "cancel up to N hours" setting).
 The card shows the total, which is what is paid: no deposit line.
+
+**Built so far** (`OfferingView` and `SessionBookingCard` in `src/modules/directory/components/`): the title row
+(category, town, length, `ShareButton`), the cover photo or the drawn `PlaceArt`, the summary ("Experience in …",
+length, group size, languages, "Hosted by" linking to the place), the description and tags, "Things to know" (guest
+requirements, activity level, included, not included, accessibility, the refund rule), and "Where you'll meet"
+(`PlaceMap`). The card groups the sessions by day in the place's time, each with its spots left (a full one is
+greyed out), six days then "Show more dates" in a `SheetDialog`; then guests, the total, and the guest's details.
+Signed out, it offers "Sign in to book". On a phone a bar held at the bottom leads to it. The layout in `/o/[slug]`
+answers a real 404. Not built yet: the photo gallery and "Show all photos", reviews and `MeetHost`.
 
 #### `/assistant` Use Mabeet from your AI app (F6)
 
@@ -839,7 +855,7 @@ booking and payment, contact, then the checklist. It has a `loading.tsx`.
 | `/channels`                | F10         | Each room's export link (`CopyField`); connected Airbnb, Booking.com or other links with last sync and error (`FeedButtons`); "Add calendar" opens `AddFeedForm` in a `FormDialog`                                                                                                                                                                                                                                                              |
 | `/place` Your place        | F7, F3      | Summary cards (`Panel`s, two columns from `lg`), each showing what is saved and an "Edit" `FormDialog` with only that part: About (`PlaceEssentials`), Photos (count, first four, `PhotoManager` in the pop-up), the whole place's price and size (`RoomEditor` and `SpecialPrices`, booked as a whole only), Name and location, Things to know, Map pin, Stay rules (`SettingsForm` with one place section each); "View my page" in the header |
 | `/rooms`                   | F7          | A `DataTable` of rooms (first photo, name, guests and beds, price, Bookable/Hidden `Pill`), each row with "Edit" (`RoomEditor` and `SpecialPrices`) and "Photos" (`PhotoManager`) in `FormDialog`s; "Add a room" in the header opens `RoomEditor` in a `FormDialog`; empty state                                                                                                                                                                |
-| `/offerings`               | F8 (bonus)  | `OfferingEditor`, `PhotoManager`, `SessionScheduler`. No cancellation-hours field                                                                                                                                                                                                                                                                                                                                                               |
+| `/offerings`               | F8 (bonus)  | A `DataTable` (title and type, price, upcoming dates, Bookable or Hidden, then Edit, Schedule dates and Open public page); `OfferingEditor` and `SessionScheduler` (seats taken in each session) open in `FormDialog`s. No cancellation-hours field. Not built yet: `PhotoManager` for offerings                                                                                                                                                |
 | `/reviews`                 | F5 (bonus)  | Average rating; each review with `ReviewControls` (reply, hide with a reason)                                                                                                                                                                                                                                                                                                                                                                   |
 | `/payouts`                 | F12a        | `StatTile`s (available, upcoming, paid out); "Ask for a payout" opens `PayoutRequestForm` in a `FormDialog`; payout history; online payments                                                                                                                                                                                                                                                                                                    |
 | `/billing`                 | F15 (bonus) | Current plan and renewal date, with `ManageBillingButton` for a place paying by card; 3 `StatTile`s (rooms, experiences, team members against the plan's limits); `PlanOffers` (a `Panel` of the offers open now, each with its end date, "Get Pro free" on a free one for owners not paying by card; hidden when there is none); `PlanCards` with `UpgradeButton` and `WhishPlanButton` (owners only)                                          |

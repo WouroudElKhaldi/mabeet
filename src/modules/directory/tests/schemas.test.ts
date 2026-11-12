@@ -61,6 +61,7 @@ describe("searchParams", () => {
       maxPrice: "150",
       checkIn: "2026-12-04",
       checkOut: "2026-12-06",
+      tab: "experiences",
     });
     expect(state).toEqual({
       area: "Ehden",
@@ -73,11 +74,13 @@ describe("searchParams", () => {
       maxPrice: 150,
       checkIn: "2026-12-04",
       checkOut: "2026-12-06",
+      tab: "experiences",
     });
   });
 
   it("quietly drops what is wrong instead of failing the page", () => {
     const state = searchParams.parse({
+      tab: "castles",
       category: "Mountain!,village",
       amenities: "wifi,teleporter",
       guests: "lots",
@@ -85,6 +88,7 @@ describe("searchParams", () => {
       checkIn: "someday",
     });
     expect(state).toMatchObject({
+      tab: "homes",
       category: ["village"],
       amenities: ["wifi"],
       guests: 1,

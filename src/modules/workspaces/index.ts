@@ -10,6 +10,7 @@ export {
   workspaceInput,
 } from "./schemas";
 export { BusinessStatusToggle } from "./components/business-status-toggle";
+export { RegionSelect } from "./components/region-select";
 export { CreateWorkspaceForm } from "./components/create-workspace-form";
 export { HostProfileForm } from "./components/host-profile-form";
 export { AddPlaceButton } from "./components/add-place-button";
