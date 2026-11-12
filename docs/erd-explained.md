@@ -71,7 +71,8 @@ The main thing on the site: a guesthouse, a hotel, a chalet, a tour company. It 
 - `bookingMode`: one of three modes. **Automatic**: the guest pays online and the booking is confirmed by the payment. **Online with approval**: the guest pays online, then the owner confirms. **Offline**: no payment through the site; the owner confirms by hand. Guests always pay the full price (no deposits), and every online refund is full
 - `onlineTermsAcceptedAt`: when the owner accepted "online payments are always refunded in full" (needed for the two online modes)
 - `plan`: which subscription the business pays for
-- `status`: for example active or suspended
+- `status`: active, suspended by the platform admin (closed to guests and team), or archived by its owner (closed
+  to guests only, so the team can bring it back)
 
 The business is the "parent" of almost everything:
 
@@ -229,6 +230,22 @@ admin approves anything. It also records how many months the payment bought.
 
 - It belongs to **one business**.
 - It _may_ belong to **one user** (the owner who paid; empty for automatic Stripe renewals).
+- It _may_ belong to **one PlanOffer** (the share off that lowered its price).
+
+### 24a. PlanOffer
+
+An offer a platform admin gives hosts: a paid plan **free**, or a **share off** its price, for every place or one
+place, during each place's first months or between two dates. Ending it sets `isDeleted`; what it gave stays.
+
+- It _may_ belong to **one business** (empty means every place).
+- It belongs to **one user** (the admin who made it).
+- It has many **PlanOfferClaims** and many **PlanPayments** (the discounted ones).
+
+### 24b. PlanOfferClaim
+
+"This place took this free offer": its plan runs until `endsAt`. A place takes each offer once.
+
+- It belongs to **one offer** and **one business**.
 
 ### 25. WhishSandboxPayment
 
@@ -266,10 +283,11 @@ staying in its region see it under "Things to do near your stay". It is never bo
 
 ### 28b. Sponsorship
 
-"From this day to that day, this partner (or this experience) is sponsored." While it lasts, it comes first near
-guests' stays and is always marked "Sponsored".
+"From this day to that day, this partner (or this experience, or this guesthouse) is sponsored." While it lasts, a
+partner or an experience comes first near guests' stays, marked "Sponsored"; a guesthouse comes first in search and
+on the home page, marked "Featured".
 
-- It belongs to **one partner place** _or_ **one offering**, never both and never neither.
+- It belongs to exactly **one partner place**, **one offering** or **one business**.
 - `endsOn` is the day after the last sponsored day, like a check-out.
 - It remembers the admin who made it.
 
@@ -350,7 +368,9 @@ A **secret key** a staff member makes so an AI app can reach the business's data
 
 A diary of **every action an AI app did**: which tool, whether it worked, and how fast. It is for safety and checking.
 
-- It belongs to **one business**.
+- A call from a host's AI app or the dashboard chat belongs to **one business** and one person.
+- A call from a guest's AI app (the public guest MCP, channel "guest") belongs to **no business and no person**:
+  it is kept only so the platform admins can see how much guests use it, on the AI apps page.
 
 ---
 

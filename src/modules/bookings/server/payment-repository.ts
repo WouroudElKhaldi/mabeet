@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { type Db, moneyNumber, type Tx } from "@/server/db/client";
 
 // A booking's online payments and their refunds. Every payment is online (Whish or Stripe) and for the full total;
@@ -258,11 +259,41 @@ export function listBusinessPayments(db: Db, businessId: string, take: number) {
   });
 }
 
-/** Refunds a provider kept refusing and housekeeping stopped retrying: the admin sends them by hand. */
-export function listRefundsToSendByHand(db: Db, recordedBefore: Date) {
+/** Refunds a provider kept refusing and housekeeping stopped retrying, recorded before `recordedBefore`. */
+function refundsToSendWhere(recordedBefore: Date, q: string): Prisma.RefundWhereInput {
+  const words = { contains: q, mode: "insensitive" } as const;
+  const guest = { OR: [{ guestName: words }, { reference: words }] };
+  return {
+    status: "PENDING",
+    isDeleted: false,
+    createdAt: { lt: recordedBefore },
+    ...(q
+      ? {
+          OR: [
+            { business: { name: words } },
+            { payment: { booking: guest } },
+            { payment: { sessionBooking: guest } },
+          ],
+        }
+      : {}),
+  };
+}
+
+/**
+ * The refunds the admin sends by hand, the oldest first, a page at a time, found by words in the place's name, the
+ * guest's name or the booking's reference.
+ */
+export function listRefundsToSendByHand(
+  db: Db,
+  recordedBefore: Date,
+  q: string,
+  page: { skip: number; take: number },
+) {
   return db.refund.findMany({
-    where: { status: "PENDING", isDeleted: false, createdAt: { lt: recordedBefore } },
+    where: refundsToSendWhere(recordedBefore, q),
     orderBy: { createdAt: "asc" },
+    skip: page.skip,
+    take: page.take,
     select: {
       id: true,
       businessId: true,
@@ -280,6 +311,10 @@ export function listRefundsToSendByHand(db: Db, recordedBefore: Date) {
       },
     },
   });
+}
+
+export function countRefundsToSendByHand(db: Db, recordedBefore: Date, q: string) {
+  return db.refund.count({ where: refundsToSendWhere(recordedBefore, q) });
 }
 
 /** The admin sent a refund by hand. Only a pending one changes, so it is marked once. */

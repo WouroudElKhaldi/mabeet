@@ -1,4 +1,12 @@
-import { expect, type Page } from "@playwright/test";
+import {
+  type Browser,
+  type BrowserContext,
+  type BrowserContextOptions,
+  test as base,
+  expect,
+  type Page,
+} from "@playwright/test";
+import { confirmEmail } from "./mailbox";
 
 // What the browser tests share: the demo accounts the seed makes (prisma/seed.ts), where each one's sign-in is kept
 // between tests, and the checks every page must pass.
@@ -16,6 +24,39 @@ export type AccountName = keyof typeof ACCOUNTS;
 
 /** Where the sign-in step keeps an account's cookies, for tests that start signed in (`test.use({ storageState })`). */
 export const signedIn = (account: AccountName) => `test-results/.auth/${account}.json`;
+
+// The demo places' stock photos come from images.unsplash.com. On a slow connection they take longer than the image
+// optimizer waits (it answers 500), and a place's page never finishes loading, so the tests would measure the photo
+// site, not our app. The browser answers them with one small picture instead; our own uploaded photos still go the
+// whole way through.
+const STOCK_PHOTO = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4sP8EAATJAkrt3ZsDAAAAAElFTkSuQmCC",
+  "base64",
+);
+
+function isStockPhoto(url: URL): boolean {
+  const source = url.pathname === "/_next/image" ? url.searchParams.get("url") : url.href;
+  return source?.startsWith("https://images.unsplash.com/") ?? false;
+}
+
+async function withoutStockPhotos(context: BrowserContext): Promise<BrowserContext> {
+  await context.route(isStockPhoto, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: STOCK_PHOTO }),
+  );
+  return context;
+}
+
+/** Playwright's `test`, with the stock photos answered in the browser. Every spec imports this one. */
+export const test = base.extend({
+  context: async ({ context }, provide) => {
+    await provide(await withoutStockPhotos(context));
+  },
+});
+
+/** A second window (another person, or a visitor), with the stock photos answered like the first. */
+export async function newContext(browser: Browser, options?: BrowserContextOptions) {
+  return withoutStockPhotos(await browser.newContext(options));
+}
 
 /** The demo places, by booking mode (prisma/seed.ts). */
 export const PLACES = {
@@ -114,18 +155,22 @@ function isoDaysAfter(isoDate: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** The page is no wider than the phone: nothing makes the visitor scroll sideways. */
+/**
+ * The page is no wider than the window: nothing makes the visitor scroll sideways. It looks again for a moment,
+ * because while the theme changes the page briefly counts the scrollbar as width, then settles.
+ */
 export async function expectNoSidewaysScroll(page: Page) {
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow, `${page.url()} scrolls sideways by ${overflow}px`).toBeLessThanOrEqual(0);
+  await expect
+    .poll(
+      () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth),
+      { message: `${page.url()} scrolls sideways`, timeout: 3_000 },
+    )
+    .toBeLessThanOrEqual(0);
 }
 
 /**
  * Collects what went wrong in the browser while a test ran: uncaught errors and our server's 5xx answers. A refusal
- * the test asked for is checked by the test itself, so 4xx answers are left out, and so is the image optimizer timing
- * out on a demo place's stock photo, which is the photo site being slow, not our app.
+ * the test asked for is checked by the test itself, so 4xx answers are left out.
  */
 export function watchForErrors(page: Page) {
   const problems: string[] = [];
@@ -133,7 +178,6 @@ export function watchForErrors(page: Page) {
   page.on("response", (response) => {
     const url = new URL(response.url());
     if (url.origin !== new URL(page.url()).origin || response.status() < 500) return;
-    if (response.status() === 504 && url.pathname === "/_next/image") return;
     problems.push(`${response.status()} ${response.request().method()} ${url.pathname}`);
   });
   return problems;
@@ -168,8 +212,25 @@ export async function signUp(page: Page, name: string): Promise<string> {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).not.toHaveURL(/\/sign-up/, { timeout: 15_000 });
+  // No one is signed in before confirming their email: the account waits for its link.
+  await expect(page.getByText("Check your inbox")).toBeVisible({ timeout: 15_000 });
+  await confirmEmail(email);
+  await signIn(page, email);
   return email;
+}
+
+/**
+ * Signs in on the sign-in page. Many tests sign in at once from the same address, so the sign-in limit (a few tries
+ * in ten seconds) can refuse one: it waits and tries again, as a person would.
+ */
+export async function signIn(page: Page, email: string) {
+  await expect(async () => {
+    if (!new URL(page.url()).pathname.startsWith("/sign-in")) await page.goto("/sign-in");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).not.toHaveURL(/\/sign-in/, { timeout: 5_000 });
+  }).toPass({ intervals: [3_000, 5_000, 10_000], timeout: 45_000 });
 }
 
 /**
@@ -185,8 +246,9 @@ export async function newHost(page: Page, name: string): Promise<string> {
     .fill(`${name.split(" ")[0] ?? "New"}'s guesthouse ${Date.now() % 100_000}`);
   await create.getByLabel("Town or area").fill("Batroun");
   await create.getByRole("button", { name: "Create workspace" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/[^/]+$/, { timeout: 20_000 });
-  return new URL(page.url()).pathname;
+  // A new place on Free opens on its guided setup; the place's home is the address above it.
+  await expect(page).toHaveURL(/\/dashboard\/[^/]+\/setup$/, { timeout: 20_000 });
+  return new URL(page.url()).pathname.replace(/\/setup$/, "");
 }
 
 /**

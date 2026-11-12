@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+import { type PersonKind, TEAM_OPEN_STATUSES } from "@/config/enums";
 import type { Db, Tx } from "@/server/db/client";
 
 // Everything held about one person, for "download my data", and the checks before deleting an account.
@@ -101,10 +103,15 @@ export function findMyData(db: Db, userId: string) {
   });
 }
 
-/** Active businesses where this person is the only active owner: deleting them would orphan the place. */
+/** Open or archived businesses where this person is the only active owner: deleting them would orphan the place. */
 export async function listSoleOwnedBusinesses(db: Db, userId: string): Promise<string[]> {
   const owned = await db.membership.findMany({
-    where: { userId, status: "ACTIVE", role: { isOwner: true }, business: { status: "ACTIVE" } },
+    where: {
+      userId,
+      status: "ACTIVE",
+      role: { isOwner: true },
+      business: { status: { in: [...TEAM_OPEN_STATUSES] } },
+    },
     select: { businessId: true, business: { select: { name: true } } },
   });
   const sole: string[] = [];
@@ -149,11 +156,14 @@ export async function softDeleteUser(tx: Tx, userId: string, now: Date) {
   await tx.oauthConsent.deleteMany({ where: { userId } });
 }
 
-/** Gives this person the platform admin role: every business, on the website only. */
+/**
+ * Gives this person the platform admin role: every business, on the website only. Their email counts as confirmed:
+ * whoever runs `pnpm admins:create` vouches for the address, and sign-in refuses an unconfirmed one.
+ */
 export function makePlatformAdmin(db: Db, userId: string) {
   return db.user.update({
     where: { id: userId },
-    data: { platformRole: "SUPER_ADMIN" },
+    data: { platformRole: "SUPER_ADMIN", emailVerified: true },
     select: { id: true },
   });
 }
@@ -184,26 +194,84 @@ export function setLocale(db: Db, userId: string, locale: string) {
 }
 
 /** The newest accounts for the platform admin, with how many places each works in and how many trips they booked. */
-export function listNewestPeople(db: Db, take: number) {
+export interface PeopleFilters {
+  /** Words in the person's name, email or phone. */
+  q: string;
+  kind?: PersonKind;
+}
+
+/** A place the person is on the team of now. */
+const onTeam = { status: "ACTIVE", isDeleted: false, business: { isDeleted: false } } as const;
+const owns = { ...onTeam, role: { isOwner: true, isDeleted: false } } as const;
+
+function personWhere({ q, kind }: PeopleFilters): Prisma.UserWhereInput {
+  const words = { contains: q, mode: "insensitive" } as const;
+  const byKind: Record<PersonKind, Prisma.UserWhereInput> = {
+    admin: { platformRole: "SUPER_ADMIN" },
+    host: { memberships: { some: owns } },
+    team: { memberships: { some: onTeam, none: owns } },
+    guest: { memberships: { none: onTeam } },
+  };
+  return {
+    isDeleted: false,
+    ...(kind ? byKind[kind] : {}),
+    ...(q ? { OR: [{ name: words }, { email: words }, { phone: words }] } : {}),
+  };
+}
+
+/** One page of the people for the platform admin, the newest first, with their places and trips. */
+export function listPeopleForAdmin(db: Db, filters: PeopleFilters, page: { skip: number; take: number }) {
   return db.user.findMany({
-    where: { isDeleted: false },
-    orderBy: { createdAt: "desc" },
-    take,
+    where: personWhere(filters),
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    ...page,
     select: {
       id: true,
       name: true,
       email: true,
+      phone: true,
       platformRole: true,
       createdAt: true,
-      _count: {
-        select: { memberships: { where: { status: "ACTIVE" } }, bookings: { where: { isDeleted: false } } },
-      },
+      memberships: { where: onTeam, select: { role: { select: { isOwner: true } } } },
+      _count: { select: { bookings: { where: { isDeleted: false } } } },
     },
   });
 }
 
-export function countPeople(db: Db) {
-  return db.user.count({ where: { isDeleted: false } });
+export function countPeople(db: Db, filters: PeopleFilters = { q: "" }) {
+  return db.user.count({ where: personWhere(filters) });
+}
+
+/**
+ * One person for the platform admin: their account, the places they are on the team of with their role there, and
+ * how many trips and reviews they have. Null when there is no such person.
+ */
+export function findPersonForAdmin(db: Db, userId: string) {
+  return db.user.findFirst({
+    where: { id: userId, isDeleted: false },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      emailVerified: true,
+      phone: true,
+      locale: true,
+      platformRole: true,
+      createdAt: true,
+      memberships: {
+        where: onTeam,
+        orderBy: { createdAt: "asc" },
+        select: {
+          createdAt: true,
+          role: { select: { name: true, isOwner: true } },
+          business: { select: { id: true, name: true, slug: true, status: true, plan: true } },
+        },
+      },
+      _count: {
+        select: { bookings: { where: { isDeleted: false } }, reviews: { where: { isDeleted: false } } },
+      },
+    },
+  });
 }
 
 export function findNotificationsSeenAt(db: Db, userId: string) {

@@ -133,6 +133,37 @@ describe("business isolation over HTTP", () => {
     expect(await prisma.membership.count({ where: { userId: admin.userId } })).toBe(0);
   });
 
+  it("signs no one in before their email is confirmed, and refuses an unconfirmed account a place", async () => {
+    const email = testEmail();
+    const signedUp = await authRoute.POST(
+      new Request("http://localhost:3000/api/auth/sign-up/email", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify({ name: "Waiting", email, password: TEST_PASSWORD }),
+      }),
+    );
+    expect(signedUp.headers.getSetCookie().some((cookie) => cookie.includes("session_token="))).toBe(false);
+    const signIn = await authRoute.POST(
+      new Request("http://localhost:3000/api/auth/sign-in/email", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify({ email, password: TEST_PASSWORD }),
+      }),
+    );
+    expect(signIn.status).toBe(403);
+
+    // An account signed in before confirming was required still cannot open a place.
+    const early = await signUp("Early account");
+    await prisma.user.update({ where: { id: early.userId }, data: { emailVerified: false } });
+    const refused = await call(workspaces.POST, { as: early, body: { name: "Beit Early" } });
+    expect(refused.status).toBe(403);
+    expect(
+      await prisma.business.count({
+        where: { name: "Beit Early", memberships: { some: { userId: early.userId } } },
+      }),
+    ).toBe(0);
+  });
+
   it("never lets anyone become a platform admin by signing up", async () => {
     const email = testEmail();
     await authRoute.POST(

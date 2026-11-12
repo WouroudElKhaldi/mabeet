@@ -1,3 +1,4 @@
+import { TEAM_OPEN_STATUSES } from "@/config/enums";
 import type { Db } from "@/server/db/client";
 
 // The two reads every workspace request makes to learn who is acting. They live in the shared kernel, not the team
@@ -5,7 +6,8 @@ import type { Db } from "@/server/db/client";
 
 export function findActiveMembership(db: Db, userId: string, businessId: string) {
   return db.membership.findFirst({
-    where: { userId, businessId, status: "ACTIVE", business: { status: "ACTIVE" } },
+    // An archived place is closed to guests only: its team keeps the dashboard, so the owner can bring it back.
+    where: { userId, businessId, status: "ACTIVE", business: { status: { in: [...TEAM_OPEN_STATUSES] } } },
     include: { role: true },
   });
 }

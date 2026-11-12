@@ -14,3 +14,5 @@ export {
 } from "./server/billing-service";
 export { getPlanFeesPaid } from "./server/plan-fees";
 export { getPlanRevenue } from "./server/plan-revenue";
+export { claimFreeOffer, createOffer, endOffer, listOffersForAdmin } from "./server/offer-service";
+export { setPlanAsAdmin } from "./server/admin-plan-service";

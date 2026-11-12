@@ -1,8 +1,16 @@
 import { z } from "zod";
-import { BOOKING_MODES, BUSINESS_STATUSES, CURRENCIES, HOST_CONTACT_OPTIONS } from "@/config/enums";
+import {
+  ADMIN_BUSINESS_STATUSES,
+  BOOKING_MODES,
+  BUSINESS_STATUSES,
+  CURRENCIES,
+  HOST_CONTACT_OPTIONS,
+} from "@/config/enums";
 import { ACCESSIBILITY, LANGUAGES, TAGS } from "@/config/listing";
 import { REGION_KEYS } from "@/config/regions";
-import { id, phone } from "@/lib/schemas";
+import { PLANS } from "@/config/plans";
+import { SETUP_SCREENS } from "@/config/setup";
+import { id, listChoice, listQuery, phone } from "@/lib/schemas";
 
 /** Creating a place: the person who creates it becomes its owner. */
 export const workspaceInput = z.object({
@@ -64,7 +72,10 @@ export const settingsInput = z
 export const platformBusinessParams = z.object({ businessId: id });
 
 /** A platform admin suspends a business, or brings it back. */
-export const businessStatusInput = z.object({ status: z.enum(BUSINESS_STATUSES) });
+export const businessStatusInput = z.object({ status: z.enum(ADMIN_BUSINESS_STATUSES) });
+
+/** The owner archives the place (closed to guests, kept for the team) or brings it back. */
+export const placeArchiveInput = z.object({ archived: z.boolean() });
 
 // ---------- Host profile ----------
 
@@ -87,3 +98,12 @@ export const hostProfileInput = z.object({
   showOnListings: z.boolean(),
   contactBy: z.enum(HOST_CONTACT_OPTIONS).default("BOTH"),
 });
+
+/** The admin's hosts table: words, and their places' status or plan. */
+export const platformHostsQuery = listQuery.extend({
+  status: listChoice(BUSINESS_STATUSES),
+  plan: listChoice(PLANS),
+});
+
+/** The guided setup's screen in its address (`?step=photos`); the first one when it is missing or wrong. */
+export const setupQuery = z.object({ step: z.enum(SETUP_SCREENS).catch("unit") });

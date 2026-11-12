@@ -8,7 +8,19 @@ export {
   findPlacesForReports,
   getPublicPlace,
   listListedPlaces,
+  listPlaceNames,
   listPlacesByIds,
 } from "./server/place-lookup";
-export { getPlatformHost, listPlatformBusinesses, setBusinessStatus } from "./server/platform-service";
-export { getPlaceBasics, getSettings, saveBookingUnit, updateSettings } from "./server/settings-service";
+export {
+  getPlatformHost,
+  listPlatformBusinesses,
+  listPlatformHosts,
+  setBusinessStatus,
+} from "./server/platform-service";
+export {
+  getPlaceBasics,
+  getSettings,
+  saveBookingUnit,
+  setPlaceArchived,
+  updateSettings,
+} from "./server/settings-service";

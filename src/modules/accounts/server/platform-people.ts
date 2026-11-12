@@ -1,20 +1,50 @@
 import { type PlatformActor, requirePlatformAdmin } from "@/server/auth/tenant-context";
 import { prisma } from "@/server/db/client";
-import { countPeople, listNewestPeople } from "./account-repository";
+import { notFound } from "@/server/errors";
+import { pageOf } from "@/utils/paging";
+import {
+  countPeople,
+  findPersonForAdmin,
+  listPeopleForAdmin,
+  type PeopleFilters,
+} from "./account-repository";
 
-/** How many accounts the admin's list shows: the newest ones. */
-const PEOPLE_SHOWN = 100;
-
-/** Everyone with an account, for the platform admin: how many in all, and the newest. */
-export async function listPlatformPeople(actor: PlatformActor) {
+/**
+ * Everyone with an account, for the platform admin's table: one page, the newest first, searched by name, email or
+ * phone and filtered by kind, with how many in all. With no filters it is everyone, for the overview's count.
+ */
+export async function listPlatformPeople(actor: PlatformActor, filters: PeopleFilters = { q: "" }, page = 1) {
   requirePlatformAdmin(actor);
-  const [total, people] = await Promise.all([countPeople(prisma), listNewestPeople(prisma, PEOPLE_SHOWN)]);
+  const total = await countPeople(prisma, filters);
+  const { skip, take, ...paging } = pageOf(total, page);
+  const people = await listPeopleForAdmin(prisma, filters, { skip, take });
   return {
     total,
-    people: people.map(({ _count, ...person }) => ({
+    ...paging,
+    people: people.map(({ _count, memberships, ...person }) => ({
       ...person,
-      placeCount: _count.memberships,
+      placeCount: memberships.length,
+      ownsPlace: memberships.some((membership) => membership.role.isOwner),
       tripCount: _count.bookings,
+    })),
+  };
+}
+
+/** One person for the admin: their account, the places they work in and their role there, and their counts. */
+export async function getPlatformPerson(actor: PlatformActor, userId: string) {
+  requirePlatformAdmin(actor);
+  const person = await findPersonForAdmin(prisma, userId);
+  if (!person) throw notFound("Person");
+  const { _count, memberships, ...account } = person;
+  return {
+    ...account,
+    tripCount: _count.bookings,
+    reviewCount: _count.reviews,
+    places: memberships.map(({ business, role, createdAt }) => ({
+      ...business,
+      roleName: role.name,
+      isOwner: role.isOwner,
+      joinedAt: createdAt,
     })),
   };
 }

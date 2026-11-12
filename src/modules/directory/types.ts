@@ -1,4 +1,14 @@
-import type { BookingMode, BookingStatus, BookingUnit, HostContact, PhotoArea } from "@prisma/client";
+import type {
+  ActivityLevel,
+  BookingMode,
+  BookingStatus,
+  BookingUnit,
+  HostContact,
+  PhotoArea,
+  PriceUnit,
+  SkillLevel,
+} from "@prisma/client";
+import type { OfferingKind } from "@/config/enums";
 import type { PlaceRating, PlaceReview } from "@/modules/reviews";
 import type { StayIssue } from "@/config/booking-limits";
 import type { NearbyPartner } from "@/modules/partners";
@@ -104,6 +114,13 @@ export interface PublicPlace {
   nearby: NearbyPartner[];
 }
 
+/** An experience or service a guest could join during their stay: sponsored ones are marked, and how far it is. */
+export interface NearbyOffering extends OfferingCard {
+  sponsored: boolean;
+  /** From the place, by map pin; null when either has no pin. */
+  distanceKm: number | null;
+}
+
 /** One of a guest's stays, as their trips list shows it: no payment details, no guest contact, only what the list needs. */
 export interface GuestTrip {
   /** The secret in the booking's private link, /b/{publicToken}. */
@@ -151,6 +168,8 @@ export interface PlaceCard {
   /** The cheapest whole stay, or null without dates. */
   stayTotalFromCents: number | null;
   offers: SearchOffer[];
+  /** Featured by the platform today: shown first, and always marked so. */
+  featured: boolean;
 }
 
 /** One unit of a place over the stay a guest asked about: free or not, whether it fits, and its price. */
@@ -187,4 +206,65 @@ export interface ActivityItem {
   href: string | null;
   /** The booking's reference, for a stay. */
   reference: string | null;
+}
+
+/** One experience or service in a browse grid: its cover, price and next date. */
+export interface OfferingCard {
+  slug: string;
+  kind: OfferingKind;
+  title: string;
+  categorySlug: string | null;
+  area: string | null;
+  durationMinutes: number;
+  priceCents: number;
+  priceUnit: PriceUnit;
+  currency: string;
+  /** Where the business is, for showing the next date in its own time. */
+  timezone: string;
+  photo: { url: string; alt: string | null } | null;
+  /** When its next session starts, or null when none is scheduled. */
+  nextStartsAt: Date | null;
+}
+
+/** A session a guest can still pick, with how many seats are left in it now. */
+export interface OpenSession {
+  id: string;
+  startsAt: string;
+  seatsLeft: number;
+}
+
+/** An experience or service's public page: what it is, where you meet, and its next sessions. */
+export interface PublicOffering {
+  slug: string;
+  kind: OfferingKind;
+  title: string;
+  description: string | null;
+  categorySlug: string | null;
+  area: string | null;
+  meetingPoint: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  durationMinutes: number;
+  priceCents: number;
+  priceUnit: PriceUnit;
+  maxGuests: number;
+  minAge: number | null;
+  activityLevel: ActivityLevel | null;
+  skillLevel: SkillLevel | null;
+  included: string[];
+  notIncluded: string[];
+  accessibility: string[];
+  languages: string[];
+  tags: string[];
+  photos: { id: string; url: string; alt: string | null }[];
+  /** Its own published reviews, newest first. */
+  reviews: PlaceReview[];
+  /** The place's host, met as on the place's page. */
+  host: PublicHost;
+  /** The place's WhatsApp, the only number guests are given. */
+  whatsapp: string | null;
+  business: { name: string; slug: string; area: string | null; timezone: string; currency: string };
+  /** Whether the guest pays online as they book (modes 1 and 2) or waits for the host (mode 3). */
+  bookingMode: BookingMode;
+  sessions: OpenSession[];
 }

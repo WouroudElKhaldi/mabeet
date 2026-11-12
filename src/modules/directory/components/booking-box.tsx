@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -45,6 +46,17 @@ export function BookingBox({ place, units, initial = {} }: BookingBoxProps) {
     checkOut: initial.checkOut ?? null,
   });
   const [guests, setGuests] = useState(initial.guests ?? DEFAULT_GUESTS);
+  const router = useRouter();
+
+  // The dates go in the address too, so the page can show what is on during the stay and a shared link keeps them.
+  const pickDates = (picked: DateRangeValue) => {
+    setDates(picked);
+    if (!isCompleteStay(picked)) return;
+    const query = new URLSearchParams(globalThis.location.search);
+    query.set("checkIn", picked.checkIn);
+    query.set("checkOut", picked.checkOut);
+    router.replace(`?${query.toString()}`, { scroll: false });
+  };
 
   // What is taken is read once for the year ahead, for the room chosen; the calendar shows those nights as taken.
   const [window] = useState(() => availabilityWindow());
@@ -91,7 +103,7 @@ export function BookingBox({ place, units, initial = {} }: BookingBoxProps) {
         <span className="text-sm font-semibold">{t("dates")}</span>
         <DateRangePicker
           value={dates}
-          onChange={setDates}
+          onChange={pickDates}
           minNights={unit.minNights}
           maxNights={MAX_STAY_NIGHTS}
           maxDate={window.to}

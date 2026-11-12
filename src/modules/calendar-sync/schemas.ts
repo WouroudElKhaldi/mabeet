@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { FEED_SOURCES } from "@/config/enums";
-import { id, workspaceParams } from "@/lib/schemas";
+import { id, listChoice, listQuery, workspaceParams } from "@/lib/schemas";
 
 // The input checks of calendar links, shared by the routes and the screens.
 
 export const feedParams = workspaceParams.extend({ feedId: id });
+
+/** The admin's table of links that need a look: words, a page, and where the link is from. */
+export const syncHealthQuery = listQuery.extend({ source: listChoice(FEED_SOURCES) });
 
 /** Connecting a room to an Airbnb, Booking.com or other calendar link. The server checks it is public https. */
 export const feedInput = z.object({

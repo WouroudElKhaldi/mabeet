@@ -1,8 +1,9 @@
-import type { Prisma } from "@prisma/client";
+import type { PartnerKind, Prisma } from "@prisma/client";
 import type { Db } from "@/server/db/client";
 
-// Featured partners (F23): places near guesthouses that are not on the platform, and the dates they are sponsored.
-// They belong to no business, so these queries filter by region or id, never by a business.
+// Featured partners (F23): places near guesthouses that are not on the platform, and the dates they are sponsored;
+// and the dates guesthouses on the platform are featured. Partners belong to no business, so their queries filter
+// by region or id; a featured guesthouse's sponsorship is found by its business.
 
 const PARTNER = {
   id: true,
@@ -38,6 +39,52 @@ export function listPartners(db: Db, today: Date) {
       },
     },
   });
+}
+
+export interface PartnerFilters {
+  /** Words in the name or the area. */
+  q: string;
+  kind?: PartnerKind;
+  region?: string;
+  /** The removed partners instead of the live ones. */
+  removed: boolean;
+}
+
+function partnerWhere({ q, kind, region, removed }: PartnerFilters): Prisma.PartnerPlaceWhereInput {
+  const words = { contains: q, mode: "insensitive" } as const;
+  return {
+    isDeleted: removed,
+    ...(kind ? { kind } : {}),
+    ...(region ? { region } : {}),
+    ...(q ? { OR: [{ name: words }, { area: words }] } : {}),
+  };
+}
+
+/** One page of the partners for the admin's table, by region then name, with the sponsorships not over yet. */
+export function listPartnerPage(
+  db: Db,
+  filters: PartnerFilters,
+  today: Date,
+  page: { skip: number; take: number },
+) {
+  return db.partnerPlace.findMany({
+    where: partnerWhere(filters),
+    orderBy: [{ region: "asc" }, { name: "asc" }, { id: "asc" }],
+    ...page,
+    select: {
+      ...PARTNER,
+      isDeleted: true,
+      sponsorships: {
+        where: { isDeleted: false, endsOn: { gt: today } },
+        orderBy: { startsOn: "asc" },
+        select: { id: true, startsOn: true, endsOn: true },
+      },
+    },
+  });
+}
+
+export function countPartners(db: Db, filters: PartnerFilters) {
+  return db.partnerPlace.count({ where: partnerWhere(filters) });
 }
 
 export async function createPartner(db: Db, data: Prisma.PartnerPlaceCreateInput) {
@@ -85,4 +132,42 @@ export async function listPartnersInRegion(db: Db, region: string, today: Date) 
     select: { ...PARTNER, sponsorships: { where: sponsoredOn(today), select: { id: true }, take: 1 } },
   });
   return partners.map(({ sponsorships, ...partner }) => ({ ...partner, sponsored: sponsorships.length > 0 }));
+}
+
+/** The days guesthouses are featured that are not over yet, soonest first. */
+export function listPlaceSponsorships(db: Db, today: Date) {
+  return db.sponsorship.findMany({
+    where: { businessId: { not: null }, isDeleted: false, endsOn: { gt: today } },
+    orderBy: { startsOn: "asc" },
+    select: { id: true, businessId: true, startsOn: true, endsOn: true },
+  });
+}
+
+/** Ends a guesthouse's featured days. False when there is no such live one. */
+export async function removePlaceSponsorship(db: Db, sponsorshipId: string) {
+  const { count } = await db.sponsorship.updateMany({
+    where: { id: sponsorshipId, businessId: { not: null }, isDeleted: false },
+    data: { isDeleted: true },
+  });
+  return count > 0;
+}
+
+/** The guesthouses featured on `today`. */
+export async function findFeaturedBusinessIds(db: Db, today: Date): Promise<string[]> {
+  const rows = await db.sponsorship.findMany({
+    where: { ...sponsoredOn(today), businessId: { not: null } },
+    select: { businessId: true },
+    distinct: ["businessId"],
+  });
+  return rows.flatMap((row) => (row.businessId ? [row.businessId] : []));
+}
+
+/** The experiences and services sponsored on `today`. */
+export async function findSponsoredOfferingIds(db: Db, today: Date): Promise<string[]> {
+  const rows = await db.sponsorship.findMany({
+    where: { ...sponsoredOn(today), offeringId: { not: null } },
+    select: { offeringId: true },
+    distinct: ["offeringId"],
+  });
+  return rows.flatMap((row) => (row.offeringId ? [row.offeringId] : []));
 }

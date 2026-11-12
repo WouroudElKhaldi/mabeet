@@ -32,3 +32,4 @@ export {
   setCoverPhoto,
   uploadPhoto,
 } from "./server/photo-service";
+export { getSetupChecklist } from "./server/setup-service";

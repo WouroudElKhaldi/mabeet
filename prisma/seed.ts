@@ -6,7 +6,8 @@
  * It makes the platform categories, four demo accounts (host, front-desk staff, guest, admin; password SEED_PASSWORD),
  * and five places that show every way to take bookings: online with the host's approval (the one shown on stage),
  * automatic, offline, and one booked as a whole. The offline place starts with a request waiting for the host and a
- * confirmed stay, so the bookings screen has something to show. Nine partner places sit in the demo places' regions,
+ * confirmed stay, so the bookings screen has something to show, and a stay the demo guest has already made and
+ * reviewed, so the place page and the host's reviews page have a review to show. Nine partner places sit in the demo places' regions,
  * three of them sponsored, for "Things to do near your stay".
  */
 import { config } from "dotenv";
@@ -335,7 +336,7 @@ async function main() {
   const { createWorkspace } = await import("@/modules/workspaces/server");
   const { confirmBooking, requestBooking } = await import("@/modules/bookings/server");
   const { resolveContext } = await import("@/server/auth/resolve-context");
-  const { secureToken } = await import("@/utils/tokens");
+  const { bookingReference, secureToken } = await import("@/utils/tokens");
   const { addDays, todayUtc } = await import("@/utils/dates");
 
   const password = env.SEED_PASSWORD ?? "demo-password-123";
@@ -475,6 +476,54 @@ async function main() {
       const ctx = await resolveContext(host.id, offline.business.id);
       if (ctx) await confirmBooking(ctx, { bookingId: confirmed.id });
     }
+  }
+
+  // A stay the demo guest made three weeks ago at the offline place, and their review of it. Written straight to the
+  // database, because the booking engine takes no stay in the past; only once, whenever the place has no review yet.
+  const reviewed = await prisma.business.findFirst({
+    where: { name: "Beit Ghazir (demo)", isDeleted: false },
+  });
+  const reviewedRoom =
+    reviewed &&
+    (await prisma.room.findFirst({
+      where: { businessId: reviewed.id, kind: "ROOM", isDeleted: false },
+      orderBy: { createdAt: "asc" },
+    }));
+  if (reviewed && reviewedRoom && !(await prisma.review.findFirst({ where: { businessId: reviewed.id } }))) {
+    const checkIn = addDays(todayUtc(), -21);
+    const checkOut = addDays(checkIn, 2);
+    const past = await prisma.booking.create({
+      data: {
+        businessId: reviewed.id,
+        roomId: reviewedRoom.id,
+        guestUserId: guest.id,
+        guestName: "Demo Guest",
+        guestPhone: "+96170000001",
+        guestEmail: guest.email,
+        guestCount: 2,
+        checkIn,
+        checkOut,
+        totalCents: reviewedRoom.baseRateCents * 2,
+        currency: reviewed.currency,
+        reference: bookingReference(),
+        publicToken: secureToken(),
+        bookingMode: reviewed.bookingMode,
+        status: "CONFIRMED",
+        occupancy: {
+          create: { businessId: reviewed.id, roomId: reviewedRoom.id, checkIn, checkOut, kind: "DIRECT" },
+        },
+      },
+    });
+    await prisma.review.create({
+      data: {
+        businessId: reviewed.id,
+        roomId: reviewedRoom.id,
+        bookingId: past.id,
+        authorId: guest.id,
+        rating: 5,
+        comment: "A quiet stone house by the sea, and breakfast on the terrace every morning. We'll be back.",
+      },
+    });
   }
 
   // The demo partners, each made once. A sponsored one is sponsored from the day it is made, for 60 days, by the

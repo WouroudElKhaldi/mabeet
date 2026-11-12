@@ -2,6 +2,7 @@ import type { FeedSource } from "@prisma/client";
 import { type PlatformActor, requirePlatformAdmin } from "@/server/auth/tenant-context";
 import { type Db, prisma, type Tx } from "@/server/db/client";
 import { conflict } from "@/server/errors";
+import { pageOf } from "@/utils/paging";
 import { FEED_STALE_AFTER_MS } from "../feed-health";
 import { buildExportFeed, type ExportEvent } from "./build-feed";
 import * as feeds from "./feed-repository";
@@ -69,17 +70,24 @@ export function buildRoomCalendarFile(calendarName: string, events: readonly Exp
   return buildExportFeed(calendarName, events);
 }
 
-/** How many links the admin's health page lists at most: the newest problems first. */
-const HEALTH_SHOWN = 100;
-
-/** Calendar sync across the platform, for the admin: how many links, how many need a look, and the newest of those. */
-export async function getSyncHealth(actor: PlatformActor, now = new Date()) {
+/**
+ * Calendar sync across the platform, for the admin: how many links, how many need a look, and those that match the
+ * filters, the newest first, a page at a time.
+ */
+export async function getSyncHealth(
+  actor: PlatformActor,
+  filters: feeds.FeedHealthFilters = { q: "" },
+  page = 1,
+  now = new Date(),
+) {
   requirePlatformAdmin(actor);
   const staleBefore = new Date(now.getTime() - FEED_STALE_AFTER_MS);
-  const [total, problems, needsLook] = await Promise.all([
+  const [total, problems, found] = await Promise.all([
     feeds.countLiveFeeds(prisma),
     feeds.countFeedsNeedingLook(prisma, staleBefore),
-    feeds.listFeedsNeedingLook(prisma, staleBefore, HEALTH_SHOWN),
+    feeds.countFeedsNeedingLook(prisma, staleBefore, filters),
   ]);
-  return { total, problems, needsLook };
+  const { skip, take, ...paging } = pageOf(found, page);
+  const needsLook = await feeds.listFeedsNeedingLook(prisma, staleBefore, filters, { skip, take });
+  return { total, problems, found, ...paging, needsLook };
 }

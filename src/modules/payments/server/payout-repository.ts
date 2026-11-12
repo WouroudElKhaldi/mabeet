@@ -1,4 +1,5 @@
-import type { PayoutMethod } from "@prisma/client";
+import type { PayoutMethod, Prisma } from "@prisma/client";
+import type { DecidedPayoutStatus } from "@/config/enums";
 import { type Db, moneyNumber, type Tx } from "@/server/db/client";
 
 // Payouts: a host asking Mabeet to send what guests paid online for them, and the admin sending it by hand. What is
@@ -57,23 +58,48 @@ export async function sumPayouts(db: Db, businessId: string | null) {
   }));
 }
 
-/** Requests waiting for an admin, the oldest first, with the business they are for. */
-export function listPayoutRequests(db: Db) {
+/**
+ * What the admin's payout tables filter by: words in the place's name or the account's name, how it is sent, and,
+ * for payouts already decided, whether it was sent or refused.
+ */
+export interface PayoutFilters {
+  q: string;
+  method?: PayoutMethod;
+  status?: DecidedPayoutStatus;
+}
+
+/** Requests still waiting (`waiting`), or payouts already decided, that match the filters. */
+function payoutWhere(waiting: boolean, filters: PayoutFilters): Prisma.PayoutWhereInput {
+  const words = { contains: filters.q, mode: "insensitive" } as const;
+  return {
+    isDeleted: false,
+    status: waiting ? "REQUESTED" : (filters.status ?? { not: "REQUESTED" }),
+    method: filters.method,
+    ...(filters.q ? { OR: [{ business: { name: words } }, { accountName: words }] } : {}),
+  };
+}
+
+/**
+ * One page of payouts, with the business each is for: requests waiting for an admin the oldest first (the next to
+ * send on top), or payouts already decided the latest first.
+ */
+export function listPayoutPage(
+  db: Db,
+  waiting: boolean,
+  filters: PayoutFilters,
+  page: { skip: number; take: number },
+) {
   return db.payout.findMany({
-    where: { status: "REQUESTED", isDeleted: false },
-    orderBy: { createdAt: "asc" },
+    where: payoutWhere(waiting, filters),
+    orderBy: waiting ? { createdAt: "asc" } : { decidedAt: "desc" },
+    skip: page.skip,
+    take: page.take,
     include: { business: { select: { id: true, name: true } } },
   });
 }
 
-/** Payouts already sent or refused, the latest first. */
-export function listDecidedPayouts(db: Db, take: number) {
-  return db.payout.findMany({
-    where: { status: { not: "REQUESTED" }, isDeleted: false },
-    orderBy: { decidedAt: "desc" },
-    take,
-    include: { business: { select: { id: true, name: true } } },
-  });
+export function countPayouts(db: Db, waiting: boolean, filters: PayoutFilters) {
+  return db.payout.count({ where: payoutWhere(waiting, filters) });
 }
 
 export function findPayout(db: Db, payoutId: string) {

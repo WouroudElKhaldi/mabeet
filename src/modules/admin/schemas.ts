@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PALETTES } from "@/config/appearance";
 import { CATEGORY_ICON_NAMES } from "@/config/category-icons";
 import { LISTING_KINDS } from "@/config/enums";
+import { listChoice, listQuery } from "@/lib/schemas";
 
 /** The website's colour palette, chosen by a platform admin. */
 export const sitePaletteInput = z.object({ palette: z.enum(PALETTES) });
@@ -24,3 +25,6 @@ export const categoryInput = categoryFields.extend({
 });
 export const categoryUpdate = categoryFields.partial();
 export const categoryParams = z.object({ slug: z.string().min(1).max(40) });
+
+/** The admin's categories table: words, and the kind of listing. */
+export const categoriesQuery = listQuery.extend({ kind: listChoice(LISTING_KINDS) });

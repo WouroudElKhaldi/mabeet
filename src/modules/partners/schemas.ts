@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { PARTNER_KINDS } from "@/config/partner-kinds";
+import { PARTNER_KINDS, PARTNER_LIST_STATES } from "@/config/partner-kinds";
 import { REGION_KEYS } from "@/config/regions";
-import { id, isoDate, phone } from "@/lib/schemas";
+import { id, isoDate, listChoice, listQuery, phone } from "@/lib/schemas";
 
 // Input checks for featured partners (F23). Platform admins write them; guests only ever read partners.
 
@@ -40,5 +40,21 @@ export const sponsorshipInput = z
     path: ["endsOn"],
   });
 
+/** A guesthouse on the platform featured for a set of days, the last one `endsOn - 1`, as for a partner. */
+export const featureInput = z
+  .object({ businessId: id, startsOn: isoDate, endsOn: isoDate })
+  .refine((dates) => dates.endsOn > dates.startsOn, {
+    message: "The last day must be on or after the first",
+    path: ["endsOn"],
+  });
+
+export const featureParams = z.object({ sponsorshipId: id });
 export const partnerParams = z.object({ partnerId: id });
 export const sponsorshipParams = z.object({ partnerId: id, sponsorshipId: id });
+
+/** The admin's partners table: words, kind, region, and live or removed. */
+export const partnersQuery = listQuery.extend({
+  kind: listChoice(PARTNER_KINDS),
+  region: listChoice(REGION_KEYS),
+  shown: listChoice(PARTNER_LIST_STATES),
+});

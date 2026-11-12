@@ -1,6 +1,7 @@
 import type { Messages } from "next-intl";
 import type { NavIconName } from "@/components/shell/nav-icons";
 import type { Permission } from "@/config/permissions";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { can, isBusinessOwner, type TenantContext } from "@/server/auth/tenant-context";
 
 // The host dashboard's menu: one line per page, added with the page itself, in the order the side menu shows them.
@@ -38,6 +39,7 @@ export const DASHBOARD_PAGES = {
   channels: { group: "bookings", path: "channels", icon: "channels", anyOf: ["feeds.manage"] },
   place: { group: "listings", path: "place", icon: "place", anyOf: ["settings.manage"] },
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
+  offerings: { group: "listings", path: "offerings", icon: "offerings", anyOf: ["offerings.manage"] },
   reviews: { group: "listings", path: "reviews", icon: "reviews", anyOf: ["reviews.reply"] },
   settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
   profile: { group: "business", path: "profile", icon: "profile", anyOf: [], everyone: true },
@@ -75,6 +77,7 @@ export function dashboardNav(ctx: TenantContext): DashboardNavGroup[] {
       .filter(
         ({ page }) =>
           page.group === group &&
+          (OFFERINGS_SHOWN || page !== DASHBOARD_PAGES.offerings) &&
           (page.everyone ||
             (page.ownerOnly ? isBusinessOwner(ctx) : page.anyOf.some((permission) => can(ctx, permission)))),
       )

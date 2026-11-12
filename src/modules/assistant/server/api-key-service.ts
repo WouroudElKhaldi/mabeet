@@ -75,13 +75,14 @@ export async function authenticateKey(raw: string, now = new Date()) {
   return { ctx: { ...ctx, readOnly: !key.canWrite }, keyId: key.id };
 }
 
-/** Writes each AI tool call to the place's log after the answer, so logging never slows an AI app down. */
-export function toolCallRecorder(caller: {
-  businessId: string;
-  userId: string;
-  channel: "mcp" | "chat";
-  apiKeyId?: string;
-}): ToolCallListener {
+/**
+ * Writes each AI tool call to the log after the answer, so logging never slows an AI app down. A host's AI app and the
+ * dashboard chat log the place and the person; the public guest MCP has neither.
+ */
+export function toolCallRecorder(
+  caller:
+    { businessId: string; userId: string; channel: "mcp" | "chat"; apiKeyId?: string } | { channel: "guest" },
+): ToolCallListener {
   return (tool, outcome, latencyMs) =>
     inBackground("AI tool call log", () =>
       keys.logToolCall(prisma, {

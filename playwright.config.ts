@@ -2,7 +2,9 @@ import { config } from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
 import { e2eDatabaseUrl } from "./tests/e2e/e2e-database";
 
-// Browser tests (tests/e2e): Google Chrome, at a phone's size, clicks through the built app like a person. The app runs on its
+// Browser tests (tests/e2e): Google Chrome clicks through the built app like a person, twice: at a phone's size, and in
+// a window opened to the whole screen, as a host at their desk sees it. A test only one of them can run is tagged:
+// `@phone` (the phone's menus) or `@desktop` (the side menu a full screen shows). The app runs on its
 // own database filled with the demo data (E2E_DATABASE_URL, named ..._e2e), so a run never touches development data.
 // Build first (`pnpm build`); `pnpm test:e2e` then prepares that database and starts the built app on port 3100, or
 // reuses an app already running there. `pnpm test:e2e:headed` opens the Chrome window, to watch each click.
@@ -11,6 +13,8 @@ config({ quiet: true });
 
 const PORT = 3100;
 const baseURL = `http://localhost:${PORT}`;
+
+const FULL_SCREEN = ["--start-maximized", "--window-size=1366,768"];
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -34,12 +38,22 @@ export default defineConfig({
     {
       name: "sign-in",
       testMatch: /auth\.setup\.ts/,
-      use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } },
+      // Signing in keeps only cookies, so it works for both sizes; it opens to the whole screen.
+      use: { viewport: null, launchOptions: { args: FULL_SCREEN } },
     },
     {
       name: "mobile",
       dependencies: ["sign-in"],
+      grepInvert: /@desktop/,
       use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: "desktop",
+      dependencies: ["sign-in"],
+      grepInvert: /@phone/,
+      // No fixed size: the window opens to the whole screen and the page takes all of it. Without a window (headless)
+      // there is no screen, so it takes a laptop's, 1366 by 768.
+      use: { viewport: null, launchOptions: { args: FULL_SCREEN } },
     },
   ],
   webServer: {

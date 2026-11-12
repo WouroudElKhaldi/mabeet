@@ -1,12 +1,12 @@
 "use client";
 
-import { clsx } from "clsx";
 import { Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-error";
+import { SheetDialog } from "@/components/ui/sheet-dialog";
 import { useAction } from "@/hooks/use-action";
 import { api } from "@/lib/api-client";
 import { shiftDay } from "../calendar-model";
@@ -20,7 +20,9 @@ export interface BlockDraft {
 
 /**
  * Closes a run of nights in one room: for maintenance, or a booking taken by phone. The nights come from the calendar
- * (a double-click, then a click on the last night) and can be adjusted here before saving.
+ * (a double-click, then a click on the last night): while the last night is still to pick, one line under the calendar
+ * says so and the calendar stays free to click. Once it is picked, the form opens in a pop-up, where the room, the
+ * nights and a note can still be changed before saving.
  */
 export function CloseDatesForm({
   businessId,
@@ -56,66 +58,82 @@ export function CloseDatesForm({
     if (saved) onClose();
   };
 
-  return (
-    <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl bg-surface p-5 ring-1 ring-accent sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end">
-      <p className="flex items-center gap-2 font-semibold sm:col-span-2 lg:col-span-5">
-        <Lock className="size-4 text-accent" aria-hidden />
-        {draft.end === null
-          ? t("pickLastNight")
-          : t("closeRange", { from: formatDay(draft.start), to: formatDay(draft.end) })}
-      </p>
-      <label className="grid gap-1 text-xs font-semibold">
-        {t("room")}
-        <select
-          value={draft.roomId}
-          onChange={(event) => onChange({ ...draft, roomId: event.target.value })}
-          className={clsx(inputClass, "h-10")}
-        >
-          {rooms.map((room) => (
-            <option key={room.id} value={room.id}>
-              {room.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid gap-1 text-xs font-semibold">
-        {t("from")}
-        <input
-          type="date"
-          value={draft.start}
-          onChange={(event) => event.target.value && onChange({ ...draft, start: event.target.value })}
-          className={clsx(inputClass, "h-10")}
-        />
-      </label>
-      <label className="grid gap-1 text-xs font-semibold">
-        {t("lastNight")}
-        <input
-          type="date"
-          value={draft.end ?? draft.start}
-          min={draft.start}
-          onChange={(event) => event.target.value && onChange({ ...draft, end: event.target.value })}
-          className={clsx(inputClass, "h-10")}
-        />
-      </label>
-      <label className="grid gap-1 text-xs font-semibold">
-        {t("note")}
-        <input
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          maxLength={200}
-          placeholder={t("notePlaceholder")}
-          className={clsx(inputClass, "h-10")}
-        />
-      </label>
-      <div className="flex gap-2">
-        <Button disabled={pending || draft.end === null} onClick={() => void save()}>
-          {t("block")}
-        </Button>
-        <Button variant="ghost" onClick={onClose}>
+  if (draft.end === null) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface px-5 py-3 ring-1 ring-accent">
+        <p className="flex items-center gap-2 font-semibold">
+          <Lock className="size-4 text-accent" aria-hidden />
+          {t("pickLastNight")}
+        </p>
+        <Button variant="ghost" size="sm" onClick={onClose}>
           {t("cancel")}
         </Button>
       </div>
-      <FormError message={error} className="sm:col-span-2 lg:col-span-5" />
-    </div>
+    );
+  }
+
+  return (
+    <SheetDialog
+      open
+      onClose={onClose}
+      title={t("closeRange", { from: formatDay(draft.start), to: formatDay(draft.end) })}
+      footer={
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={pending} onClick={() => void save()}>
+            {t("block")}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            {t("cancel")}
+          </Button>
+        </div>
+      }
+    >
+      <div className="grid gap-4 p-5 sm:grid-cols-2">
+        <label className="grid gap-1 text-xs font-semibold sm:col-span-2">
+          {t("room")}
+          <select
+            value={draft.roomId}
+            onChange={(event) => onChange({ ...draft, roomId: event.target.value })}
+            className={inputClass}
+          >
+            {rooms.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs font-semibold">
+          {t("from")}
+          <input
+            type="date"
+            value={draft.start}
+            onChange={(event) => event.target.value && onChange({ ...draft, start: event.target.value })}
+            className={inputClass}
+          />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold">
+          {t("lastNight")}
+          <input
+            type="date"
+            value={draft.end}
+            min={draft.start}
+            onChange={(event) => event.target.value && onChange({ ...draft, end: event.target.value })}
+            className={inputClass}
+          />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold sm:col-span-2">
+          {t("note")}
+          <input
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            maxLength={200}
+            placeholder={t("notePlaceholder")}
+            className={inputClass}
+          />
+        </label>
+        <FormError message={error} className="sm:col-span-2" />
+      </div>
+    </SheetDialog>
   );
 }

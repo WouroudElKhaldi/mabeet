@@ -345,6 +345,7 @@ erDiagram
     String paidById FK
     Plan plan
     Int months
+    String offerId FK
     BigInt amountCents
     String currency
     PaymentMethod method
@@ -352,6 +353,28 @@ erDiagram
     String providerRef UK
     String checkoutUrl
     DateTime paidAt
+    Boolean isDeleted
+    DateTime createdAt
+  }
+  PlanOffer {
+    String id PK
+    String name
+    Plan plan
+    OfferKind kind
+    Int percentOff
+    String businessId FK
+    Int firstMonths
+    DateTime startsAt
+    DateTime endsAt
+    String createdById FK
+    Boolean isDeleted
+    DateTime createdAt
+  }
+  PlanOfferClaim {
+    String id PK
+    String offerId FK
+    String businessId FK
+    DateTime endsAt
     Boolean isDeleted
     DateTime createdAt
   }
@@ -691,6 +714,7 @@ erDiagram
     String id PK
     String partnerPlaceId FK
     String offeringId FK
+    String businessId FK
     DateTime startsOn
     DateTime endsOn
     String createdById FK
@@ -742,6 +766,11 @@ erDiagram
   User |o--o{ Payout : "decidedBy"
   Business ||--o{ PlanPayment : "business"
   User |o--o{ PlanPayment : "paidBy"
+  PlanOffer |o--o{ PlanPayment : "offer"
+  Business |o--o{ PlanOffer : "business"
+  User ||--o{ PlanOffer : "createdBy"
+  PlanOffer ||--o{ PlanOfferClaim : "offer"
+  Business ||--o{ PlanOfferClaim : "business"
   User ||--o{ Favorite : "user"
   Business ||--o{ Favorite : "business"
   Business ||--o{ Review : "business"
@@ -757,7 +786,7 @@ erDiagram
   Business ||--o{ ApiKey : "business"
   Membership ||--o{ ApiKey : "membership"
   User ||--o{ ApiKey : "createdBy"
-  Business ||--o{ McpAuditLog : "business"
+  Business |o--o{ McpAuditLog : "business"
   Business ||--o{ Offering : "business"
   Category |o--o{ Offering : "category"
   Business ||--o{ OfferingSession : "business"
@@ -783,6 +812,7 @@ erDiagram
   User ||--o{ PushSubscription : "user"
   PartnerPlace |o--o{ Sponsorship : "partnerPlace"
   Offering |o--o{ Sponsorship : "offering"
+  Business |o--o{ Sponsorship : "business"
   User ||--o{ Sponsorship : "createdBy"
 ```
 
@@ -841,6 +871,9 @@ bookings.
 | PlanPayment         | `providerRef`                         | unique |
 | PlanPayment         | `businessId`                          | index  |
 | PlanPayment         | `status,paidAt`                       | index  |
+| PlanOffer           | `businessId`                          | index  |
+| PlanOfferClaim      | `offerId,businessId`                  | unique |
+| PlanOfferClaim      | `businessId`                          | index  |
 | WhishSandboxPayment | `code`                                | unique |
 | WebhookEvent        | `provider,eventId`                    | unique |
 | Favorite            | `userId,businessId`                   | unique |
@@ -857,6 +890,7 @@ bookings.
 | ApiKey              | `hash`                                | unique |
 | ApiKey              | `businessId`                          | index  |
 | McpAuditLog         | `businessId,createdAt`                | index  |
+| McpAuditLog         | `createdAt`                           | index  |
 | Offering            | `slug`                                | unique |
 | Offering            | `businessId`                          | index  |
 | Offering            | `kind,active`                         | index  |
@@ -899,3 +933,4 @@ bookings.
 | Sponsorship         | `startsOn,endsOn`                     | index  |
 | Sponsorship         | `partnerPlaceId`                      | index  |
 | Sponsorship         | `offeringId`                          | index  |
+| Sponsorship         | `businessId`                          | index  |

@@ -1,5 +1,5 @@
 import { auth } from "@/server/auth/better-auth";
-import { testEmail } from "./helpers";
+import { prisma, testEmail } from "./helpers";
 
 type RouteHandler = (
   request: Request,
@@ -20,15 +20,24 @@ const sessionCookie = (response: Response) =>
     .map((header) => header.split(";")[0])
     .join("; ");
 
-/** Signs up a real user through Better Auth and returns their session cookie. */
+/**
+ * Signs up a real user through Better Auth, confirms their email (as opening the emailed link does; no session
+ * starts before that), signs them in and returns their session cookie.
+ */
 export async function signUp(name: string): Promise<Caller> {
   const email = testEmail();
-  const response = await auth.api.signUpEmail({
+  const signedUp = await auth.api.signUpEmail({
     body: { name, email, password: TEST_PASSWORD },
     asResponse: true,
   });
-  const { user } = (await response.json()) as { user: { id: string } };
-  return { userId: user.id, email, cookie: sessionCookie(response) };
+  const { user, token } = (await signedUp.json()) as { user: { id: string }; token: string | null };
+  if (token !== null) throw new Error("A new account was signed in before confirming its email");
+  await prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });
+  const signedIn = await auth.api.signInEmail({
+    body: { email, password: TEST_PASSWORD },
+    asResponse: true,
+  });
+  return { userId: user.id, email, cookie: sessionCookie(signedIn) };
 }
 
 export interface CallOptions {

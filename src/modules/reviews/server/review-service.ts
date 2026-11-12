@@ -65,6 +65,19 @@ export async function listPlaceReviews(businessId: string): Promise<PlaceReview[
   }));
 }
 
+/** What an experience or service's page shows: its own published reviews, newest first. */
+export async function listOfferingReviews(offeringId: string): Promise<PlaceReview[]> {
+  const rows = await reviews.listPublishedOfferingReviews(prisma, offeringId);
+  return rows.map((review) => ({
+    id: review.id,
+    rating: review.rating,
+    comment: review.comment,
+    ownerReply: review.ownerReply,
+    writtenOn: toIsoDate(review.createdAt),
+    authorName: authorNameOf(review.author),
+  }));
+}
+
 /** A place's stars and how many guests gave them. */
 export async function getPlaceRating(businessId: string): Promise<PlaceRating> {
   const ratings = await reviews.listRatings(prisma, businessId);

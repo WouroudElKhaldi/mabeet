@@ -8,6 +8,7 @@ import type {
   FeedSource,
   HostContact,
   PayoutMethod,
+  PayoutStatus,
   PhotoArea,
   PriceUnit,
   SkillLevel,
@@ -73,11 +74,35 @@ export type OnlinePaymentMethod = (typeof ONLINE_PAYMENT_METHODS)[number];
 /** Where Mabeet sends a host's payout: a bank account (IBAN) or a Whish number. Never a card. */
 export const PAYOUT_METHODS = ["BANK_TRANSFER", "WHISH"] as const satisfies readonly PayoutMethod[];
 
+/** A payout the admin has decided: sent, or refused (then the host can ask again). */
+export const DECIDED_PAYOUT_STATUSES = ["PAID", "REJECTED"] as const satisfies readonly PayoutStatus[];
+export type DecidedPayoutStatus = (typeof DECIDED_PAYOUT_STATUSES)[number];
+
 /** A business is live, or suspended by a platform admin (hidden everywhere until reactivated). */
-export const BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies readonly BusinessStatus[];
+export const BUSINESS_STATUSES = [
+  "ACTIVE",
+  "SUSPENDED",
+  "ARCHIVED",
+] as const satisfies readonly BusinessStatus[];
+
+/** What the platform admin sets: suspend or reactivate. Archiving is the owner's own, from the place's settings. */
+export const ADMIN_BUSINESS_STATUSES = ["ACTIVE", "SUSPENDED"] as const satisfies readonly BusinessStatus[];
+
+/** Where the team can still work: an archived place is closed to guests, not to the people who run it. */
+export const TEAM_OPEN_STATUSES = ["ACTIVE", "ARCHIVED"] as const satisfies readonly BusinessStatus[];
+
+export const isTeamOpen = (status: BusinessStatus): boolean =>
+  (TEAM_OPEN_STATUSES as readonly BusinessStatus[]).includes(status);
 
 /** What a browse category is for: places, experiences or services. */
 export const LISTING_KINDS = ["HOME", "EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
+
+/** Where an AI tool call came from: a host's own AI app (the host MCP), the dashboard chat, or the public guest MCP. */
+export const AI_CALL_CHANNELS = ["mcp", "chat", "guest"] as const;
+export type AiCallChannel = (typeof AI_CALL_CHANNELS)[number];
+
+/** The periods the platform's AI usage page counts over, in days ending now. */
+export const AI_USAGE_PERIODS = ["7", "30", "90"] as const;
 
 /** What a host sells by the session rather than by the night. */
 export const OFFERING_KINDS = ["EXPERIENCE", "SERVICE"] as const satisfies readonly ListingKind[];
@@ -117,3 +142,10 @@ export const PHOTO_AREAS = [
 
 /** Analytics for the place on screen, or for every place the member may read the numbers of. */
 export type AnalyticsScope = "place" | "all";
+
+/**
+ * The kinds of people the admin's people table filters by: a platform admin, someone who owns a place (a host),
+ * someone on a place's team who owns none, and everyone else (a guest).
+ */
+export const PERSON_KINDS = ["guest", "team", "host", "admin"] as const;
+export type PersonKind = (typeof PERSON_KINDS)[number];

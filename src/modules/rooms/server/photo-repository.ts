@@ -1,19 +1,21 @@
 import type { PhotoArea, Prisma } from "@prisma/client";
 import type { Db, Tx } from "@/server/db/client";
 
-// The galleries the host manages: the place's own photos (no room), and each room's. Experiences' photos come with
-// experiences. A photo's file is a StoredImage: in R2, or kept in Postgres when R2 is not set up.
+// The galleries the host manages: the place's own photos (no room and no offering), each room's, and each
+// experience or service's. A photo's file is a StoredImage: in R2, or kept in Postgres when R2 is not set up.
 
 export interface Gallery {
   businessId: string;
-  /** Null for the place's own photos. */
+  /** A room's gallery; null for the place's own photos or an offering's. */
   roomId: string | null;
+  /** An experience or service's gallery; null otherwise. Never set together with `roomId`. */
+  offeringId: string | null;
 }
 
 const galleryWhere = (gallery: Gallery): Prisma.PhotoWhereInput => ({
   businessId: gallery.businessId,
   roomId: gallery.roomId,
-  offeringId: null,
+  offeringId: gallery.offeringId,
   isDeleted: false,
 });
 
@@ -57,6 +59,7 @@ export async function addUploadedPhoto(
     data: {
       businessId: gallery.businessId,
       roomId: gallery.roomId,
+      offeringId: gallery.offeringId,
       url: inR2?.publicUrl ?? `/api/images/${stored.id}`,
       storedImageId: stored.id,
       alt: image.alt,
@@ -69,8 +72,8 @@ export async function addUploadedPhoto(
 
 export function findPhoto(db: Db, businessId: string, photoId: string) {
   return db.photo.findFirst({
-    where: { id: photoId, businessId, offeringId: null, isDeleted: false },
-    select: { id: true, roomId: true, storedImageId: true },
+    where: { id: photoId, businessId, isDeleted: false },
+    select: { id: true, roomId: true, offeringId: true, storedImageId: true },
   });
 }
 

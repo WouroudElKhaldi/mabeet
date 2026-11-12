@@ -124,6 +124,20 @@ export async function requireUser(request: Request) {
   return user;
 }
 
+/**
+ * A signed-in person whose email is confirmed: booking and opening a place need one. A new account cannot sign in
+ * before confirming; this also stops an account made before confirming was required.
+ */
+export async function requireVerifiedUser(request: Request) {
+  const user = await requireUser(request);
+  if (!user.emailVerified) {
+    throw forbidden(
+      "Confirm your email first. Sign out, then sign in again and we will email you a new link to confirm it.",
+    );
+  }
+  return user;
+}
+
 /** Scheduled jobs call in with `Authorization: Bearer <CRON_SECRET>`. */
 export function requireCronSecret(request: Request): void {
   const presented = Buffer.from(request.headers.get("authorization") ?? "");

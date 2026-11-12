@@ -56,7 +56,7 @@ export function listOfferings(db: Db, businessId: string, now: Date) {
       photos: {
         where: { isDeleted: false },
         orderBy: { position: "asc" },
-        select: { id: true, url: true, alt: true },
+        select: { id: true, url: true, alt: true, area: true },
       },
       sessions: {
         where: { isDeleted: false, active: true, startsAt: { gt: now } },
@@ -134,5 +134,135 @@ export function findOpenSession(db: Db, offeringId: string, sessionId: string, n
   return db.offeringSession.findFirst({
     where: { id: sessionId, offeringId, active: true, isDeleted: false, startsAt: { gt: now } },
     select: { id: true, businessId: true, startsAt: true, endsAt: true, capacity: true },
+  });
+}
+
+// ---------- What guests see ----------
+
+/** What a guest reads of an offering: never the business's plan, payment accounts or commission rate. */
+const publicFields = {
+  id: true,
+  slug: true,
+  kind: true,
+  title: true,
+  description: true,
+  categorySlug: true,
+  area: true,
+  region: true,
+  meetingPoint: true,
+  latitude: true,
+  longitude: true,
+  durationMinutes: true,
+  priceCents: true,
+  priceUnit: true,
+  maxGuests: true,
+  minAge: true,
+  activityLevel: true,
+  skillLevel: true,
+  included: true,
+  notIncluded: true,
+  accessibility: true,
+  languages: true,
+  tags: true,
+  photos: {
+    where: { isDeleted: false },
+    orderBy: { position: "asc" },
+    select: { id: true, url: true, alt: true },
+  },
+  business: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      area: true,
+      whatsapp: true,
+      timezone: true,
+      currency: true,
+      bookingMode: true,
+    },
+  },
+} as const satisfies Prisma.OfferingSelect;
+
+/** Sessions a guest can still pick: switched on, live and not started. */
+const upcomingSessions = (now: Date) =>
+  ({
+    where: { isDeleted: false, active: true, startsAt: { gt: now } },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, startsAt: true, endsAt: true, capacity: true },
+  }) as const satisfies Prisma.Offering$sessionsArgs;
+
+/** An offering guests can book, by its public link, with its upcoming sessions (the next `take`). */
+export function findPublicOffering(db: Db, slug: string, now: Date, take: number) {
+  return db.offering.findFirst({
+    where: { slug, ...bookable },
+    select: { ...publicFields, sessions: { ...upcomingSessions(now), take } },
+  });
+}
+
+/**
+ * The offerings of one kind on listed places, for browsing: those with a session coming first, then the newest, each
+ * with its cover photo and next session.
+ */
+export function listPublicOfferings(
+  db: Db,
+  filter: { kind: "EXPERIENCE" | "SERVICE"; categorySlug?: string; take: number },
+  now: Date,
+) {
+  return db.offering.findMany({
+    where: {
+      ...bookable,
+      kind: filter.kind,
+      business: { ...bookable.business, listedPublicly: true },
+      ...(filter.categorySlug && { categorySlug: filter.categorySlug }),
+    },
+    orderBy: { createdAt: "desc" },
+    take: filter.take,
+    select: {
+      id: true,
+      slug: true,
+      kind: true,
+      title: true,
+      categorySlug: true,
+      area: true,
+      durationMinutes: true,
+      priceCents: true,
+      priceUnit: true,
+      photos: { ...publicFields.photos, take: 1 },
+      business: { select: { currency: true, timezone: true } },
+      sessions: { ...upcomingSessions(now), take: 1 },
+    },
+  });
+}
+
+/**
+ * The bookable offerings of a region with a session starting in `[from, to)`, each with its cover photo, its map pin
+ * and its sessions in that window: what a guest staying there on those nights could join.
+ */
+export function listOfferingsDuring(db: Db, region: string, from: Date, to: Date, take: number) {
+  const during = {
+    where: { isDeleted: false, active: true, startsAt: { gte: from, lt: to } },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, startsAt: true, capacity: true },
+  } as const satisfies Prisma.Offering$sessionsArgs;
+  return db.offering.findMany({
+    where: { ...bookable, region, sessions: { some: during.where } },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      slug: true,
+      kind: true,
+      title: true,
+      categorySlug: true,
+      area: true,
+      latitude: true,
+      longitude: true,
+      durationMinutes: true,
+      priceCents: true,
+      priceUnit: true,
+      photos: { ...publicFields.photos, take: 1 },
+      business: { select: { currency: true, timezone: true } },
+      sessions: during,
+    },
   });
 }

@@ -2,6 +2,7 @@
 
 import type { PartnerKind } from "@prisma/client";
 import { useTranslations } from "next-intl";
+import { useCloseDialog } from "@/components/ui/form-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, LabeledControl } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-error";
@@ -46,6 +47,7 @@ export function PartnerForm({ partner }: { partner?: PartnerFields }) {
   const kinds = useTranslations("partners.kinds");
   const regions = useTranslations("regions.names");
   const { run, pending, error, fieldErrors } = useAction(SHOWN_FIELDS);
+  const closeDialog = useCloseDialog();
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,7 +67,10 @@ export function PartnerForm({ partner }: { partner?: PartnerFields }) {
     const saved = await run(() =>
       partner ? api.patch(`/api/admin/partners/${partner.id}`, body) : api.post("/api/admin/partners", body),
     );
-    if (saved && !partner) form.reset();
+    if (saved && !partner) {
+      form.reset();
+      closeDialog();
+    }
   };
 
   const pinError = fieldErrors.latitude || fieldErrors.longitude ? t("errors.pin") : undefined;

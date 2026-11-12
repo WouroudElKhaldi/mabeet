@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { expectNoSidewaysScroll, PLACES, signedIn, watchForErrors } from "./helpers";
+import { expect } from "@playwright/test";
+import { expectNoSidewaysScroll, newContext, PLACES, signedIn, test, watchForErrors } from "./helpers";
 
 // Featured partners (F23), from both sides: the admin adds a partner, sponsors it and takes it off; a guest sees the
 // partners of the place's region under "Things to do near your stay", sponsored ones first and marked. The partner a
@@ -22,8 +22,8 @@ test.describe("as the admin", () => {
   test("adds a partner, sponsors it, then removes it and brings it back", async ({ page, browser }) => {
     const name = `Rooftop Bar ${Date.now() % 100_000}`;
     await page.goto("/admin/partners");
-    const added = page.locator("details").filter({ has: page.getByText("New partner", { exact: true }) });
-    await added.locator("summary").click();
+    await page.getByRole("button", { name: "New partner" }).click();
+    const added = page.getByRole("dialog");
     await added.getByLabel("Name").fill(name);
     await added.getByLabel("Type").selectOption({ label: "Café" });
     await added.getByLabel("Region").selectOption({ label: "North Lebanon" });
@@ -35,16 +35,20 @@ test.describe("as the admin", () => {
     await added.getByLabel("Website or social page").fill("https://www.instagram.com/rooftopbar");
     await added.getByRole("button", { name: "Add partner" }).click();
 
-    const panel = page.locator("details").filter({ has: page.getByText(name, { exact: true }) });
-    await expect(panel).toBeVisible();
-    await panel.locator("summary").click();
+    const live = `/admin/partners?q=${encodeURIComponent(name)}`;
+    await page.goto(live);
+    const row = page.getByRole("row").filter({ hasText: name });
+    await expect(row).toBeVisible();
+    await row.getByRole("button", { name: "Edit" }).click();
+    const panel = page.getByRole("dialog").first();
     await panel.getByLabel("First day").fill(today());
     await panel.getByLabel("Last day").fill(today());
     await panel.getByRole("button", { name: "Sponsor" }).click();
-    await expect(panel.locator("summary")).toContainText("Sponsored now");
+    await expect(panel.getByRole("button", { name: "End sponsorship" })).toBeVisible();
 
     // A guest staying in the north sees it, marked.
-    const guest = await browser.newPage();
+    const visitor = await newContext(browser);
+    const guest = await visitor.newPage();
     await guest.goto(`/p/${PLACES.automatic.slug}`);
     const nearby = guest.getByRole("region", { name: "Things to do near your stay" });
     const card = nearby.getByRole("article").filter({ hasText: name });
@@ -56,26 +60,26 @@ test.describe("as the admin", () => {
     );
 
     await panel.getByRole("button", { name: "End sponsorship" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "End sponsorship" }).click();
+    await panel.getByRole("dialog").getByRole("button", { name: "End sponsorship" }).click();
     await expect(panel.getByText("Not sponsored.")).toBeVisible();
 
-    await panel.getByRole("button", { name: "Remove" }).click();
+    await page.goto(live);
+    await row.getByRole("button", { name: `Remove «${name}»?` }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Remove" }).click();
-    const removed = page.getByRole("region", { name: "Removed partners" }).getByRole("listitem").filter({
-      hasText: name,
-    });
-    await expect(removed).toBeVisible();
+    await expect(row).toBeHidden();
+    await page.goto(`${live}&shown=removed`);
+    await expect(row).toBeVisible();
     await guest.reload();
     await expect(nearby.getByText(name)).toBeHidden();
 
-    await removed.getByRole("button", { name: "Bring back" }).click();
-    await expect(panel).toBeVisible();
-    await panel.locator("summary").click();
-    await panel.getByRole("button", { name: "Remove" }).click();
+    await row.getByRole("button", { name: "Bring back" }).click();
+    await expect(row).toBeHidden();
+    await page.goto(live);
+    await row.getByRole("button", { name: `Remove «${name}»?` }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Remove" }).click();
-    await expect(removed).toBeVisible();
+    await expect(row).toBeHidden();
     await expectNoSidewaysScroll(page);
-    await guest.close();
+    await visitor.close();
   });
 });
 

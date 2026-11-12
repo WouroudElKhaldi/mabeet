@@ -38,18 +38,28 @@ async function shrink(file: File): Promise<Blob> {
   return blob ?? file;
 }
 
-/** Uploads photos one by one, shrunk first, to the place's gallery or a room's. Says whether all of them went up. */
+/** Which gallery: a room's, an experience or service's, or (neither) the place's own. */
+export interface PhotoGallery {
+  roomId?: string | null;
+  offeringId?: string | null;
+}
+
+/**
+ * Uploads photos one by one, shrunk first, to the place's gallery, a room's or an offering's. Says whether all of
+ * them went up.
+ */
 export async function uploadPhotos(
   businessId: string,
   files: File[],
-  roomId: string | null,
+  gallery: PhotoGallery,
   onProgress?: (done: number) => void,
 ): Promise<boolean> {
   let allUploaded = true;
   for (const [index, file] of files.entries()) {
     const form = new FormData();
     form.set("file", await shrink(file).catch(() => file), file.name);
-    if (roomId) form.set("roomId", roomId);
+    if (gallery.roomId) form.set("roomId", gallery.roomId);
+    if (gallery.offeringId) form.set("offeringId", gallery.offeringId);
     await api.upload(`/api/workspaces/${businessId}/photos`, form).catch(() => {
       allUploaded = false;
     });
@@ -59,16 +69,19 @@ export async function uploadPhotos(
 }
 
 /**
- * The photos of the place, or of one of its rooms: upload, pick the cover, tag what each shows for the photo tour,
- * and delete (after a confirmation).
+ * The photos of the place, of one of its rooms, or of an experience or service: upload, pick the cover, tag what each
+ * shows for the place's photo tour, and delete (after a confirmation). An offering has no photo tour, so its photos
+ * are not tagged.
  */
 export function PhotoManager({
   businessId,
   roomId = null,
+  offeringId = null,
   photos,
 }: {
   businessId: string;
   roomId?: string | null;
+  offeringId?: string | null;
   photos: GalleryPhoto[];
 }) {
   const t = useTranslations("dashboard.photos");
@@ -81,6 +94,7 @@ export function PhotoManager({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [failed, setFailed] = useState(false);
   const busy = pending || progress !== null;
+  const which = offeringId ? "offering" : roomId ? "room" : "place";
   const photoUrl = (photoId: string) => `/api/workspaces/${businessId}/photos/${photoId}`;
 
   const upload = async (files: FileList | null) => {
@@ -88,7 +102,7 @@ export function PhotoManager({
     const list = [...files];
     setFailed(false);
     setProgress({ done: 0, total: list.length });
-    const allUploaded = await uploadPhotos(businessId, list, roomId, (done) =>
+    const allUploaded = await uploadPhotos(businessId, list, { roomId, offeringId }, (done) =>
       setProgress({ done, total: list.length }),
     );
     setProgress(null);
@@ -111,8 +125,8 @@ export function PhotoManager({
       {dialog}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">{t(roomId ? "roomTitle" : "title")}</h2>
-          <p className="max-w-xl text-sm text-muted">{t(roomId ? "roomHint" : "hint")}</p>
+          <h2 className="text-lg font-semibold">{t(`${which}Title`)}</h2>
+          <p className="max-w-xl text-sm text-muted">{t(`${which}Hint`)}</p>
         </div>
         <label
           className={`inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper transition-opacity hover:opacity-90 has-focus-visible:ring-2 has-focus-visible:ring-accent ${busy ? "pointer-events-none opacity-50" : ""}`}
@@ -137,7 +151,7 @@ export function PhotoManager({
 
       {photos.length === 0 ? (
         <p className="rounded-xl border border-dashed border-line-strong p-6 text-center text-sm text-muted">
-          {t("empty")}
+          {t(offeringId ? "offeringEmpty" : "empty")}
         </p>
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
@@ -175,22 +189,24 @@ export function PhotoManager({
                   </button>
                 </div>
               </div>
-              <select
-                aria-label={t("area")}
-                value={photo.area ?? ""}
-                disabled={busy}
-                onChange={(event) =>
-                  void run(() => api.patch(photoUrl(photo.id), { area: event.target.value || null }))
-                }
-                className={`${inputClass} h-9 px-2 text-xs`}
-              >
-                <option value="">{t("noArea")}</option>
-                {PHOTO_AREAS.map((area) => (
-                  <option key={area} value={area}>
-                    {tArea(area)}
-                  </option>
-                ))}
-              </select>
+              {offeringId ? null : (
+                <select
+                  aria-label={t("area")}
+                  value={photo.area ?? ""}
+                  disabled={busy}
+                  onChange={(event) =>
+                    void run(() => api.patch(photoUrl(photo.id), { area: event.target.value || null }))
+                  }
+                  className={`${inputClass} h-9 px-2 text-xs`}
+                >
+                  <option value="">{t("noArea")}</option>
+                  {PHOTO_AREAS.map((area) => (
+                    <option key={area} value={area}>
+                      {tArea(area)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </li>
           ))}
         </ul>

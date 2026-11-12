@@ -8,6 +8,8 @@ import { channelColor } from "@/modules/analytics";
 import { getBusinessReport, getSavings } from "@/modules/analytics/server";
 import { BookingRow } from "@/modules/bookings";
 import { listBookings } from "@/modules/bookings/server";
+import { SetupChecklist } from "@/modules/rooms";
+import { getSetupChecklist } from "@/modules/rooms/server";
 import { can } from "@/server/auth/tenant-context";
 import { requirePageAccess } from "@/server/http/session";
 import { addDays, todayUtc } from "@/utils/dates";
@@ -33,12 +35,14 @@ export default async function TodayPage({ params }: PageProps) {
   const period = { checkIn: addDays(today, 1 - REPORT_DAYS), checkOut: addDays(today, 1) };
   const readsNumbers = can(ctx, "analytics.read");
   const readsBookings = can(ctx, "bookings.read");
-  const [t, locale, report, savings, waiting] = await Promise.all([
+  const [t, locale, report, savings, waiting, setup] = await Promise.all([
     getTranslations("dashboard.overview"),
     getLocale(),
     readsNumbers ? getBusinessReport(ctx, period) : null,
     readsNumbers ? getSavings(ctx) : null,
     readsBookings ? listBookings(ctx, { status: "HELD", take: REQUESTS_SHOWN, skip: 0 }) : [],
+    // Until the place is listed, the people who run it see what is left to do first.
+    can(ctx, "settings.manage") ? getSetupChecklist(ctx) : null,
   ]);
   const monthName = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" });
 
@@ -46,6 +50,14 @@ export default async function TodayPage({ params }: PageProps) {
     <>
       <PageHeader title={t("title")} intro={t("subtitle")} />
       <div className="grid gap-10">
+        {setup && !setup.listed ? (
+          <SetupChecklist
+            businessId={businessId}
+            steps={setup.steps}
+            photoCount={setup.photoCount}
+            ready={setup.ready}
+          />
+        ) : null}
         {report ? (
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label={t("kpis")}>
             <div className="rise-in h-full" style={stagger(1)}>

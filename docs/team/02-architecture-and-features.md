@@ -69,7 +69,10 @@ Our product gives the host one booking page, one calendar, and a database that r
   rules that Prisma cannot write, such as the rule against overlapping nights. We write those rules by hand in SQL
   migration files.
 - **Better Auth:** sign in with email and password, and sessions saved in the database. It also lets AI apps connect
-  with OAuth (a safe sign-in for apps).
+  with OAuth (a safe sign-in for apps). Every new account confirms its email first (`requireEmailVerification`):
+  sign-up sends "Confirm your email" with a button, shows "Check your inbox", and the session starts only once the
+  link is opened; signing in before that sends a new link. Without `RESEND_API_KEY` the email, link included, is
+  printed in the log.
 - **Zod 4:** checks every input: API input, AI tool input, settings in `.env`, and answers from DeepSeek, Stripe and
   Whish.
 - **next-intl:** English, Arabic and Lebanese Arabic. Arabic is right-to-left.
@@ -390,8 +393,8 @@ the website, never through AI keys. Their actions are logged under their own nam
 
 Nobody becomes an admin by signing up: `platformRole` is not something a sign-up can set. Admins are made only with
 `pnpm admins:create "Name <email>" …` (`scripts/create-admins.ts`, which calls `ensurePlatformAdmin` in
-`src/modules/accounts/server/platform-admin.ts`). It creates a verified account, or makes an existing one an admin, gives each a
-new random password, and writes the sign-in details to `.admin-credentials`, which git ignores. Running it again
+`src/modules/accounts/server/platform-admin.ts`). It creates a verified account, or makes an existing one an admin (and marks its email
+confirmed, as sign-in needs it), gives each a new random password, and writes the sign-in details to `.admin-credentials`, which git ignores. Running it again
 never makes a copy.
 
 ---
@@ -467,7 +470,9 @@ Its one `Occupancy` row takes the nights.
   trail read it.
 - `ActivityLog`: one person's own timeline (their requests, favourites and reviews, and what happened to them),
   shown on their account's Activity page.
-- `McpAuditLog`: every AI tool call (tool, result, time taken, channel).
+- `McpAuditLog`: every AI tool call (tool, result, time taken, channel: `mcp`, `chat` or `guest`). A guest MCP call has
+  no place and no person. `getAiUsage` (`ai-usage-service.ts`, platform admins only) counts them by tool and channel
+  for `/admin/ai-apps`.
 - `AiUsage`: tokens and cost of each AI answer, for the monthly budget.
 - `AiChat` and `AiChatMessage`: saved AI chats, per person.
 - `JobProgress`: what a queued AI answer has written so far, shown live; deleted when the job ends.
@@ -543,7 +548,8 @@ Each feature says what it does, where its code is, and the rules that matter.
 ### A. Guest account
 
 Booking needs an account. A signed-out visitor who presses Book is sent to sign in (or sign up) and comes back to
-the same dates; the booking API answers 401 to anyone not signed in (`requireUser(request)` in the route). Every
+the same dates; the booking API answers 401 to anyone not signed in, and 403 to an account whose email is not
+confirmed (`requireVerifiedUser(request)` in the route; opening a place, `POST /api/workspaces`, asks the same). Every
 `Booking` and `SessionBooking` has a required `guestUserId`, and a booking's page (`/b/[token]`) opens only for the
 guest who made it.
 
@@ -599,8 +605,8 @@ new kind of bell entry (all four steps, or it shows a raw key or nothing):
 
 ### A. Admin area
 
-`/admin`, for platform admins: businesses (suspend or reactivate), hosts, AI spending against the budget, calendar
-sync health, payouts and refunds to send by hand, categories, and the
+`/admin`, for platform admins: businesses (suspend or reactivate; an owner's archived place shows "Archived"), hosts, AI spending against the budget, calendar
+sync health, payouts and refunds to send by hand, plan offers, categories, and the
 site's colour palette. Code: `src/app/admin/**`.
 
 - Each admin read and change lives in the module that owns its table, never in `admin`: `workspaces` lists the
@@ -608,8 +614,21 @@ site's colour palette. Code: `src/app/admin/**`.
   `payments` keeps the payout queue, `bookings` what each host is owed and the refunds to send by hand. `admin` keeps
   only its own tables: the categories and the site's palette. So `workspaces` can keep calling `admin` with no circle.
 - Every one takes a `PlatformActor`, calls `requirePlatformAdmin` first, and logs its change with
-  `recordPlatformAction` (`business.suspended`, `business.reactivated`, `category.created`, `category.updated`,
-  `category.deleted`, `site.palette_changed`).
+  `recordPlatformAction` (`business.suspended`, `business.reactivated`, `business.plan_changed`, `category.created`,
+  `category.updated`, `category.deleted`, `site.palette_changed`).
+- **The admin's long lists** are read a page at a time by the module that owns the table, filtered in the query:
+  `listPlatformHosts` (workspaces: name, email, phone or place; place status; plan), `listPlatformPeople` and
+  `getPlatformPerson` (accounts: guest, team member, host or admin), `listPersonTripsForAdmin` (bookings: a
+  person's latest stays), `listCategoryPage` (admin), `listOffersForAdmin` (billing), `listPartnerPage`
+  (partners), `listPayoutRequests` and `listPayoutHistory` (payments: place or account name; how it is sent; sent
+  or refused), `listRefundsToSend` (bookings: place, guest or booking reference) and `getSyncHealth`
+  (calendar-sync: place or room name; source). Each returns `{ total, page, pages }` from `pageOf`
+  (`src/utils/paging.ts`, 20 a page). `getHostBalances` (bookings) is the one list paged after it is worked out:
+  balances are computed from payments, never stored, so it names each place with `listPlaceNames` (workspaces, any
+  status), filters by that name and pages the result.
+- **Setting a plan by hand:** `setPlanAsAdmin` (billing, `PATCH /api/admin/businesses/{businessId}/plan`) sets a
+  plan until a last day (housekeeping ends it like a Whish month) or with no end. A place paying by card is refused:
+  its plan follows Stripe, and the next webhook would undo the change.
 - Suspending writes only `Business.status`: every public read and `resolveContext` already ask for `ACTIVE`, so the
   page, the listing and the team's access go at once, and come back with `ACTIVE`.
 - A category's slug is its key: creating a deleted slug brings the row back. A category still used is never
@@ -620,7 +639,7 @@ site's colour palette. Code: `src/app/admin/**`.
   `BusinessStatusToggle` and "Open dashboard"), one host (`/admin/hosts/{userId}`: their contacts, their host
   profile even while private, and each business with its size, "Open dashboard", its public page and the toggle;
   `getPlatformHost` in `workspaces`), people, money (`PayoutDecision`, what each host is owed,
-  `RefundSent`, plan revenue by month), categories (`CategoryManager`), appearance (`SitePalettePicker`) and health: the calendar links
+  `RefundSent`, plan revenue by month), plan offers (`OfferManager`, "Plans and billing"), categories (`CategoryManager`), appearance (`SitePalettePicker`) and health: the calendar links
   that need a look across the platform (`getSyncHealth` in `calendar-sync`). A link needs a look when its last read
   failed or nothing was read for an hour (`feedNeedsLook`, `src/modules/calendar-sync/feed-health.ts`); the host's
   Channels page uses the same rule. Each
@@ -700,7 +719,8 @@ ones too. `POST /api/mcp` (`answerHostMcp`, `host-mcp.ts`): 401 without a workin
 the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_rooms`, `check_availability`
 (`findFreeRooms`), `get_calendar` and `list_bookings`, each with the optional `place` (`resolvePlaceContext`: by
 id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
-come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background. `get_report`
+come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background; the guest MCP logs its calls too, as
+channel `guest` with no place. `get_report`
 (`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give
 the same numbers as the analytics page. Tests: `mcp-isolation.integration.test.ts` and
 `mcp-oauth.integration.test.ts` (assistant).
@@ -722,9 +742,10 @@ allows there. Each takes the optional `place` like the reading tools:
   most three such refunds a day per place (`enforceRateLimit`). A refusal is logged as
   `booking.ai_refund_refused.<check>` and the member is only told to use the dashboard: the company's figures never
   reach a host or an AI app. Then the dashboard's own decline or cancel runs, with its full refund.
-- `close_dates` and `reopen_dates` (`blocks.manage`): `addBlock` and `removeBlock`. Reopening only removes closed
-  dates lying wholly inside the days asked, and says which ones it left; bookings and platform stays are never
-  touched.
+- `close_dates` and `reopen_dates` (`blocks.manage`): `addBlock` and `reopenNights`. Reopening frees every closed
+  night in the days asked, even part of a longer block: a block reopened at one end is trimmed, one reopened in the
+  middle is split in two, and the tool says what it reopened and what stays closed beside it. Bookings and platform
+  stays are never touched.
 - `set_room_open` (`rooms.manage`): `updateRoom` with `active`.
 - `sync_calendars` (`feeds.manage`): `syncFeedNow` for every connected calendar link of the place.
 
@@ -760,15 +781,18 @@ an AI is cut.
 
 **What exists today** (`src/modules/assistant/server/`): `tool.ts`, `run-tool.ts` and `mcp-server.ts` as above, and
 `guest-tools.ts` with `search_places` (`searchPlaces`: every part of the wish as a filter, the matching rooms with
-their layout, and a booking link with the stay already picked), `check_availability`
+their layout, and a booking link with the stay already picked; up to 20 places, with `moreMatch` true when more match,
+so the guest's AI narrows the search instead of calling it again and again), `check_availability`
 (`checkPlaceAvailability(slug, { range, guests })` in `directory`: each unit the place is booked by, free or not, the
 stay's price, and the `stayIssue` code when the stay does not fit it) and `get_place` (`getPlace`: public fields,
-the units, how booking and paying work in the place's mode, and the full refund rule). The experience tools come with
+the units, how booking and paying work in the place's mode, the full refund rule, and the host as the place's Meet your
+host section shows them: their name, about, languages, years hosting and how quickly they answer only when they show
+their profile, and only the ways to reach them they offer, the place's WhatsApp and its Contact host page). The experience tools come with
 experiences (F8). `answerGuestMcp(request)` (`guest-mcp.ts`, the module's `server.ts`) serves them at
 `POST /api/mcp/guest`: no sign-in, 30 calls a minute from one address, `GET` and `DELETE` answer 405 (stateless).
 Links are absolute (`BETTER_AUTH_URL`), so the guest's AI app can show them. Tests: `mcp-server.test.ts` (marks,
-context, safe errors, money formatted) and `guest-mcp.integration.test.ts` (search, dates, a place, nothing private,
-the rate limit).
+context, safe errors, money formatted) and `guest-mcp.integration.test.ts` (search, 20 at a time and `moreMatch`, dates, a place and its host, nothing
+private, the rate limit).
 
 The place cards under a reply are built from the tool results, not from the model's words. So the model cannot
 invent a place.
@@ -919,6 +943,17 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
 - **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
+- **Another place, from the dashboard:** "Add a place" in the place switcher and on "All my places" opens
+  `NewPlaceForm` in a pop-up (name and town only). It creates the place on Free and goes straight into its guided
+  setup; the plan pitch of `/host` is for new hosts only. Each place has its own plan.
+- **Getting a new place ready:** `getSetupChecklist` (rooms) works out each step of `SETUP_STEPS`
+  (`src/config/setup.ts`) from what is saved, so a step ticks itself wherever it is done. Until the place is listed,
+  its home shows `SetupChecklist`, each step leading to its screen of the guided setup. The guided setup
+  (`/dashboard/{id}/setup?step=`, `SETUP_SCREENS`) asks one question a screen, through the same forms as the place's
+  pages (`PlaceEssentials` with `ask`, `SettingsForm` parts `profile`, `payments` and `contact`, `PhotoManager`,
+  `RoomEditor`), and ends on the checklist with "Publish". `StepFlow` (`src/components/ui/step-flow.tsx`) wraps each
+  screen in `FormStep` (`form-dialog.tsx`): the form calls `useCloseDialog()` once saved, which here moves on, and
+  its button says "Save and continue" (`useSubmitLabel`). A new place on Free, from `/host` too, lands on it.
 - **Choosing a plan before there is a business:** `/pricing` sends a paid plan to `/host?plan=PRO` (checked with
   `paidPlan`), where it can be changed in place (each plan is its own address). A signed-out visitor keeps it
   through sign-up or sign-in (`?next=`). `CreateWorkspaceForm` creates
@@ -935,6 +970,24 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   us ask Whish for the real status; once paid, 30 days are added (following on from what is left of the same plan),
   once. Housekeeping re-checks pending Whish plan payments from the last day whose callback never came, and puts a
   business whose Whish month ran out back on Free.
+- **Plan offers:** a platform admin gives hosts a paid plan free (`FREE`) or a share off its price (`PERCENT_OFF`,
+  1 to 99 %), for every place or one place, either for each place's first months (1 to 24, counted from the day it
+  joined) or between two dates (both days included; `endsAt` is the day after the last one). Code: `offer-service.ts`
+  and `src/modules/billing/offers.ts` (`offerWindow`, `offerMonthlyCents`, pure, so the billing page shows the price
+  the checkout charges). Admin routes `GET`/`POST /api/admin/offers` and `DELETE /api/admin/offers/{offerId}` (ends
+  it, logged `plan_offer.created` and `plan_offer.ended`); page `/admin/offers` (`OfferManager`). `getBilling`
+  returns the offers open to the place now, shown above the plans (`PlanOffers`).
+  - A **free** offer is taken by an owner (`POST .../billing/offers/{offerId}/claim`, `claimFreeOffer`): one
+    transaction locks the business money, writes a `PlanOfferClaim` (unique per offer and place, so a second claim is
+    409), and sets the plan until the offer ends for the place, the way a paid Whish month does, so the same
+    housekeeping puts it back on Free afterwards. Months already paid on the same plan past that date are kept. A
+    place paying by card, or on a bigger plan that is still running, is refused (409).
+  - A **percent-off** offer needs nothing from the host: the Whish checkout charges the lower price and stores
+    `PlanPayment.offerId`; the card checkout first creates a one-use Stripe coupon (`createPlanCoupon`, repeating for
+    the months the offer has left, rounded up) and passes it as `discounts[0][coupon]`. With two offers on the same
+    plan, the larger share wins.
+  - Ending an offer hides it at once. What it already gave stays: a free plan taken runs to its end, a discounted
+    payment is paid.
 - **Simulator:** with `WHISH_MODE=simulator` the Whish client talks to `/api/whish-simulator/*` inside the app
   (Whish v1.4.4). Phone 96170123456 and code 111111 pay; any other code is a failed attempt. Its API (create,
   status, refund) answers only this server's own client: the `secret` header must be `simulatorSecret()`, made from
@@ -1047,8 +1100,10 @@ same nights as `getCalendar`, under `calendar.read` alone, so a member who may s
 
 ### C. Closed dates (blocks)
 
-`addBlock` and `removeBlock` in `src/modules/bookings/server/closed-dates-service.ts` (no moving by drag and drop),
-under the same room lock as bookings. A block is a `MANUAL` occupancy, so the database
+`addBlock`, `removeBlock` and `reopenNights` in `src/modules/bookings/server/closed-dates-service.ts` (no moving by
+drag and drop), under the same room lock as bookings. `reopenNights` frees a range of nights in one room whatever
+blocks they belong to: each block it touches is kept inactive and the nights outside the range come back as new
+blocks with the same note (closed 12 to 15 and reopened 14 to 15 leaves 12 to 14 closed; the middle leaves two). A block is a `MANUAL` occupancy, so the database
 refuses it on taken nights (409 "Those nights are already booked or blocked"). Hosts also use blocks for bookings
 taken by phone.
 
@@ -1185,7 +1240,19 @@ Shared pieces:
 - Without an API key, emails are printed in the log.
 - Addresses on reserved test domains (`.test`, `.example`, `.invalid`, `.localhost`) are never sent to, because they
   can never receive email. The demo accounts (`host@mabeet.test`) use them.
-- Emails only reach other people's inboxes after the sending domain is verified on Resend.
+- Emails only reach other people's inboxes after the sending domain is verified on Resend. The live site needs it:
+  every new account confirms its email before it can sign in, so with Resend's test sender no one else could.
+
+### Archiving a place
+
+The owner archives their own place from Settings (`setPlaceArchived` in `workspaces/settings-service.ts`, route
+`PUT /api/workspaces/{businessId}/archive`), or brings it back. Archived (`BusinessStatus` `ARCHIVED`), it is closed
+to guests everywhere at once, because every public read and every new booking asks for `ACTIVE`: its page, search,
+the guest MCP and the booking routes. Unlike a suspension, its team keeps the dashboard (`TEAM_OPEN_STATUSES`, read by
+`findActiveMembership`), where a line above every page says it is archived. Bookings already made stay as they are.
+Only the business's own owners decide, never a visiting platform admin; the status moves only from `ACTIVE` to
+`ARCHIVED` and back, so an owner can never reopen a place the admin suspended (409). Logged as `business.archived` and
+`business.restored`. Tests: `src/modules/workspaces/tests/archive-place.integration.test.ts`.
 
 ### E. Experiences and services
 
@@ -1228,12 +1295,26 @@ Hosts can sell seats in dated sessions (a hike, a wine tasting, an airport trans
   `POST .../offerings/{offeringId}/sessions`, `DELETE .../sessions/{sessionId}`, `GET .../session-bookings`,
   `POST .../session-bookings/{bookingId}/{action}`, and for guests `POST /api/public/experiences/{slug}/bookings`
   (signed in, the stay requests' rate limit), then the stay's `/api/public/bookings/{token}/checkout` and `/cancel`.
+- **What guests see** is put together in `directory` (`offering-page-service.ts`), which reads the offering from
+  `offerings` (`findPublicOffering`, `listPublicOfferings`: active, at an active place, sessions not started) and
+  the seats taken from `bookings` (`countTakenSeats`: confirmed seats, and held or unpaid ones whose time has not run
+  out). `getOfferingPage` (cached per request as `loadOffering`) gives `/o/[slug]` each session with its seats left;
+  `browseOfferings(kind, take)` gives the Experiences and Services tabs of the home and search pages, listed places
+  only, the offerings with a date first. The private link `/b/[token]` reads the stay, then the seats
+  (`getSessionBookingForGuest`), and `BookingView` shows either.
+- **The host's screens:** `/dashboard/[businessId]/offerings` (`offerings.manage`) lists them in a `DataTable`, with
+  `OfferingEditor` and `SessionScheduler` (the seats taken in each session, from `countTakenSeats`) in pop-ups. The
+  Bookings page lists the seats under the stays, by the same tabs (`listSessionBookings` with `startsFrom` or
+  `startsBefore`), with the same `BookingRow` and answers. Photos for an offering are not built yet: its card and
+  page show the place's drawn art.
 
 Tests: `src/modules/offerings/tests/offerings.integration.test.ts`,
 `src/modules/bookings/tests/session-bookings.integration.test.ts` (the modes, the race for the last seats, payments
-and refunds, guest cancel, expiry, cancelling a session, isolation), the seats case in
+and refunds, guest cancel, expiry, cancelling a session, isolation, the team's list by tab), the seats case in
 `booking-rollback.integration.test.ts`, the seat emails in `booking-notifications.integration.test.ts`, and
-`sessionHoldUntil` and `sessionDayHasCome` in `booking-policy.test.ts`.
+`sessionHoldUntil` and `sessionDayHasCome` in `booking-policy.test.ts`, and the guest's side in
+`src/modules/directory/tests/offering-page.integration.test.ts` (seats left, a switched-off offering, the browse tabs,
+the private link).
 
 ### F. Favourites (F5)
 
@@ -1274,7 +1355,9 @@ Bonus (F23), built on "N. Near your stay".
   `/api/admin/partners/{partnerId}` (save every field, remove), `.../restore`, `.../sponsorships` (sponsor) and
   `.../sponsorships/{sponsorshipId}` (end). Anyone but a platform admin gets 404, as everywhere in the admin area.
 - A partner's photo is a link (`https` only), never an upload: partners are not on the platform (`07`, section 5).
-- Guests: `getPlace` (directory) adds `nearby`, from `listNearbyPartners(place, now)`: the live partners of the
+- Guests: `getPlace` (directory) adds `nearby`, and the guest's booking page reads the same through
+  `listNearStay(slug)` (none once the place has closed; test `near-stay.integration.test.ts`), from
+  `listNearbyPartners(place, now)`: the live partners of the
   place's region, sponsored ones first (marked `sponsored`, only on the days their sponsorship covers), then the
   nearest by map pin (`src/utils/geo.ts`), then by name, at most 12. A place with no region shows none.
 - Screens (`src/modules/partners/components/`): `/admin/partners` shows `PartnerManager`: each live partner is a
@@ -1288,6 +1371,16 @@ Bonus (F23), built on "N. Near your stay".
   places' regions, three sponsored for 60 days. Test: `tests/e2e/partners.spec.ts`.
 - Sponsoring an experience or service is built with experiences (F8): the table already takes it, and those
   offerings then join the same list.
+- **Featured guesthouses:** `featurePlace(actor, { businessId, startsOn, endsOn })`, `endPlaceFeature(actor,
+sponsorshipId)` and `listFeaturedPlacesForAdmin(actor)` (`partner-service.ts`; only platform admins, an open place
+  only, days already over refused; logged as `place.featured` in the place's own log and `place.feature_ended`).
+  Routes `/api/admin/featured-places` (list, feature) and `/api/admin/featured-places/{sponsorshipId}` (end).
+  `searchPlaces` (directory) asks `listFeaturedPlaceIds(now)` and reads the featured places that match the search on
+  their own (`PlaceFilters.ids`), so one is never left out of a page because others came first in the database; they
+  come first, and each card carries `featured`, which `PlaceCard` shows as a "Featured" label on the photo. The home
+  page and the guest MCP use the same search, so they agree. The admin features a place in the "Featured
+  guesthouses" panel at the top of `/admin/partners` (`FeaturedPlaces`: the place, first and last day, and End on
+  each). Test: `featured-places.integration.test.ts` (partners).
 
 ### H. Host profile (F7a)
 
@@ -1414,10 +1507,15 @@ Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `send
 
 Bonus (F22), needs experiences and services (F8).
 
-- On a place's page, once the guest picks dates, and on the guest's booking page, `NearbySection` shows experiences
-  and services in the same region with a session during the guest's nights, nearest first (from the map pins).
-- `listNearbyOfferings(placeId, range, now = new Date())` in `offering-service.ts` reads only public, active,
-  not-deleted offerings and sessions with free seats; route `GET /api/public/places/{slug}/nearby?checkIn=&checkOut=`.
+- On a place's page, once the guest picks dates, and on the guest's booking page for a stay, `NearbyOfferings` (in
+  the "Things to do near your stay" section, above the partners) shows experiences and services of the same region
+  with a session that still has seats from the check-in day to the end of the check-out day: sponsored ones first
+  (marked), then the nearest by map pin, then the soonest, at most 12.
+- `listOfferingsNearStay(slug, range, now = new Date())` in `directory/server/offering-page-service.ts` puts it
+  together: the offerings from `listOfferingsDuring` (offerings module), the seats taken from `countTakenSeats`
+  (bookings), the sponsored ones from `listSponsoredOfferingIds` (partners). The pages call it while they render, so
+  there is no route of its own: `BookingBox` puts the picked dates in the address (`?checkIn=&checkOut=`) and the
+  place page reads them.
 - It uses the region (`src/config/regions.ts`), the map pin and the `OfferingSession` dates that already exist; no
   database change.
 - With F23, sponsored offerings and partner places come first ("F. Featured partners and sponsored listings").
@@ -1474,9 +1572,10 @@ tens of thousands of them.
   `StoredImage` and `Photo` rows are saved in one transaction; if that fails, the file is removed from R2 again
   (`deleteObject`), so nothing is left behind.
 
-The galleries are the place's own (no room) and each room's; both need `rooms.manage`, and a gallery holds 20 photos.
-Routes: `POST /api/workspaces/{businessId}/photos` (multipart through `parseUpload`: `file`, and optional `roomId`,
-`alt`, `area`; 60 uploads an hour per member), `PATCH .../photos/{photoId}` (`{ cover: true }` puts it first,
+The galleries are the place's own (no room), each room's, and each experience or service's. The place's and the rooms'
+need `rooms.manage`, an offering's needs `offerings.manage`, and a gallery holds 20 photos.
+Routes: `POST /api/workspaces/{businessId}/photos` (multipart through `parseUpload`: `file`, and optional `roomId` or
+`offeringId`, `alt`, `area`; 60 uploads an hour per member), `PATCH .../photos/{photoId}` (`{ cover: true }` puts it first,
 `{ area, alt }` tags it for the photo tour), `DELETE .../photos/{photoId}`, and the public `GET /api/images/{id}`.
 Code: `photo-service.ts`, `photo-repository.ts` (in `rooms`), the R2 client and the resizing in `src/server/storage/`.
 Tests: `photos.integration.test.ts` (rooms), with R2 faked and a failed save that must take the upload back down.
@@ -1548,7 +1647,7 @@ rooms, or the one whole-place unit) with their photos, its `rooms` to show (at a
 and its photos (the rooms' photos when it has none of its own). `getRoomAvailability(slug, roomId, range)` is the calendar's
 read, behind `GET /api/public/places/{slug}/rooms/{roomId}/availability` (no sign-in, 120 a minute from one address): the
 taken nights as dates, for the year ahead by default (`AVAILABILITY_DAYS`), for the same rooms a quote accepts.
-The guest's booking route is `POST /api/public/places/{slug}/bookings` (`requireUser`, 10 requests per 10 minutes per guest): it
+The guest's booking route is `POST /api/public/places/{slug}/bookings` (`requireVerifiedUser`, 10 requests per 10 minutes per guest): it
 calls `requestBooking` with the guest taken from the session, and answers `{ publicToken, reference, status }` only. The
 book page (`/p/{slug}/book`) is its screen.
 The guest's own booking page is `/b/{token}`: `getBookingForGuest` (someone else's link is "not found"), then
@@ -1898,6 +1997,7 @@ getCalendar(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string
 getCalendarBoard(ctx: TenantContext, query: { from?: Date; to?: Date; roomId?: string }, now?: Date)   // calendar.read: { rooms, occupancy }
 addBlock(ctx: TenantContext, input: { roomId: string; range: DateRange; note: string | null }, now?: Date)   // blocks.manage
 removeBlock(ctx: TenantContext, blockId: string, now?: Date)   // blocks.manage
+reopenNights(ctx: TenantContext, roomId: string, range: DateRange, now?: Date)   // blocks.manage: { reopened, leftClosed }, trims or splits blocks
 // Closing taken nights gives 409 "Those nights are already booked or closed."
 
 // The input checks for these routes are in `@/modules/bookings` (bookingRequestInput, decisionInput,

@@ -6,15 +6,20 @@ import type { ReactNode } from "react";
 
 const pill = "inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 ring-line";
 
-/** Newer and older links and "Page x of y", as plain links so each page has its own address. Nothing for one page. */
+/**
+ * Back and forward links and "Page x of y", as plain links so each page has its own address. Nothing for one page.
+ * A feed reads newest first ("Newer", "Older"); any other list reads "Previous", "Next".
+ */
 export async function Pagination({
   page,
   pages,
   href,
+  order = "newest",
 }: {
   page: number;
   pages: number;
   href: (page: number) => string;
+  order?: "newest" | "list";
 }) {
   if (pages <= 1) return null;
   const t = await getTranslations("pagination");
@@ -35,7 +40,7 @@ export async function Pagination({
         page > 1,
         <>
           <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
-          {t("newer")}
+          {order === "newest" ? t("newer") : t("previous")}
         </>,
       )}
       <p className="text-sm text-muted">{t("of", { page, pages })}</p>
@@ -43,7 +48,7 @@ export async function Pagination({
         page + 1,
         page < pages,
         <>
-          {t("older")}
+          {order === "newest" ? t("older") : t("next")}
           <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
         </>,
       )}

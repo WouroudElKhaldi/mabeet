@@ -1,11 +1,13 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import {
   dayName,
   expectNoSidewaysScroll,
+  newContext,
   pickFreeStay,
   placeDashboard,
   PLACES,
   signedIn,
+  test,
   watchForErrors,
 } from "./helpers";
 
@@ -35,7 +37,7 @@ async function requestStay(page: Page, guestName: string) {
 test("a guest requests a stay and the owner confirms it", async ({ browser }) => {
   const guestName = `Rima Haddad ${Date.now() % 100_000}`;
 
-  const guest = await browser.newContext({ storageState: signedIn("guest") });
+  const guest = await newContext(browser, { storageState: signedIn("guest") });
   const guestPage = await guest.newPage();
   const guestProblems = watchForErrors(guestPage);
   await requestStay(guestPage, guestName);
@@ -43,7 +45,7 @@ test("a guest requests a stay and the owner confirms it", async ({ browser }) =>
   await expect(guestPage.getByRole("heading", { name: `Your room at ${place.name} is held` })).toBeVisible();
   await expectNoSidewaysScroll(guestPage);
 
-  const owner = await browser.newContext({ storageState: signedIn("host") });
+  const owner = await newContext(browser, { storageState: signedIn("host") });
   const ownerPage = await owner.newPage();
   const ownerProblems = watchForErrors(ownerPage);
   await ownerPage.goto(await placeDashboard(ownerPage, place.name));
@@ -68,7 +70,7 @@ test("a guest requests a stay and the owner confirms it", async ({ browser }) =>
 });
 
 test("a night already taken cannot be picked", async ({ browser }) => {
-  const first = await browser.newContext({ storageState: signedIn("guest") });
+  const first = await newContext(browser, { storageState: signedIn("guest") });
   const page = await first.newPage();
   const stay = await requestStay(page, "Karim Saad");
   await expect(page).toHaveURL(/\/b\//);

@@ -4,10 +4,11 @@ import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
 import { PageHeader } from "@/components/shell/page-header";
 import { StatTile } from "@/components/ui/stat-tile";
 import { PLANS, type PlanName } from "@/config/plans";
-import { ManageBillingButton, UpgradeButton, WhishPlanButton } from "@/modules/billing";
+import { ManageBillingButton, PlanOffers, UpgradeButton, WhishPlanButton } from "@/modules/billing";
 import { getBilling, settlePlanPayment } from "@/modules/billing/server";
 import { requirePageAccess } from "@/server/http/session";
 import { toIsoDate } from "@/utils/dates";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { formatDate } from "@/utils/format";
 
 type PageProps = {
@@ -20,7 +21,7 @@ const noticeClass = "rounded-xl bg-surface-2 p-4 text-sm";
 /**
  * The business's plan, what it uses against the plan's limits, and the ways to pay for a bigger one: by card (a
  * Stripe subscription, changed later in Stripe's portal) or a month at a time with Whish. Plans are paid instantly;
- * nothing is paid by hand and nothing waits for an admin.
+ * nothing is paid by hand and nothing waits for an admin. Offers from Mabeet open to the place show above the plans.
  */
 export default async function BillingPage({ params, searchParams }: PageProps) {
   const { businessId } = await params;
@@ -33,7 +34,9 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
     max === null ? t("unlimited") : t("usage.allowed", { count: max });
   const usage = [
     { label: t("usage.rooms"), used: billing.usage.rooms, max: billing.limits.rooms },
-    { label: t("usage.offerings"), used: billing.usage.offerings, max: billing.limits.offerings },
+    ...(OFFERINGS_SHOWN
+      ? [{ label: t("usage.offerings"), used: billing.usage.offerings, max: billing.limits.offerings }]
+      : []),
     { label: t("usage.members"), used: billing.usage.members, max: billing.limits.members },
   ];
   const higher = (plan: PlanName) => PLANS.indexOf(plan) > PLANS.indexOf(billing.plan);
@@ -86,6 +89,10 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
             />
           ))}
         </section>
+
+        {billing.offers.length > 0 && (
+          <PlanOffers businessId={businessId} offers={billing.offers} canClaim={canPay} />
+        )}
 
         <PlanCards
           current={billing.plan}

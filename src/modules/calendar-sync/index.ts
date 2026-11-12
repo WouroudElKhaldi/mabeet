@@ -2,4 +2,4 @@
 // code lives behind ./server.ts.
 export { AddFeedForm, FeedButtons } from "./components/feed-controls";
 export { feedNeedsLook } from "./feed-health";
-export { exportTokenParams, feedInput, feedParams } from "./schemas";
+export { exportTokenParams, feedInput, feedParams, syncHealthQuery } from "./schemas";

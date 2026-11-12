@@ -2,6 +2,7 @@ import type { BookingMode, BookingStatus } from "@prisma/client";
 import { getLocale, getTranslations } from "next-intl/server";
 import { BoardingPass } from "@/components/brand/boarding-pass";
 import { Postmark } from "@/components/brand/postmark";
+import { Section } from "@/components/site/section";
 import { WhatsAppLink } from "@/components/site/whatsapp-link";
 import { ButtonLink } from "@/components/ui/button";
 import { panelClass } from "@/components/ui/field";
@@ -9,57 +10,129 @@ import { StepTrail } from "@/components/ui/step-trail";
 import type { Locale } from "@/config/appearance";
 import type { OnlinePaymentMethod } from "@/config/enums";
 import { isOnlineMode } from "@/config/enums";
+import { PhoneAlerts } from "@/modules/notifications";
+import { NearbyPartners, type NearbyPartner } from "@/modules/partners";
 import { PayOnline } from "@/modules/payments";
 import { toIsoDate, todayUtc } from "@/utils/dates";
-import { formatMoney, formatStayDates } from "@/utils/format";
+import { formatMoney, formatSessionTime, formatStayDates } from "@/utils/format";
+import { todayIn } from "@/utils/zoned-time";
 import { bookingProgress, canGuestCancel, watchEverySeconds } from "../booking-progress";
 import { BookingWatcher } from "./booking-watcher";
+import type { NearbyOffering } from "../types";
+import { NearbyOfferings } from "./nearby-offerings";
 import { GuestCancelButton } from "./guest-cancel-button";
 import { HoldCountdown } from "./hold-countdown";
 
-/** A booking as its guest's page shows it: what the guest may see of it, its place and its payments. */
-export interface GuestBooking {
+/** What a stay and seats in a session share on the guest's page: where it stands, its place and its payments. */
+interface BookingBasics {
   status: BookingStatus;
   bookingMode: BookingMode;
   currency: string;
   totalCents: number;
-  checkIn: Date;
-  checkOut: Date;
-  guestCount: number;
   guestName: string;
   reference: string;
   holdExpiresAt: Date | null;
-  room: { name: string };
   business: {
     name: string;
     slug: string;
     area: string | null;
     whatsapp: string | null;
     phone: string | null;
-    checkInTime: string;
     paymentInstructions: string | null;
   };
   payments: { status: "PENDING" | "PAID" | "REFUNDED" | "FAILED"; amountCents: number }[];
 }
 
+/** A stay as its guest's page shows it. */
+export interface GuestBooking extends BookingBasics {
+  checkIn: Date;
+  checkOut: Date;
+  guestCount: number;
+  room: { name: string };
+  business: BookingBasics["business"] & { checkInTime: string };
+}
+
+/** Seats in a session of an experience or service, as their guest's page shows them. */
+export interface GuestSeats extends BookingBasics {
+  seats: number;
+  offering: { slug: string; title: string; meetingPoint: string | null };
+  session: { startsAt: Date };
+  /** The session's day and time are read where the place is. */
+  business: BookingBasics["business"] & { timezone: string };
+}
+
+/** What differs between a stay and seats: the pass's lines, the day it can be cancelled before, and "book again". */
+async function describe(booking: GuestBooking | GuestSeats, locale: Locale, now: Date) {
+  const t = await getTranslations("confirmation");
+  if ("seats" in booking) {
+    const { timezone } = booking.business;
+    return {
+      kind: "seats" as const,
+      title: booking.offering.title,
+      firstDay: todayIn(timezone, booking.session.startsAt),
+      today: todayIn(timezone, now),
+      againHref: `/o/${encodeURIComponent(booking.offering.slug)}`,
+      fields: [
+        { label: t("when"), value: formatSessionTime(booking.session.startsAt, locale, timezone) },
+        { label: t("guestsLabel"), value: t("guests", { count: booking.seats }) },
+        { label: t("passenger"), value: booking.guestName },
+        ...(booking.offering.meetingPoint
+          ? [{ label: t("meetingPoint"), value: booking.offering.meetingPoint }]
+          : []),
+        { label: t("host"), value: booking.business.name },
+      ],
+    };
+  }
+  return {
+    kind: "stay" as const,
+    title: booking.business.name,
+    firstDay: toIsoDate(booking.checkIn),
+    today: toIsoDate(todayUtc(now)),
+    againHref: `/p/${encodeURIComponent(booking.business.slug)}`,
+    fields: [
+      { label: t("dates"), value: formatStayDates(booking.checkIn, booking.checkOut, locale) },
+      { label: t("room"), value: booking.room.name },
+      { label: t("guestsLabel"), value: t("guests", { count: booking.guestCount }) },
+      { label: t("passenger"), value: booking.guestName },
+      { label: t("checkInFrom"), value: booking.business.checkInTime },
+    ],
+  };
+}
+
 /**
- * The guest's own booking: where it stands, what to do next (pay, wait for the host), how to reach the host, and how
- * to cancel. `now` is the moment the page is drawn, so the countdown starts from the server's clock.
+ * The guest's own booking, a stay or seats in a session: where it stands, what to do next (pay, wait for the host), how to reach the host, and how
+ * to cancel. While the booking is alive it also offers phone alerts, so the guest hears the host's answer without
+ * keeping the page open, and what is worth doing near the stay. `now` is the moment the page is drawn, so the
+ * countdown starts from the server's clock.
  */
 export async function BookingView({
   token,
   booking,
   methods,
+  nearby,
+  thingsToDo = [],
+  pushKey,
   now = new Date(),
 }: {
   token: string;
-  booking: GuestBooking;
+  booking: GuestBooking | GuestSeats;
   /** The ways this booking's currency can be paid online, for the pay buttons. */
   methods: OnlinePaymentMethod[];
+  /** What is worth doing near the place, for "Near your stay". */
+  nearby: NearbyPartner[];
+  /** Experiences and services during the stay; none for seats in a session. */
+  thingsToDo?: NearbyOffering[];
+  /** The server's push key, or null when phone alerts are not set up. */
+  pushKey: string | null;
   now?: Date;
 }) {
-  const [t, locale] = await Promise.all([getTranslations("confirmation"), getLocale()]);
-  const place = booking.business.name;
+  const [t, locale, near] = await Promise.all([
+    getTranslations("confirmation"),
+    getLocale(),
+    getTranslations("partners.nearby"),
+  ]);
+  const summary = await describe(booking, locale as Locale, now);
+  const place = summary.title;
   const money = (cents: number) => formatMoney(cents, booking.currency, locale as Locale);
   const online = isOnlineMode(booking.bookingMode);
   const progress = bookingProgress(booking.bookingMode, booking.status);
@@ -79,7 +152,7 @@ export async function BookingView({
       <div className="flex min-w-0 flex-col gap-8">
         <div className="flex flex-col gap-4">
           <h1 className="font-poster text-[clamp(1.75rem,3.2vw,2.25rem)]">
-            {t(`heading.${booking.status}`, { place })}
+            {t(`${summary.kind === "seats" ? "seatHeading" : "heading"}.${booking.status}`, { place })}
           </h1>
           {progress ? (
             <StepTrail
@@ -94,7 +167,7 @@ export async function BookingView({
           <section className={`${panelClass} flex flex-col gap-4`}>
             <h2 className="text-xl font-semibold">{t("pay.title", { amount: money(booking.totalCents) })}</h2>
             <p className="text-muted">
-              {t("pay.intro")}{" "}
+              {t(summary.kind === "seats" ? "pay.seatIntro" : "pay.intro")}{" "}
               {remainingSeconds !== null ? <HoldCountdown remainingSeconds={remainingSeconds} /> : null}
             </p>
             <PayOnline token={token} methods={methods} />
@@ -107,7 +180,7 @@ export async function BookingView({
               <p className="font-semibold">{t("pay.paid", { amount: money(booking.totalCents) })}</p>
             ) : null}
             <p className="text-muted">
-              {t("holdIntro")}{" "}
+              {t(summary.kind === "seats" ? "seatHoldIntro" : "holdIntro")}{" "}
               {remainingSeconds !== null ? <HoldCountdown remainingSeconds={remainingSeconds} /> : null}
             </p>
           </section>
@@ -133,17 +206,28 @@ export async function BookingView({
             ) : online && paid.length > 0 ? (
               <p className="font-semibold">{t("refundNote")}</p>
             ) : null}
-            <ButtonLink href={`/p/${encodeURIComponent(booking.business.slug)}`}>{t("bookAgain")}</ButtonLink>
+            <ButtonLink href={summary.againHref}>{t("bookAgain")}</ButtonLink>
           </section>
         ) : null}
 
         {contact ? <WhatsAppLink phone={contact} label={t("whatsapp")} /> : null}
 
-        {canGuestCancel(booking.status, toIsoDate(booking.checkIn), toIsoDate(todayUtc(now))) ? (
+        {canGuestCancel(booking.status, summary.firstDay, summary.today) ? (
           <GuestCancelButton token={token} online={online} />
         ) : null}
 
         <p className="text-sm text-muted">{t("keepLink")}</p>
+
+        {!ended && pushKey ? <PhoneAlerts publicKey={pushKey} forBooking /> : null}
+
+        {!ended && (nearby.length > 0 || thingsToDo.length > 0) ? (
+          <Section id="nearby" title={near("title")} intro={near("intro")}>
+            <div className="grid gap-8">
+              {thingsToDo.length > 0 ? <NearbyOfferings offerings={thingsToDo} /> : null}
+              {nearby.length > 0 ? <NearbyPartners partners={nearby} /> : null}
+            </div>
+          </Section>
+        ) : null}
       </div>
 
       <aside className="relative lg:sticky lg:top-28 lg:self-start">
@@ -151,16 +235,7 @@ export async function BookingView({
           kicker={t(`status.${booking.status}`)}
           title={place}
           subtitle={booking.business.area}
-          fields={[
-            {
-              label: t("dates"),
-              value: formatStayDates(booking.checkIn, booking.checkOut, locale as Locale),
-            },
-            { label: t("room"), value: booking.room.name },
-            { label: t("guestsLabel"), value: t("guests", { count: booking.guestCount }) },
-            { label: t("passenger"), value: booking.guestName },
-            { label: t("checkInFrom"), value: booking.business.checkInTime },
-          ]}
+          fields={summary.fields}
           stub={
             <div className="flex items-end justify-between gap-4">
               <div>

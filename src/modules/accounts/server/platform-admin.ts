@@ -6,7 +6,8 @@ import { createVerifiedAccount } from "./invited-account";
 /**
  * Makes this person a platform admin who signs in with this password. Nobody can become one by signing up
  * (platformRole is not an input); only this, run from `pnpm admins:create`. A new person gets a verified account;
- * an existing account keeps everything it has and gets the new password, so running it twice never makes a copy.
+ * an existing account keeps everything it has, gets the new password and its email confirmed (sign-in needs it), so
+ * running it twice never makes a copy.
  */
 export async function ensurePlatformAdmin(input: { name: string; email: string; password: string }) {
   const email = input.email.trim().toLowerCase();

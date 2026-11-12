@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { placeParams } from "@/modules/bookings";
 import { initialStay, PlaceView } from "@/modules/directory";
-import { isPlaceSaved, loadPlace } from "@/modules/directory/server";
+import { isPlaceSaved, listOfferingsNearStay, loadPlace } from "@/modules/directory/server";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { getCurrentUser } from "@/server/http/session";
+import { toDateRange } from "@/utils/dates";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -26,16 +28,23 @@ export async function generateMetadata({ params }: Pick<PageProps, "params">): P
 /**
  * A guesthouse's public page, at the link its host shares: photos, rooms, what it offers, and where a guest picks
  * dates and books. A stay can arrive in the address (?room=&checkIn=&checkOut=&guests=) from a search or a shared
- * link; whatever does not fit is dropped.
+ * link; whatever does not fit is dropped. With dates, "Things to do near your stay" adds what is on during them.
  */
 export default async function PlacePage({ params, searchParams }: PageProps) {
   const { slug } = placeParams.parse(await params);
   const [place, user] = await Promise.all([loadPlace(slug), getCurrentUser()]);
   if (!place) notFound();
+  const initial = initialStay(await searchParams);
+  const { checkIn, checkOut } = initial;
+  const thingsToDo =
+    OFFERINGS_SHOWN && checkIn && checkOut
+      ? await listOfferingsNearStay(slug, toDateRange({ checkIn, checkOut }))
+      : [];
   return (
     <PlaceView
       place={place}
-      initial={initialStay(await searchParams)}
+      initial={initial}
+      thingsToDo={thingsToDo}
       saved={user ? await isPlaceSaved(user.id, slug) : false}
       signedIn={user !== null}
     />

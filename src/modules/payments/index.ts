@@ -2,8 +2,10 @@
 // code lives behind ./server.ts.
 export {
   payoutDecisionInput,
+  payoutHistoryQuery,
   payoutParams,
   payoutRequestInput,
+  payoutRequestsQuery,
   whishCreateBody,
   whishPayInput,
   whishPayParams,

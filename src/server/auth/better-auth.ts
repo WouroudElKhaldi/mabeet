@@ -5,7 +5,6 @@ import { nextCookies } from "better-auth/next-js";
 import { jwt } from "better-auth/plugins";
 import { prisma } from "@/server/db/client";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/server/email/auth-emails";
-import { emailReachesEveryone } from "@/server/email/send";
 import { env } from "@/server/env";
 import { MCP_READ_SCOPE, MCP_RESOURCE, pickedWorkspace } from "./mcp-oauth";
 import { PASSWORD_MIN_LENGTH } from "@/config/passwords";
@@ -25,8 +24,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: PASSWORD_MIN_LENGTH,
-    // Only demand a verified email once it can actually reach people (a key and a verified sending domain).
-    requireEmailVerification: emailReachesEveryone(),
+    // Nobody books or opens a place before confirming their email: sign-up sends the link, and the session only
+    // starts once it is opened. The live site needs RESEND_API_KEY and EMAIL_FROM on a verified domain for it.
+    requireEmailVerification: true,
     sendResetPassword: ({ user, url }) =>
       sendPasswordResetEmail(user.email, user.name, url, (user as { locale?: string }).locale),
     revokeSessionsOnPasswordReset: true,

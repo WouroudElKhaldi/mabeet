@@ -240,7 +240,48 @@ and the `OfferingSession` dates that exist.
 3. `Sponsorship`: the dates during which a partner place, or an experience or service (`Offering`), is sponsored.
    Exactly one of `partnerPlaceId` and `offeringId` (the `CHECK` `sponsorship_one_target`), `startsOn` and `endsOn`
    as dates with `endsOn` after `startsOn` (`sponsorship_valid_dates`; `endsOn` is the day after the last one, like a
-   check-out), who created it, `isDeleted`. Indexed by dates, by partner and by offering. Sponsoring an offering is
+   check-out), who created it, `isDeleted`. Indexed by dates, by partner and by offering (and by business, item 4). Sponsoring an offering is
    built with experiences (F8); the table already takes it.
-4. How a sponsor pays is not decided yet, so there is no money column. If it is paid through the platform, it is paid
+4. **Featured guesthouses** (approved by Sami on 10 November; migration `20261110172855_featured_places`):
+   `Sponsorship.businessId` (optional, indexed, deleted with its business) for a guesthouse on the platform
+   featured for a set of days. `sponsorship_one_target` became `num_nonnulls("partnerPlaceId", "offeringId",
+"businessId") = 1`: exactly one of the three. Every older row already had one of the first two.
+5. How a sponsor pays is not decided yet, so there is no money column. If it is paid through the platform, it is paid
    instantly with Stripe or Whish like plans, and its money is `BigInt` minor units with a line in `moneyAsNumbers`.
+
+## 6. Plan offers (applied)
+
+Approved by the user (the database keeper) for admin offers on host plans, in the migration
+`20261111000000_plan_offers`. How they work is in `02` ("Plans and billing").
+
+1. `OfferKind` enum (`FREE`, `PERCENT_OFF`), matched by `OFFER_KINDS` in `src/config/plans.ts` with `satisfies`.
+2. `PlanOffer`: name, `plan`, `kind`, `percentOff`, `businessId` (one place, or empty for every place),
+   `firstMonths` or `startsAt`/`endsAt` (`endsAt` is the day after the last one), `createdById`, `isDeleted` (an
+   ended offer), `createdAt`. CHECKs: `plan_offer_paid_plan` (never on Free), `plan_offer_percent` (a share of 1 to
+   99 only on `PERCENT_OFF`, none on `FREE`) and `plan_offer_shape` (exactly one kind of time: `firstMonths` 1 to 24,
+   or both dates with `endsAt` after `startsAt`). Each branch tests `IS NOT NULL` itself, because a CHECK lets an
+   unknown (NULL) result through.
+3. `PlanOfferClaim`: a place taking a free offer: `offerId`, `businessId`, `endsAt` (when the plan it gave ends),
+   `isDeleted`, `createdAt`, unique on (`offerId`, `businessId`), so each place takes an offer once.
+4. `PlanPayment.offerId`: the percent-off offer a Whish payment was discounted by, if any. No new money column: the
+   discounted price is the payment's own `amountCents`.
+
+## 7. Guest MCP calls in the AI log (applied)
+
+Approved by the user (the database keeper) for the platform's AI usage page, in the migration
+`20261112120000_guest_mcp_calls`. How it is used is in `02` ("The guest MCP" and the admin area).
+
+1. `McpAuditLog.businessId` is optional. A call from a host's AI app or the dashboard chat still names its place and
+   person; a call to the public guest MCP has neither, and is logged with `channel` `"guest"`. The channels are
+   `AI_CALL_CHANNELS` in `src/config/enums.ts` (`mcp`, `chat`, `guest`).
+2. A new index on `McpAuditLog.createdAt`, because the usage page counts every place's calls over a period.
+
+## 8. Archived places (applied)
+
+Approved by the user (the database keeper) so an owner can archive their own place from its settings, in the
+migration `20261112150000_archived_places`. How it is used is in `02` ("Archiving a place").
+
+1. `BusinessStatus` has a third value, `ARCHIVED`: closed to guests like `SUSPENDED` (every public read asks for
+   `ACTIVE`), but its team keeps the dashboard (`TEAM_OPEN_STATUSES` in `src/config/enums.ts`, read by
+   `findActiveMembership`). Only the owner moves a place between `ACTIVE` and `ARCHIVED`; only the platform admin
+   sets `SUSPENDED` (`ADMIN_BUSINESS_STATUSES`). No existing row changes.

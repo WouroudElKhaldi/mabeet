@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toIsoDate, todayUtc } from "@/utils/dates";
+import { OFFERINGS_SHOWN } from "@/config/listing";
 import { AVAILABILITY_DAYS, availabilityWindow } from "../availability-window";
 import { searchParams, toPlaceSearch } from "..";
 import { availabilityQuery, quoteQuery } from "../schemas";
@@ -61,6 +62,7 @@ describe("searchParams", () => {
       maxPrice: "150",
       checkIn: "2026-12-04",
       checkOut: "2026-12-06",
+      tab: "experiences",
     });
     expect(state).toEqual({
       area: "Ehden",
@@ -73,11 +75,14 @@ describe("searchParams", () => {
       maxPrice: 150,
       checkIn: "2026-12-04",
       checkOut: "2026-12-06",
+      // Experiences and services are hidden for now (OFFERINGS_SHOWN), so their tab reads as the places tab.
+      tab: OFFERINGS_SHOWN ? "experiences" : "homes",
     });
   });
 
   it("quietly drops what is wrong instead of failing the page", () => {
     const state = searchParams.parse({
+      tab: "castles",
       category: "Mountain!,village",
       amenities: "wifi,teleporter",
       guests: "lots",
@@ -85,6 +90,7 @@ describe("searchParams", () => {
       checkIn: "someday",
     });
     expect(state).toMatchObject({
+      tab: "homes",
       category: ["village"],
       amenities: ["wifi"],
       guests: 1,

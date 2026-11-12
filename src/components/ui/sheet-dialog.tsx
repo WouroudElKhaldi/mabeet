@@ -26,8 +26,9 @@ interface SheetDialogProps {
 // Put `data-autofocus` on the element that should have the focus first (the first button, by default).
 // Each layout is written out whole: two width classes on one element would fight, and the one that wins would depend
 // on the order of the generated CSS. The dialog itself never scrolls (its content area does): otherwise the content
-// rising into place as it opens would flash a scrollbar.
-const base = "overflow-hidden border-0 bg-surface p-0 text-ink shadow-lift backdrop:bg-scrim";
+// rising into place as it opens would flash a scrollbar. Its text starts at the start side whatever surrounds it: a
+// dialog opened from a table's last cell would otherwise line every label up at the end.
+const base = "overflow-hidden border-0 bg-surface p-0 text-start text-ink shadow-lift backdrop:bg-scrim";
 const sheetBySize = {
   md: "m-auto w-full sm:max-w-lg sm:rounded-xl sm:max-h-[85dvh] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-dvw max-sm:max-w-none max-sm:rounded-none",
   lg: "m-auto w-full sm:max-w-3xl sm:rounded-xl sm:max-h-[85dvh] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-dvw max-sm:max-w-none max-sm:rounded-none",
@@ -76,7 +77,9 @@ export function SheetDialog({
       ref={dialogRef}
       aria-labelledby={titleId}
       // The browser also reports a close we asked for ourselves; only a close the visitor started needs an answer.
-      onClose={() => open && onClose()}
+      // React hands a dialog the close of any dialog opened inside it (a confirmation over a form), so only its own
+      // close counts: otherwise answering the confirmation would shut the form under it.
+      onClose={(event) => event.target === event.currentTarget && open && onClose()}
       onClick={(event) => event.target === event.currentTarget && onClose()}
       className={dialogClasses(placement, compact, size)}
     >

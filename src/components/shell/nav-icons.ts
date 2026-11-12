@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Compass,
   CreditCard,
+  Gift,
   Home,
   Info,
   KeyRound,
@@ -60,6 +61,7 @@ export const NAV_ICONS = {
   partners: Store,
   appearance: Palette,
   health: Activity,
+  offers: Gift,
 };
 
 export type NavIconName = keyof typeof NAV_ICONS;

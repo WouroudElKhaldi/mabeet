@@ -1,15 +1,19 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import {
   expectNoSidewaysScroll,
+  newContext,
   newEmail,
   newHost,
   PASSWORD,
   pickFreeStay,
   PLACES,
   signedIn,
+  signIn,
   signUp,
+  test,
   watchForErrors,
 } from "./helpers";
+import { confirmEmail } from "./mailbox";
 
 // A guest's whole journey, page by page, on a phone: making an account, signing out and back in, asking for a new
 // password, booking and paying at a place that confirms at once, finding the stay in My trips and cancelling it for
@@ -25,6 +29,33 @@ test.afterEach(() => {
   expect(problems).toEqual([]);
 });
 
+test("a new account waits for its email to be confirmed before it can sign in", async ({ page }) => {
+  const email = newEmail("waiting");
+  await page.goto("/sign-up");
+  await page.getByLabel("Full name").fill("Hiba Saad");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText("Check your inbox")).toBeVisible();
+  await expect(page.getByText(email)).toBeVisible();
+
+  const signIn = async () => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+  };
+  // Not yet: signing in only sends the link again.
+  await signIn();
+  await expect(page.getByText("Please confirm your email first. We just sent you a new link.")).toBeVisible();
+  await page.goto("/account");
+  await expect(page).toHaveURL(/\/sign-in/);
+
+  await confirmEmail(email);
+  await signIn();
+  await expect(page).not.toHaveURL(/\/sign-in/);
+});
+
 test("a new account: sign up, sign out, sign back in, and a forgotten password", async ({ page }) => {
   const name = "Lea Nassar";
   const email = await signUp(page, name);
@@ -37,18 +68,19 @@ test("a new account: sign up, sign out, sign back in, and a forgotten password",
   await page.goto("/account");
   await expect(page).toHaveURL(/\/sign-in/);
 
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await signIn(page, email);
   await expect(page.getByRole("heading", { level: 1, name: `Hello, ${name}` })).toBeVisible();
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).not.toHaveURL(/\/account/);
   await page.goto("/sign-in");
   await page.getByRole("link", { name: "Forgot password?" }).click();
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Send reset link" }).click();
-  await expect(page.getByRole("status")).toContainText(email);
+  // A press before the page has finished loading sends nothing: press again until the link is on its way.
+  await expect(async () => {
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("button", { name: "Send reset link" }).click();
+    await expect(page.getByRole("status")).toContainText(email, { timeout: 3_000 });
+  }).toPass({ intervals: [1_000, 3_000, 10_000], timeout: 30_000 });
 
   // A reset link that is not ours, or no longer valid, says so instead of changing anything.
   await page.goto("/reset-password?token=not-a-real-token");
@@ -73,7 +105,7 @@ async function startBooking(page: Page, slug: string, next: string) {
 test("a place that confirms at once: pay with Whish, find it in trips, cancel for a full refund", async ({
   browser,
 }) => {
-  const context = await browser.newContext({ storageState: signedIn("guest") });
+  const context = await newContext(browser, { storageState: signedIn("guest") });
   const page = await context.newPage();
   const pageProblems = watchForErrors(page);
   const place = PLACES.automatic;
@@ -175,7 +207,10 @@ test("the account pages: trips, notifications, downloading my data, and deleting
 });
 
 test("becoming a host: a new account makes its own place and lands in its dashboard", async ({ page }) => {
-  await newHost(page, "Nour Hayek");
+  const dashboard = await newHost(page, "Nour Hayek");
+  // A new place opens on its guided setup; its home is one step away.
+  await expect(page.getByRole("heading", { level: 1, name: "How do guests book your place?" })).toBeVisible();
+  await page.goto(dashboard);
   await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
   await expectNoSidewaysScroll(page);
 });

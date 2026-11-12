@@ -3,6 +3,7 @@
 import type { PayoutMethod } from "@prisma/client";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { useCloseDialog } from "@/components/ui/form-dialog";
 import { Button } from "@/components/ui/button";
 import { ChoiceChips } from "@/components/ui/choice-chips";
 import { Field, inputClass, LabeledControl } from "@/components/ui/field";
@@ -44,6 +45,7 @@ export function PayoutRequestForm({ businessId, balances, last }: PayoutRequestF
     "bankName",
     "iban",
   ]);
+  const closeDialog = useCloseDialog();
   const payable = balances.filter((balance) => balance.availableCents >= SMALLEST_PAYOUT_CENTS);
   const [currency, setCurrency] = useState(payable[0]?.currency ?? "");
   const [method, setMethod] = useState<PayoutMethod>(last?.method ?? "WHISH");
@@ -69,6 +71,8 @@ export function PayoutRequestForm({ businessId, balances, last }: PayoutRequestF
       }),
     );
     setSent(done);
+    // In the pop-up, the request now shows in the payouts list behind it.
+    if (done) closeDialog();
   };
 
   return (

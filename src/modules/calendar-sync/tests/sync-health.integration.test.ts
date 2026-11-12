@@ -25,13 +25,20 @@ describe("calendar sync health", () => {
     const removed = await link({ lastError: "Gone", isDeleted: true });
 
     const admin = await createPlatformAdmin();
-    const { needsLook } = await getSyncHealth(admin);
+    // Searched by a name only this place has, so links other tests left behind never crowd it off the first page.
+    const name = `Beit ${randomUUID()}`;
+    await prisma.business.update({ where: { id: place.business.id }, data: { name } });
+    const { needsLook, found } = await getSyncHealth(admin, { q: name });
+    expect(found).toBe(needsLook.length);
     const ids = needsLook.map((feed) => feed.id);
     expect(needsLook.find((feed) => feed.id === failing.id)).toMatchObject({
-      business: { name: place.business.name },
+      business: { name },
       room: { name: room.name },
     });
     expect(ids).not.toContain(healthy.id);
     expect(ids).not.toContain(removed.id);
+
+    const other = await getSyncHealth(admin, { q: room.name, source: "BOOKING" });
+    expect(other.needsLook.map((feed) => feed.id)).not.toContain(failing.id);
   });
 });

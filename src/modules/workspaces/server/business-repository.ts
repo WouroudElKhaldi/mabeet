@@ -78,6 +78,8 @@ const settingsFields = {
   phone: true,
   whatsapp: true,
   currency: true,
+  timezone: true,
+  status: true,
   lbpRate: true,
   commissionRateBps: true,
   holdHours: true,
@@ -170,6 +172,8 @@ export interface PlaceFilters {
   tags?: readonly string[];
   /** The place has every one of these accessibility features. */
   accessibility?: readonly string[];
+  /** Only these places (the featured ones, read on their own so they are never left out of a page). */
+  ids?: readonly string[];
 }
 
 /**
@@ -207,6 +211,15 @@ const LISTED_BUSINESS_FIELDS = {
  * The same fields as a search result, for places named by id: a guest's saved places. A place its owner has
  * unlisted is still here (its page still works, and the guest chose it), but a paused or deleted one is not.
  */
+/** The names of businesses by id, whatever their status: for the admin, who sees paused and deleted places too. */
+export function findBusinessNames(db: Db, businessIds: readonly string[]) {
+  if (businessIds.length === 0) return Promise.resolve([]);
+  return db.business.findMany({
+    where: { id: { in: [...businessIds] } },
+    select: { id: true, name: true },
+  });
+}
+
 export function findBusinessesByIds(db: Db, businessIds: readonly string[]) {
   if (businessIds.length === 0) return Promise.resolve([]);
   return db.business.findMany({
@@ -221,6 +234,7 @@ export function findListedBusinesses(db: Db, filters: PlaceFilters, take: number
       listedPublicly: true,
       status: "ACTIVE",
       isDeleted: false,
+      id: filters.ids ? { in: [...filters.ids] } : undefined,
       tags: filters.tags?.length ? { hasSome: [...filters.tags] } : undefined,
       accessibility: filters.accessibility?.length ? { hasEvery: [...filters.accessibility] } : undefined,
       categories: filters.categories?.length
@@ -278,6 +292,23 @@ export function listPlatformBusinesses(db: Db, take: number) {
 
 export function countPlatformBusinesses(db: Db) {
   return db.business.count({ where: { isDeleted: false } });
+}
+
+/**
+ * Moves the place from one status to another, only if it is still in the first: an owner archiving a place the
+ * admin suspended a moment earlier changes nothing. False when it was not in `from`.
+ */
+export async function changeBusinessStatus(
+  tx: Tx,
+  businessId: string,
+  from: BusinessStatus,
+  to: BusinessStatus,
+) {
+  const { count } = await tx.business.updateMany({
+    where: { id: businessId, status: from, isDeleted: false },
+    data: { status: to },
+  });
+  return count === 1;
 }
 
 /** Suspends or reactivates a business. False when there is no such business. */

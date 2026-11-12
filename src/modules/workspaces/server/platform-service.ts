@@ -4,7 +4,8 @@ import { type PlatformActor, requirePlatformAdmin } from "@/server/auth/tenant-c
 import { prisma } from "@/server/db/client";
 import { notFound } from "@/server/errors";
 import * as businesses from "./business-repository";
-import { findHostForAdmin } from "./host-repository";
+import { pageOf } from "@/utils/paging";
+import { countHostsForAdmin, findHostForAdmin, type HostFilters, listHostsForAdmin } from "./host-repository";
 
 // The platform admin's side of the businesses: every one with its owners, and suspending one.
 
@@ -25,6 +26,25 @@ export async function listPlatformBusinesses(actor: PlatformActor) {
       owners: memberships.map((membership) => membership.user),
       roomCount: _count.rooms,
       bookingCount: _count.bookings,
+    })),
+  };
+}
+
+/**
+ * One page of the hosts (people who own a live place) for the admin's table, the newest first, filtered by words
+ * and by their places' status or plan, with the places each owns.
+ */
+export async function listPlatformHosts(actor: PlatformActor, filters: HostFilters, page = 1) {
+  requirePlatformAdmin(actor);
+  const total = await countHostsForAdmin(prisma, filters);
+  const { skip, take, ...paging } = pageOf(total, page);
+  const rows = await listHostsForAdmin(prisma, filters, { skip, take });
+  return {
+    total,
+    ...paging,
+    hosts: rows.map(({ memberships, ...host }) => ({
+      ...host,
+      places: memberships.map((membership) => membership.business),
     })),
   };
 }
@@ -59,8 +79,9 @@ export async function getPlatformHost(actor: PlatformActor, userId: string) {
     businesses: memberships
       .map(({ business }) => business)
       .filter((business) => !business.isDeleted)
-      .map(({ _count, isDeleted: _, ...business }) => ({
+      .map(({ _count, isDeleted: _, stripeSubscriptionId, ...business }) => ({
         ...business,
+        paysByCard: stripeSubscriptionId !== null,
         roomCount: _count.rooms,
         offeringCount: _count.offerings,
         bookingCount: _count.bookings,

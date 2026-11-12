@@ -288,7 +288,7 @@
       "post": {
         "tags": ["Guests"],
         "summary": "Request a stay: holds the room at once (rate limited)",
-        "description": "Signed-in user. Who the guest is comes from the session, never the body. The room is held at once; what happens next depends on the place's mode. Only the link to the booking and where it stands are returned.",
+        "description": "Signed-in user whose email is confirmed (403 until it is). Who the guest is comes from the session, never the body. The room is held at once; what happens next depends on the place's mode. Only the link to the booking and where it stands are returned.",
         "security": [
           {
             "session": []
@@ -557,7 +557,7 @@
       "post": {
         "tags": ["Guests"],
         "summary": "Request seats in an experience or service session (rate limited)",
-        "description": "Signed-in user. The seats are held at once, as a stay's nights are: waiting 10 minutes for the online payment, or (offline) for the host, never past the session's start. 409 when the seats were just taken; 404 for an unknown, paused or started session. Shares the stay requests' limit of 10 every 10 minutes.",
+        "description": "Signed-in user whose email is confirmed (403 until it is). The seats are held at once, as a stay's nights are: waiting 10 minutes for the online payment, or (offline) for the host, never past the session's start. 409 when the seats were just taken; 404 for an unknown, paused or started session. Shares the stay requests' limit of 10 every 10 minutes.",
         "security": [
           {
             "session": []
@@ -1664,7 +1664,7 @@
       "post": {
         "tags": ["Workspaces"],
         "summary": "Create a business; the caller becomes its owner",
-        "description": "Signed-in user.",
+        "description": "Signed-in user whose email is confirmed (403 until it is).",
         "security": [
           {
             "session": []
@@ -4918,6 +4918,10 @@
                       "VIEW",
                       "OTHER"
                     ]
+                  },
+                  "offeringId": {
+                    "type": "string",
+                    "description": "An experience or service's gallery (needs offerings.manage). Never with roomId."
                   }
                 },
                 "required": ["file"]
@@ -8354,7 +8358,7 @@
       "post": {
         "tags": ["Payments"],
         "summary": "The guest pays a booking that waits for payment, with Whish or a card; returns the payment page",
-        "description": "Signed-in user, and only their own booking: a stay, or seats in a session, waiting for its online payment. Returns the Whish or Stripe page to send them to.",
+        "description": "Signed-in user whose email is confirmed (403 until it is), and only their own booking: a stay, or seats in a session, waiting for its online payment. Returns the Whish or Stripe page to send them to.",
         "security": [
           {
             "session": []
@@ -9435,6 +9439,102 @@
             "description": "No team inbox is set"
           }
         }
+      }
+    },
+    "/api/workspaces/{businessId}/archive": {
+      "put": {
+        "tags": ["Workspaces"],
+        "summary": "Archive the place, or bring it back",
+        "description": "The business's own owners only (403 for anyone else on the team, including a visiting platform admin). Archived, the place is closed to guests (its page, search, the assistant and new bookings), while its team keeps the dashboard; bookings already made stay. 409 when it is already in that state, or the platform admin suspended it. Non-members get 404.",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "archived": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["archived"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "archived": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["archived"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Already archived, not archived, or suspended by the platform"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
       }
     },
     "/api/workspaces/{businessId}/booking-unit": {
@@ -10597,6 +10697,659 @@
                 ]
               }
             }
+          }
+        }
+      }
+    },
+    "/api/admin/featured-places": {
+      "get": {
+        "tags": ["Platform"],
+        "summary": "Guesthouses featured from today on",
+        "description": "Platform admins only (anyone else gets 404). Answers [{ id, placeName, placeSlug, startsOn, endsOn }], soonest first; endsOn is the day after the last one. placeName and placeSlug are null once the place has closed.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Platform"],
+        "summary": "Feature a guesthouse for a set of days",
+        "description": "Platform admins only (anyone else gets 404). The place comes first in search and on the home page, marked \"Featured\", on these days. endsOn is the day after the last one; days already over are refused (400), a closed or unknown place is 404. Answers { id }.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "businessId": {
+                    "type": "string"
+                  },
+                  "startsOn": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "endsOn": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                },
+                "required": ["businessId", "startsOn", "endsOn"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/featured-places/{sponsorshipId}": {
+      "delete": {
+        "tags": ["Platform"],
+        "summary": "End a guesthouse's featured days",
+        "description": "Platform admins only (anyone else gets 404). The place stays listed, no longer first or marked.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sponsorshipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/admin/offers": {
+      "get": {
+        "tags": ["Platform"],
+        "summary": "Plan offers and their use",
+        "description": "Platform admins only (anyone else gets 404). One page of the offers, newest first, ended ones too: { total, page, pages, offers: [{ id, name, plan, kind, percentOff, businessId, firstMonths, startsAt, endsAt, createdAt, placeName, claims, payments, state }] }. state is running, upcoming, over (its dates passed) or ended (an admin ended it). A wrong filter value is ignored.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "description": "Words in the offer's name or its place's name."
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["FREE", "PERCENT_OFF"]
+            },
+            "description": "Only offers of this kind."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "The page, 20 offers each; past the end gives the last."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Platform"],
+        "summary": "Add a plan offer",
+        "description": "Platform admins only (anyone else gets 404). kind FREE gives the plan with nothing to pay; PERCENT_OFF needs percentOff (1-99). The time is either firstMonths (1-24, counted from the day each place joined) or startsOn and lastDay (both days included). businessId is one place, or null for every place. Dates already past are 400; an unknown place is 404. Answers 201 with { id }.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 60
+                  },
+                  "plan": {
+                    "type": "string",
+                    "enum": ["PRO", "BUSINESS"]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": ["FREE", "PERCENT_OFF"]
+                  },
+                  "percentOff": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 99
+                  },
+                  "businessId": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "firstMonths": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 24
+                  },
+                  "startsOn": {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                  },
+                  "lastDay": {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                  }
+                },
+                "required": ["name", "plan", "kind"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/admin/offers/{offerId}": {
+      "delete": {
+        "tags": ["Platform"],
+        "summary": "End a plan offer",
+        "description": "Platform admins only (anyone else gets 404). Hosts stop seeing it now; a free plan already taken runs to its end, and payments made under it stay. The row is kept (isDeleted). An offer already ended is 404.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "offerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/workspaces/{businessId}/billing/offers/{offerId}/claim": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Take a free plan offer (owners)",
+        "description": "Owners only. The place is on the offer's plan until the offer ends for it, then back on Free unless it pays: { plan, until }. Offers open to the place are listed in the billing page's data. An offer not open to the place, already taken, or a share-off offer is 404; a place paying by card or already on a bigger plan is 409.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/admin/businesses/{businessId}/plan": {
+      "patch": {
+        "tags": ["Platform"],
+        "summary": "Set a place's plan by hand",
+        "description": "Platform admins only (anyone else gets 404). A paid plan runs to the end of lastDay (then housekeeping puts the place back on Free), or with no end when lastDay is null; Free has no lastDay. A place paying by card is 409 (its plan follows its Stripe subscription); a lastDay already past is 400; an unknown place is 404. Logged as business.plan_changed. Answers { plan, renewsAt }.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "plan": {
+                    "type": "string",
+                    "enum": ["FREE", "PRO", "BUSINESS"]
+                  },
+                  "lastDay": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["plan"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": ["code", "message"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in or key required"
+          },
+          "403": {
+            "description": "Missing permission"
+          },
+          "404": {
+            "description": "Not found, or not yours"
+          },
+          "409": {
+            "description": "Conflict, e.g. dates or seats just taken"
+          },
+          "429": {
+            "description": "Rate limited"
           }
         }
       }

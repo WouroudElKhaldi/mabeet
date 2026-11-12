@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { expectNoSidewaysScroll, placeDashboard, PLACES, signedIn, watchForErrors } from "./helpers";
+import { expect } from "@playwright/test";
+import { expectNoSidewaysScroll, placeDashboard, PLACES, signedIn, test, watchForErrors } from "./helpers";
 
 // The owner's dashboard, control by control, on a phone: the shell (menu, More, bell, theme, language) and every
 // page's buttons, tabs, filters and forms. Saves write back what was there, so the demo place stays as it was.
@@ -18,7 +18,7 @@ test.afterEach(() => {
   expect(problems).toEqual([]);
 });
 
-test("the shell: side menu, More, bell, dark mode and language", async ({ page }) => {
+test("the shell: side menu, More, bell, dark mode and language", { tag: "@phone" }, async ({ page }) => {
   await page.goto(base);
 
   await page.getByRole("button", { name: "Open menu" }).click();
@@ -96,11 +96,12 @@ test("calendar: views, months, a day, the filters and closing dates", async ({ p
 
   // Closing dates starts on the calendar itself: the last night is the next day clicked. Cancel keeps them open.
   await page.getByRole("button", { name: "Close dates" }).click();
-  await expect(page.getByText("Now click the last night to close, or pick it below.")).toBeVisible();
+  await expect(page.getByText("Now click the last night to close.")).toBeVisible();
   await days.nth(30).click();
-  await expect(page.getByRole("button", { name: "Close these dates" })).toBeEnabled();
-  await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("button", { name: "Close these dates" })).toBeHidden();
+  const form = page.getByRole("dialog");
+  await expect(form.getByRole("button", { name: "Close these dates" })).toBeEnabled();
+  await form.getByRole("button", { name: "Cancel" }).click();
+  await expect(form).toBeHidden();
 });
 
 test("channels: copy a room's link, and a calendar link to add", async ({ page }) => {
@@ -111,14 +112,16 @@ test("channels: copy a room's link, and a calendar link to add", async ({ page }
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toMatch(/\/api\/ical\/.+\.ics$/);
 
-  const add = room.getByRole("button", { name: "Add calendar" });
+  await room.getByRole("button", { name: "Add calendar" }).click();
+  const form = page.getByRole("dialog", { name: "Add a calendar to Arched room" });
+  const add = form.getByRole("button", { name: "Add calendar" });
   await expect(add).toBeDisabled();
-  await room.getByRole("combobox", { name: "Platform" }).selectOption({ label: "Booking.com" });
-  await room
+  await form.getByRole("combobox", { name: "Platform" }).selectOption({ label: "Booking.com" });
+  await form
     .getByRole("textbox", { name: "Calendar link (.ics)" })
     .fill("https://admin.booking.com/calendar.ics");
   await expect(add).toBeEnabled();
-  await room.getByRole("textbox", { name: "Calendar link (.ics)" }).fill("");
+  await form.getByRole("textbox", { name: "Calendar link (.ics)" }).fill("");
   await expect(add).toBeDisabled();
 });
 
@@ -128,14 +131,22 @@ test("your place: its page link and saving the profile", async ({ page }) => {
     "href",
     new RegExp(`/p/${PLACES.approval.slug}`),
   );
-  await page.getByRole("button", { name: "Save settings" }).click();
-  await expect(page.getByText("Saved.").first()).toBeVisible();
+  const profile = page
+    .getByRole("region")
+    .filter({ has: page.getByRole("heading", { level: 2, name: "Profile" }) });
+  await profile.getByRole("button", { name: "Edit" }).click();
+  const form = page.getByRole("dialog");
+  await form.getByRole("button", { name: "Save" }).click();
+  await expect(form).toBeHidden();
 });
 
 test("rooms: both rooms and the form to add one", async ({ page }) => {
   await page.goto(`${base}/rooms`);
-  await expect(page.getByRole("group").filter({ hasText: "Arched room" }).first()).toBeVisible();
-  const add = page.getByRole("region", { name: "Add a room" });
+  await expect(
+    page.getByRole("table", { name: "Rooms" }).getByRole("row", { name: /Arched room/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Add a room" }).click();
+  const add = page.getByRole("dialog");
   await add.getByRole("button", { name: "Add room" }).click();
   // Nothing typed: the browser stops at the first required field instead of sending.
   await expect(add.getByRole("textbox", { name: "Room name" })).toBeFocused();
@@ -186,8 +197,7 @@ test("analytics: the periods and all places", async ({ page }) => {
 
 test("payouts: the balances and asking without an amount", async ({ page }) => {
   await page.goto(`${base}/payouts`);
-  const ask = page.getByRole("region", { name: "Ask for a payout" });
-  await expect(ask).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ask for a payout" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Online payments" })).toBeVisible();
 });
 
@@ -196,7 +206,7 @@ test("billing: what the place uses, and paying a month with Whish", async ({ pag
   await expect(page.getByRole("heading", { level: 1, name: "Plan and billing" })).toBeVisible();
   await expect(page.getByText(/You are on (Free|Pro|Business)/)).toBeVisible();
   const usage = page.getByRole("region", { name: "What your place uses" });
-  for (const label of ["Rooms", "Experiences and services", "Team members"]) {
+  for (const label of ["Rooms", "Team members"]) {
     await expect(usage.getByText(label, { exact: true })).toBeVisible();
   }
   // Card payments are off in the browser tests, so the page says so and offers Whish.
@@ -219,19 +229,20 @@ test("billing: what the place uses, and paying a month with Whish", async ({ pag
 
 test("team: the members, the invitation form and a new role", async ({ page }) => {
   await page.goto(`${base}/team`);
-  await expect(
-    page.getByRole("region", { name: "Members" }).getByRole("combobox", { name: "Role" }),
-  ).toBeVisible();
-  const invite = page.getByRole("region", { name: "Invite someone to the team" });
+  await expect(page.getByRole("table").getByRole("combobox", { name: "Role" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Invite someone" }).click();
+  const invite = page.getByRole("dialog");
   await invite.getByRole("button", { name: "Send invitation" }).click();
   await expect(invite.getByRole("textbox", { name: "Full name" })).toBeFocused();
+  await invite.getByRole("button", { name: "Close" }).click();
 
   const roleName = `Night desk ${Date.now() % 100_000}`;
-  const newRole = page.getByRole("region", { name: "New role" });
+  await page.getByRole("button", { name: "New role" }).click();
+  const newRole = page.getByRole("dialog");
   await newRole.getByRole("textbox", { name: "Role name" }).fill(roleName);
   await newRole.getByRole("checkbox", { name: /^See bookings/ }).check();
   await newRole.getByRole("button", { name: "Create role" }).click();
-  await expect(page.getByRole("region", { name: "Roles" }).getByText(roleName)).toBeVisible();
+  await expect(page.getByRole("main").getByText(roleName, { exact: true }).first()).toBeVisible();
 });
 
 test("AI keys: create one, see it once, and revoke it", async ({ page }) => {

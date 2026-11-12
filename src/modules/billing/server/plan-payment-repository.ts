@@ -11,6 +11,8 @@ export function createPlanPayment(
     paidById?: string | null;
     plan: Plan;
     months?: number;
+    /** The percent-off offer the price was lowered by. */
+    offerId?: string;
     amountCents: number;
     currency: string;
     /** Plans are only ever paid instantly; the database refuses any other method. */
@@ -72,6 +74,15 @@ export async function expireWhishPlans(db: Db, now: Date): Promise<number> {
 }
 
 export function extendPlan(tx: Tx, businessId: string, plan: Plan, renewsAt: Date) {
+  return tx.business.update({
+    where: { id: businessId },
+    data: { plan, planRenewsAt: renewsAt },
+    select: { id: true },
+  });
+}
+
+/** Sets a place's plan as a platform admin decides it: until a date, or with no end (`renewsAt` null). */
+export function setPlan(tx: Tx, businessId: string, plan: Plan, renewsAt: Date | null) {
   return tx.business.update({
     where: { id: businessId },
     data: { plan, planRenewsAt: renewsAt },

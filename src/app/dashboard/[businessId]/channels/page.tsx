@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
 import { PageHeader, Panel } from "@/components/shell/page-header";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { CopyField } from "@/components/ui/copy-field";
 import { getCalendarLinks } from "@/modules/bookings/server";
 import { AddFeedForm, FeedButtons, feedNeedsLook } from "@/modules/calendar-sync";
@@ -84,7 +85,16 @@ export default async function ChannelsPage({ params }: PageProps) {
                       })}
                     </ul>
                   )}
-                  <AddFeedForm businessId={businessId} roomId={room.id} />
+                  <div>
+                    <FormDialog
+                      label={t("add")}
+                      title={t("addTitle", { room: room.name })}
+                      intro={t("addIntro")}
+                      variant="secondary"
+                    >
+                      <AddFeedForm businessId={businessId} roomId={room.id} />
+                    </FormDialog>
+                  </div>
                 </section>
               </div>
             </Panel>

@@ -39,9 +39,10 @@ async function detect(): Promise<PushState> {
 
 /**
  * Push notifications on this device, for the signed-in person: turn them on (the browser asks for permission, then the
- * device is saved for them) or off. Shown only when the server has push set up (`publicKey`).
+ * device is saved for them) or off. Shown only when the server has push set up (`publicKey`). On a booking's page
+ * (`forBooking`) it speaks of that booking; everywhere else of every update the person gets.
  */
-export function PhoneAlerts({ publicKey }: { publicKey: string }) {
+export function PhoneAlerts({ publicKey, forBooking = false }: { publicKey: string; forBooking?: boolean }) {
   const t = useTranslations("pwa");
   const { run, pending, error } = useAction();
   const [state, setState] = useState<PushState>("checking");
@@ -79,9 +80,11 @@ export function PhoneAlerts({ publicKey }: { publicKey: string }) {
     <section className="rounded-2xl p-6 ring-1 ring-line">
       <h2 className="flex items-center gap-2 text-lg font-semibold">
         <Bell className="size-5 text-accent" aria-hidden />
-        {t("title")}
+        {forBooking ? t("bookingTitle") : t("title")}
       </h2>
-      <p className="mt-2 max-w-prose text-sm text-muted">{t("accountBody")}</p>
+      <p className="mt-2 max-w-prose text-sm text-muted">
+        {forBooking ? t("bookingBody") : t("accountBody")}
+      </p>
       <div className="mt-5 flex min-h-11 flex-wrap items-center gap-3">
         {state === "off" && (
           <button type="button" disabled={pending} onClick={turnOn} className={buttonClass()}>
