@@ -544,7 +544,10 @@ postcard when there are none), `PlaceSummary`, `UnitList` (the rooms, with the r
 without a price), `AmenityList` (Omar's `AMENITIES` list and its `placePage.amenity.*` texts; six, then "Show all"),
 `ThingsToKnow`, `MeetHost`, `PlaceMap`, `ReviewList`, `BookingBox`, and the partners part of "Near your stay"
 (`NearbyPartners` from the partners module, the `nearby` section after "Where you'll be" and before `MeetHost`;
-shown without dates, as partners have no sessions). Not built yet: the experiences part of "Near your stay".
+shown without dates, as partners have no sessions). Its experiences part (`NearbyOfferings`, from
+`listOfferingsNearStay`) shows once dates are picked: `BookingBox` puts them in the address (`router.replace`, no
+scroll), so the page reads them; `OfferingCard`s of the region with a session from check-in to the check-out day,
+sponsored first and marked, then the nearest, then the soonest, above the partners.
 
 The title row carries `ShareButton` (`src/components/site/share-button.tsx`, shared with any page that wants it) and
 `FavoriteButton` on the end side. Share opens the phone's own share sheet where there is one, otherwise it copies
@@ -666,7 +669,7 @@ are left, so a phone with the wrong clock is right. `BookingWatcher` asks the se
 every 15 or 30 s while the host decides, only while the tab is in view, and stops when nothing more can change. While
 the booking is alive, under "keep this link": `PhoneAlerts` with `forBooking` ("Follow this booking"; shown only when
 the server has push keys), then "Near your stay" (`NearbyPartners`, from `listNearStay`: the partners of the place's
-region, as on its page). Not built yet: the experiences part of "Near your stay".
+region, as on its page), and for a stay the experiences and services on during its nights (`NearbyOfferings`).
 
 #### `/o/[slug]` Experience or service (F8, bonus)
 

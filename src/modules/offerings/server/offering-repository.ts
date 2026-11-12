@@ -233,3 +233,36 @@ export function listPublicOfferings(
     },
   });
 }
+
+/**
+ * The bookable offerings of a region with a session starting in `[from, to)`, each with its cover photo, its map pin
+ * and its sessions in that window: what a guest staying there on those nights could join.
+ */
+export function listOfferingsDuring(db: Db, region: string, from: Date, to: Date, take: number) {
+  const during = {
+    where: { isDeleted: false, active: true, startsAt: { gte: from, lt: to } },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, startsAt: true, capacity: true },
+  } as const satisfies Prisma.Offering$sessionsArgs;
+  return db.offering.findMany({
+    where: { ...bookable, region, sessions: { some: during.where } },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      slug: true,
+      kind: true,
+      title: true,
+      categorySlug: true,
+      area: true,
+      latitude: true,
+      longitude: true,
+      durationMinutes: true,
+      priceCents: true,
+      priceUnit: true,
+      photos: { ...publicFields.photos, take: 1 },
+      business: { select: { currency: true, timezone: true } },
+      sessions: during,
+    },
+  });
+}

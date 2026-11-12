@@ -6,6 +6,7 @@ export {
   findBookableOffering,
   findOpenSession,
   findPublicOffering,
+  listOfferingsDuring,
   listPublicOfferings,
   lockSession,
   offeringExists,

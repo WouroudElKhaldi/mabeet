@@ -51,3 +51,11 @@ export async function listPublicOfferings(
 export async function offeringExists(businessId: string, offeringId: string): Promise<boolean> {
   return (await offerings.findOffering(prisma, businessId, offeringId)) !== null;
 }
+
+/** Most offerings read for one stay, before they are ordered. */
+const READ_DURING_STAY = 50;
+
+/** The bookable experiences and services of a region with a session starting during `[from, to)`. */
+export function listOfferingsDuring(region: string, from: Date, to: Date) {
+  return offerings.listOfferingsDuring(prisma, region, from, to, READ_DURING_STAY);
+}

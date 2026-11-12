@@ -10,6 +10,7 @@ export {
   listNearbyPartners,
   listPartnerPage,
   listPartnersForAdmin,
+  listSponsoredOfferingIds,
   removePartner,
   restorePartner,
   sponsorPartner,

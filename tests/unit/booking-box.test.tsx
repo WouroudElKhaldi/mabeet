@@ -1,10 +1,12 @@
 import { NextIntlClientProvider } from "next-intl";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import ar from "../../messages/ar.json";
 import en from "../../messages/en.json";
 import { BookingBox } from "@/modules/directory/components/booking-box";
 import type { PublicUnit } from "@/modules/directory/types";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 
 // The booking box as a guest first sees it, before any date is picked. Choosing dates and the price that comes back
 // were checked in a browser; the rules behind them are tested in src/modules/directory/tests/quote-rules.test.ts and tests/unit/stay-selection.test.ts.

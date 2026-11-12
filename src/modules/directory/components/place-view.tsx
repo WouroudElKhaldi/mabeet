@@ -5,12 +5,13 @@ import type { Locale } from "@/config/appearance";
 import { NearbyPartners } from "@/modules/partners";
 import { formatMoney } from "@/utils/format";
 import { lowestRateCents } from "../summary";
-import type { PublicPlace } from "../types";
+import type { NearbyOffering, PublicPlace } from "../types";
 import { AmenityList } from "./amenity-list";
 import { BookingBox } from "./booking-box";
 import { ReviewList } from "@/modules/reviews";
 import { countPhotos, groupPhotos } from "../photo-groups";
 import { MeetHost } from "./meet-host";
+import { NearbyOfferings } from "./nearby-offerings";
 import { PlaceMap } from "./place-map";
 import { PhotoGallery } from "./photo-gallery";
 import { PlaceHeader } from "./place-header";
@@ -28,6 +29,7 @@ export async function PlaceView({
   initial,
   saved,
   signedIn,
+  thingsToDo = [],
 }: {
   place: PublicPlace;
   /** A stay carried over from a search or a link (the page's address). */
@@ -35,6 +37,8 @@ export async function PlaceView({
   /** Whether this guest already keeps the place on their list, for the heart. */
   saved: boolean;
   signedIn: boolean;
+  /** Experiences and services during the stay in the address, once the guest has picked dates. */
+  thingsToDo?: NearbyOffering[];
 }) {
   const [t, locale] = await Promise.all([getTranslations("placePage"), getLocale()]);
   const [booking, known, card, host, nearby] = await Promise.all([
@@ -81,9 +85,12 @@ export async function PlaceView({
               <PlaceMap place={place} />
             </Section>
           ) : null}
-          {place.nearby.length > 0 ? (
+          {place.nearby.length > 0 || thingsToDo.length > 0 ? (
             <Section id="nearby" title={nearby("title")} intro={nearby("intro")}>
-              <NearbyPartners partners={place.nearby} />
+              <div className="grid gap-8">
+                {thingsToDo.length > 0 ? <NearbyOfferings offerings={thingsToDo} /> : null}
+                {place.nearby.length > 0 ? <NearbyPartners partners={place.nearby} /> : null}
+              </div>
             </Section>
           ) : null}
           <Section id="host" title={host("title")}>

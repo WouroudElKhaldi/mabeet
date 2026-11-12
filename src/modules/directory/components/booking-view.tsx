@@ -18,6 +18,8 @@ import { formatMoney, formatSessionTime, formatStayDates } from "@/utils/format"
 import { todayIn } from "@/utils/zoned-time";
 import { bookingProgress, canGuestCancel, watchEverySeconds } from "../booking-progress";
 import { BookingWatcher } from "./booking-watcher";
+import type { NearbyOffering } from "../types";
+import { NearbyOfferings } from "./nearby-offerings";
 import { GuestCancelButton } from "./guest-cancel-button";
 import { HoldCountdown } from "./hold-countdown";
 
@@ -108,6 +110,7 @@ export async function BookingView({
   booking,
   methods,
   nearby,
+  thingsToDo = [],
   pushKey,
   now = new Date(),
 }: {
@@ -117,6 +120,8 @@ export async function BookingView({
   methods: OnlinePaymentMethod[];
   /** What is worth doing near the place, for "Near your stay". */
   nearby: NearbyPartner[];
+  /** Experiences and services during the stay; none for seats in a session. */
+  thingsToDo?: NearbyOffering[];
   /** The server's push key, or null when phone alerts are not set up. */
   pushKey: string | null;
   now?: Date;
@@ -215,9 +220,12 @@ export async function BookingView({
 
         {!ended && pushKey ? <PhoneAlerts publicKey={pushKey} forBooking /> : null}
 
-        {!ended && nearby.length > 0 ? (
+        {!ended && (nearby.length > 0 || thingsToDo.length > 0) ? (
           <Section id="nearby" title={near("title")} intro={near("intro")}>
-            <NearbyPartners partners={nearby} />
+            <div className="grid gap-8">
+              {thingsToDo.length > 0 ? <NearbyOfferings offerings={thingsToDo} /> : null}
+              {nearby.length > 0 ? <NearbyPartners partners={nearby} /> : null}
+            </div>
           </Section>
         ) : null}
       </div>

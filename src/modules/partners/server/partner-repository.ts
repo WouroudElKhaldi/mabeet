@@ -161,3 +161,13 @@ export async function findFeaturedBusinessIds(db: Db, today: Date): Promise<stri
   });
   return rows.flatMap((row) => (row.businessId ? [row.businessId] : []));
 }
+
+/** The experiences and services sponsored on `today`. */
+export async function findSponsoredOfferingIds(db: Db, today: Date): Promise<string[]> {
+  const rows = await db.sponsorship.findMany({
+    where: { ...sponsoredOn(today), offeringId: { not: null } },
+    select: { offeringId: true },
+    distinct: ["offeringId"],
+  });
+  return rows.flatMap((row) => (row.offeringId ? [row.offeringId] : []));
+}

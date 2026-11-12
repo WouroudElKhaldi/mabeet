@@ -9,7 +9,7 @@ import {
   refreshGuestPayments,
 } from "@/modules/bookings/server";
 import { BookingView } from "@/modules/directory";
-import { listNearStay } from "@/modules/directory/server";
+import { listNearStay, listOfferingsNearStay } from "@/modules/directory/server";
 import { pushPublicKey } from "@/modules/notifications/server";
 import { requirePageUser } from "@/server/http/session";
 
@@ -45,6 +45,14 @@ export default async function BookingPage({ params }: { params: Promise<{ token:
       booking={booking}
       methods={onlinePaymentMethods(booking.currency)}
       nearby={await listNearStay(booking.business.slug)}
+      thingsToDo={
+        "checkIn" in booking
+          ? await listOfferingsNearStay(booking.business.slug, {
+              checkIn: booking.checkIn,
+              checkOut: booking.checkOut,
+            })
+          : []
+      }
       pushKey={pushPublicKey()}
     />
   );

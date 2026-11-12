@@ -4,7 +4,7 @@ import { getSessionBookingForGuest, requestSessionBooking } from "@/modules/book
 import sharp from "sharp";
 import { listPlacePhotos, uploadPhoto } from "@/modules/rooms/server";
 import { createPlace, createUser, memberWith, prisma } from "@tests/integration/helpers";
-import { browseOfferings } from "../server";
+import { browseOfferings, listOfferingsNearStay } from "../server";
 import { getOfferingPage } from "../server/offering-page-service";
 
 // The guest's side of experiences and services on the real database: an offering's page shows its upcoming sessions
@@ -172,5 +172,64 @@ describe("an experience's photos, reviews and host", () => {
         area: null,
       }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+describe("things to do near a stay", () => {
+  it("lists the region's experiences with a session during the stay, the sponsored one first", async () => {
+    const place = await placeWithOffering();
+    await prisma.business.update({ where: { id: place.business.id }, data: { region: "north" } });
+    const other = await placeWithOffering();
+    const run = randomUUID().slice(0, 8);
+    const make = async (name: string, region: string, days: number) => {
+      const title = `${name} ${run}`;
+      const offering = await prisma.offering.create({
+        data: {
+          businessId: other.business.id,
+          kind: "EXPERIENCE",
+          slug: `near-${randomUUID()}`,
+          title,
+          region,
+          durationMinutes: 120,
+          priceCents: 2_000,
+          maxGuests: 6,
+        },
+      });
+      const startsAt = new Date(Date.now() + days * DAY_MS);
+      await prisma.offeringSession.create({
+        data: {
+          businessId: other.business.id,
+          offeringId: offering.id,
+          startsAt,
+          endsAt: new Date(startsAt.getTime() + 2 * 3_600_000),
+          capacity: 6,
+        },
+      });
+      return offering;
+    };
+    await make("Wine tasting", "north", 3);
+    const sponsored = await make("Cedar walk", "north", 4);
+    await make("Too late", "north", 20);
+    await make("Wrong region", "south", 3);
+    const admin = await createUser("Platform Admin");
+    await prisma.sponsorship.create({
+      data: {
+        offeringId: sponsored.id,
+        startsOn: new Date(Date.now() - DAY_MS),
+        endsOn: new Date(Date.now() + 30 * DAY_MS),
+        createdById: admin.id,
+      },
+    });
+
+    const checkIn = new Date(Date.now() + 2 * DAY_MS);
+    const range = {
+      checkIn: new Date(Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate())),
+      checkOut: new Date(Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate() + 3)),
+    };
+    const near = await listOfferingsNearStay(place.business.slug, range);
+    // Other tests leave offerings in the same region: only this run's are looked at.
+    const titles = near.map((card) => card.title).filter((title) => title.endsWith(run));
+    expect(titles).toEqual([`Cedar walk ${run}`, `Wine tasting ${run}`]);
+    expect(near.find((card) => card.title === `Cedar walk ${run}`)?.sponsored).toBe(true);
   });
 });

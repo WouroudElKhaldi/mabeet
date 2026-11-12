@@ -2726,7 +2726,8 @@
       "distance": "بعيد {km} كم",
       "website": "الموقع",
       "previous": "السابق",
-      "next": "التالي"
+      "next": "التالي",
+      "experiences": "تجارب وخدمات خلال إقامتك"
     },
     "kinds": {
       "RESTAURANT": "مطعم",
