@@ -77,7 +77,9 @@ export function SheetDialog({
       ref={dialogRef}
       aria-labelledby={titleId}
       // The browser also reports a close we asked for ourselves; only a close the visitor started needs an answer.
-      onClose={() => open && onClose()}
+      // React hands a dialog the close of any dialog opened inside it (a confirmation over a form), so only its own
+      // close counts: otherwise answering the confirmation would shut the form under it.
+      onClose={(event) => event.target === event.currentTarget && open && onClose()}
       onClick={(event) => event.target === event.currentTarget && onClose()}
       className={dialogClasses(placement, compact, size)}
     >
