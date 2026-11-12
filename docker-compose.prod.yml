@@ -90,6 +90,10 @@ services:
     environment:
       DATABASE_URL: *database-url
       JOBS_MODE: queue
+      # The server has 1 GB for everything. Jobs are small and never in a hurry, so the worker's memory is kept
+      # small: a 2 MB young space (Node's default is 16) makes it clean up often, and past 160 MB of old space it
+      # restarts (restart: unless-stopped) instead of pushing the website into swap.
+      NODE_OPTIONS: --max-semi-space-size=2 --max-old-space-size=160
     # Lets in-flight jobs finish on a deploy (the worker waits up to 60s).
     stop_grace_period: 70s
     depends_on:
