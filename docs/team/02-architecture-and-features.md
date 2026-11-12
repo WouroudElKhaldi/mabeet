@@ -1327,7 +1327,9 @@ Bonus (F23), built on "N. Near your stay".
   `/api/admin/partners/{partnerId}` (save every field, remove), `.../restore`, `.../sponsorships` (sponsor) and
   `.../sponsorships/{sponsorshipId}` (end). Anyone but a platform admin gets 404, as everywhere in the admin area.
 - A partner's photo is a link (`https` only), never an upload: partners are not on the platform (`07`, section 5).
-- Guests: `getPlace` (directory) adds `nearby`, from `listNearbyPartners(place, now)`: the live partners of the
+- Guests: `getPlace` (directory) adds `nearby`, and the guest's booking page reads the same through
+  `listNearStay(slug)` (none once the place has closed; test `near-stay.integration.test.ts`), from
+  `listNearbyPartners(place, now)`: the live partners of the
   place's region, sponsored ones first (marked `sponsored`, only on the days their sponsorship covers), then the
   nearest by map pin (`src/utils/geo.ts`), then by name, at most 12. A place with no region shows none.
 - Screens (`src/modules/partners/components/`): `/admin/partners` shows `PartnerManager`: each live partner is a

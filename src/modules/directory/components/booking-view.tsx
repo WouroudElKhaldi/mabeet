@@ -2,6 +2,7 @@ import type { BookingMode, BookingStatus } from "@prisma/client";
 import { getLocale, getTranslations } from "next-intl/server";
 import { BoardingPass } from "@/components/brand/boarding-pass";
 import { Postmark } from "@/components/brand/postmark";
+import { Section } from "@/components/site/section";
 import { WhatsAppLink } from "@/components/site/whatsapp-link";
 import { ButtonLink } from "@/components/ui/button";
 import { panelClass } from "@/components/ui/field";
@@ -9,6 +10,8 @@ import { StepTrail } from "@/components/ui/step-trail";
 import type { Locale } from "@/config/appearance";
 import type { OnlinePaymentMethod } from "@/config/enums";
 import { isOnlineMode } from "@/config/enums";
+import { PhoneAlerts } from "@/modules/notifications";
+import { NearbyPartners, type NearbyPartner } from "@/modules/partners";
 import { PayOnline } from "@/modules/payments";
 import { toIsoDate, todayUtc } from "@/utils/dates";
 import { formatMoney, formatStayDates } from "@/utils/format";
@@ -44,21 +47,33 @@ export interface GuestBooking {
 
 /**
  * The guest's own booking: where it stands, what to do next (pay, wait for the host), how to reach the host, and how
- * to cancel. `now` is the moment the page is drawn, so the countdown starts from the server's clock.
+ * to cancel. While the booking is alive it also offers phone alerts, so the guest hears the host's answer without
+ * keeping the page open, and what is worth doing near the stay. `now` is the moment the page is drawn, so the
+ * countdown starts from the server's clock.
  */
 export async function BookingView({
   token,
   booking,
   methods,
+  nearby,
+  pushKey,
   now = new Date(),
 }: {
   token: string;
   booking: GuestBooking;
   /** The ways this booking's currency can be paid online, for the pay buttons. */
   methods: OnlinePaymentMethod[];
+  /** What is worth doing near the place, for "Near your stay". */
+  nearby: NearbyPartner[];
+  /** The server's push key, or null when phone alerts are not set up. */
+  pushKey: string | null;
   now?: Date;
 }) {
-  const [t, locale] = await Promise.all([getTranslations("confirmation"), getLocale()]);
+  const [t, locale, near] = await Promise.all([
+    getTranslations("confirmation"),
+    getLocale(),
+    getTranslations("partners.nearby"),
+  ]);
   const place = booking.business.name;
   const money = (cents: number) => formatMoney(cents, booking.currency, locale as Locale);
   const online = isOnlineMode(booking.bookingMode);
@@ -144,6 +159,14 @@ export async function BookingView({
         ) : null}
 
         <p className="text-sm text-muted">{t("keepLink")}</p>
+
+        {!ended && pushKey ? <PhoneAlerts publicKey={pushKey} forBooking /> : null}
+
+        {!ended && nearby.length > 0 ? (
+          <Section id="nearby" title={near("title")} intro={near("intro")}>
+            <NearbyPartners partners={nearby} />
+          </Section>
+        ) : null}
       </div>
 
       <aside className="relative lg:sticky lg:top-28 lg:self-start">
