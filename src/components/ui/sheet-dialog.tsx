@@ -26,8 +26,9 @@ interface SheetDialogProps {
 // Put `data-autofocus` on the element that should have the focus first (the first button, by default).
 // Each layout is written out whole: two width classes on one element would fight, and the one that wins would depend
 // on the order of the generated CSS. The dialog itself never scrolls (its content area does): otherwise the content
-// rising into place as it opens would flash a scrollbar.
-const base = "overflow-hidden border-0 bg-surface p-0 text-ink shadow-lift backdrop:bg-scrim";
+// rising into place as it opens would flash a scrollbar. Its text starts at the start side whatever surrounds it: a
+// dialog opened from a table's last cell would otherwise line every label up at the end.
+const base = "overflow-hidden border-0 bg-surface p-0 text-start text-ink shadow-lift backdrop:bg-scrim";
 const sheetBySize = {
   md: "m-auto w-full sm:max-w-lg sm:rounded-xl sm:max-h-[85dvh] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-dvw max-sm:max-w-none max-sm:rounded-none",
   lg: "m-auto w-full sm:max-w-3xl sm:rounded-xl sm:max-h-[85dvh] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-dvw max-sm:max-w-none max-sm:rounded-none",
