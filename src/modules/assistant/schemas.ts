@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { id, workspaceParams } from "@/lib/schemas";
+import { AI_USAGE_PERIODS } from "@/config/enums";
+import { id, listChoice, workspaceParams } from "@/lib/schemas";
 
 // The assistant module's input checks.
 
@@ -21,3 +22,6 @@ export const workspaceChoice = z.object({ businessId: id });
 
 /** /api/workspaces/{businessId}/connected-apps/{connectionId} */
 export const connectionParams = workspaceParams.extend({ connectionId: id });
+
+/** The platform's AI usage page's address: the period, the last 30 days unless another is picked. */
+export const aiUsageQuery = z.object({ days: listChoice(AI_USAGE_PERIODS) });

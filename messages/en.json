@@ -1497,6 +1497,7 @@
       "partners": "Partners",
       "appearance": "Appearance",
       "health": "Health",
+      "aiApps": "AI apps",
       "groups": {
         "platform": "Platform",
         "money": "Money",
@@ -1651,6 +1652,27 @@
       "byCard": "Pays by card: change the plan in Stripe",
       "current": "{plan} until {date}",
       "currentNoEnd": "{plan}, no end date"
+    },
+    "aiApps": {
+      "title": "AI apps",
+      "intro": "How often each AI tool is called: by hosts' own AI apps, the dashboard assistant, and guests through the public guest MCP.",
+      "period": "Period",
+      "lastDays": "Last {days} days",
+      "totals": "Calls in this period",
+      "calls": "Calls",
+      "channels": {
+        "mcp": "Hosts' AI apps",
+        "chat": "Dashboard assistant",
+        "guest": "Guests' AI apps"
+      },
+      "byTool": "Calls by tool",
+      "tool": "Tool",
+      "channel": "From",
+      "failed": "Failed",
+      "averageTime": "Average time",
+      "seconds": "{value} s",
+      "empty": "No AI app has called a tool in this period.",
+      "failedNote": "{count, plural, one {# call} other {# calls}} did not work. Each one is in the place's own list on its Connect AI page."
     }
   },
   "errors": {

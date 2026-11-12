@@ -971,20 +971,23 @@ model ApiKey {
   @@index([businessId])
 }
 
+/// Every tool call an AI made. A call from a host's AI app or the dashboard chat belongs to the place it read; a call
+/// to the public guest MCP has no place and no person (channel "guest"), so the platform can count those too.
 model McpAuditLog {
-  id         String   @id @default(cuid())
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  id         String    @id @default(cuid())
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
   apiKeyId   String?
   userId     String?
-  channel    String // mcp | chat
+  channel    String // mcp | chat | guest (AI_CALL_CHANNELS)
   tool       String
   outcome    String
   latencyMs  Int
-  isDeleted  Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  isDeleted  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
 
   @@index([businessId, createdAt])
+  @@index([createdAt])
 }
 
 // ---------- Experiences and services ----------

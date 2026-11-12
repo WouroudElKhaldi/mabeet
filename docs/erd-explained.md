@@ -367,7 +367,9 @@ A **secret key** a staff member makes so an AI app can reach the business's data
 
 A diary of **every action an AI app did**: which tool, whether it worked, and how fast. It is for safety and checking.
 
-- It belongs to **one business**.
+- A call from a host's AI app or the dashboard chat belongs to **one business** and one person.
+- A call from a guest's AI app (the public guest MCP, channel "guest") belongs to **no business and no person**:
+  it is kept only so the platform admins can see how much guests use it, on the AI apps page.
 
 ---
 

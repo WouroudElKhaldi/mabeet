@@ -265,3 +265,13 @@ Approved by the user (the database keeper) for admin offers on host plans, in th
    `isDeleted`, `createdAt`, unique on (`offerId`, `businessId`), so each place takes an offer once.
 4. `PlanPayment.offerId`: the percent-off offer a Whish payment was discounted by, if any. No new money column: the
    discounted price is the payment's own `amountCents`.
+
+## 7. Guest MCP calls in the AI log (applied)
+
+Approved by the user (the database keeper) for the platform's AI usage page, in the migration
+`20261112120000_guest_mcp_calls`. How it is used is in `02` ("The guest MCP" and the admin area).
+
+1. `McpAuditLog.businessId` is optional. A call from a host's AI app or the dashboard chat still names its place and
+   person; a call to the public guest MCP has neither, and is logged with `channel` `"guest"`. The channels are
+   `AI_CALL_CHANNELS` in `src/config/enums.ts` (`mcp`, `chat`, `guest`).
+2. A new index on `McpAuditLog.createdAt`, because the usage page counts every place's calls over a period.
