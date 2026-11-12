@@ -277,3 +277,32 @@ describe("cancelling a session", () => {
     ).toBe(false);
   });
 });
+
+describe("the team's list of seats", () => {
+  it("splits sessions still to start from those already begun, for the Bookings page's tabs", async () => {
+    const place = await placeWithSession("OFFLINE");
+    const coming = await requestSessionBooking(seatsFor(place, 2));
+    const started = await prisma.offeringSession.create({
+      data: {
+        businessId: place.business.id,
+        offeringId: place.offering.id,
+        startsAt: new Date(Date.now() + HOUR_MS),
+        endsAt: new Date(Date.now() + 3 * HOUR_MS),
+        capacity: 8,
+      },
+    });
+    const begun = await requestSessionBooking(seatsFor(place, 1, { sessionId: started.id }));
+    // Its session has begun since the guest booked.
+    await prisma.offeringSession.update({
+      where: { id: started.id },
+      data: { startsAt: new Date(Date.now() - HOUR_MS) },
+    });
+    const now = new Date();
+    const ids = async (filters: { startsFrom?: Date; startsBefore?: Date }) =>
+      (await listSessionBookings(place.ctx, { ...filters, take: 50, skip: 0 })).map((row) => row.id);
+
+    expect(await ids({ startsFrom: now })).toEqual([coming.id]);
+    expect(await ids({ startsBefore: now })).toEqual([begun.id]);
+    expect(await ids({})).toEqual([begun.id, coming.id]);
+  });
+});

@@ -1,3 +1,5 @@
+import type { BrowseTab } from "@/config/listing";
+
 // One way to turn a search into a /search address, shared by the search bar, the categories and the filters, so a
 // search can always be shared as a link.
 
@@ -14,6 +16,8 @@ export interface SearchLink {
   access?: string[];
   minPrice?: number;
   maxPrice?: number;
+  /** Places to stay (the default), experiences or services. */
+  tab?: BrowseTab;
 }
 
 /** The address of a search. Empty values and the defaults are left out, so links stay short. */
@@ -30,6 +34,7 @@ export function searchHref(search: SearchLink): string {
   for (const key of ["category", "tags", "amenities", "access"] as const) put(key, search[key]?.join(","));
   put("minPrice", search.minPrice);
   put("maxPrice", search.maxPrice);
+  put("tab", search.tab === "homes" ? undefined : search.tab);
   const query = params.toString();
   return query ? `/search?${query}` : "/search";
 }

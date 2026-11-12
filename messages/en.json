@@ -185,7 +185,11 @@
       "services": "Services for your stay"
     },
     "seeAll": "See all",
-    "results": "{count, plural, =0 {Nothing matches yet} one {# result} other {# results}}"
+    "results": "{count, plural, =0 {Nothing matches yet} one {# result} other {# results}}",
+    "tabsLabel": "What to browse",
+    "offeringsEmptyTitle": "Nothing to book here yet",
+    "offeringsEmptyBody": "Hosts are adding their experiences and services. Look again soon, or find a place to stay.",
+    "browseHomes": "See places to stay"
   },
   "placePage": {
     "newListing": "New listing",
@@ -355,7 +359,8 @@
       "card": "Pay by card",
       "unavailable": "Online payment isn't available right now. Message the host.",
       "paid": "Paid online: {amount}",
-      "refunded": "Refunded to you: {amount}"
+      "refunded": "Refunded to you: {amount}",
+      "seatIntro": "Pay online with Whish or a card. Mabeet takes no commission: it all goes to the host. The spots stay yours until the time runs out:"
     },
     "cancel": {
       "title": "Cancel this booking?",
@@ -365,7 +370,16 @@
       "reason": "Reason (optional)"
     },
     "bookAgain": "Book other dates",
-    "refundNote": "Your online payment is refunded in full."
+    "refundNote": "Your online payment is refunded in full.",
+    "seatHeading": {
+      "HELD": "Your spots for {place} are held",
+      "CONFIRMED": "You're going to {place}",
+      "DECLINED": "The host couldn't take your spots for {place}",
+      "EXPIRED": "Your spots for {place} expired",
+      "CANCELLED": "Your spots for {place} were cancelled",
+      "AWAITING_PAYMENT": "Pay to secure your spots for {place}"
+    },
+    "seatHoldIntro": "Nobody else can take these spots while the host decides. Time left:"
   },
   "auth": {
     "name": "Full name",
@@ -1003,7 +1017,11 @@
         "4": "Thu",
         "5": "Fri",
         "6": "Sat"
-      }
+      },
+      "edit": "Edit",
+      "status": "Status",
+      "actions": "Actions",
+      "sessionCount": "{count, plural, =0 {No dates yet} one {# upcoming date} other {# upcoming dates}}"
     },
     "photos": {
       "title": "Photos",

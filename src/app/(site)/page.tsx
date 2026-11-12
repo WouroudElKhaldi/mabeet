@@ -10,7 +10,8 @@ import { SearchBar } from "@/components/site/search-bar";
 import type { Locale } from "@/config/appearance";
 import { listCategories } from "@/modules/admin/server";
 import { Browse, searchParams as searchSchema, toPlaceSearch } from "@/modules/directory";
-import { searchPlaces } from "@/modules/directory/server";
+import { browseOfferings, searchPlaces } from "@/modules/directory/server";
+import { offeringKindOf } from "@/config/listing";
 import { addDays, todayUtc } from "@/utils/dates";
 import { formatMoney, formatStayDates } from "@/utils/format";
 import { stagger } from "@/utils/motion";
@@ -32,11 +33,14 @@ type PageProps = { searchParams: Promise<Record<string, string | string[] | unde
  */
 export default async function HomePage({ searchParams }: PageProps) {
   const search = searchSchema.parse(await searchParams);
-  const [t, locale, places, categories, found] = await Promise.all([
+  const kind = offeringKindOf(search.tab);
+  const [t, locale, places, categories, offerings, found] = await Promise.all([
     getTranslations("home"),
     getLocale(),
+    // The places are read on every tab: the hero is built from them.
     searchPlaces(toPlaceSearch(search, HOME_RESULTS)),
-    listCategories("HOME"),
+    listCategories(kind ?? "HOME"),
+    kind ? browseOfferings(kind, HOME_RESULTS) : [],
     // The same search the sample postcard asks for: a mountain stay for two under $120 a night.
     searchPlaces({ guests: 2, categories: ["mountain"], maxRateCents: 12_000, limit: 2 }),
   ]);
@@ -116,7 +120,7 @@ export default async function HomePage({ searchParams }: PageProps) {
         </BrandScene>
       </section>
 
-      <Browse search={search} places={places} categories={categories} variant="home" />
+      <Browse search={search} places={places} categories={categories} offerings={offerings} variant="home" />
 
       <DirectReceipts />
 

@@ -67,3 +67,24 @@ export function formatStayDates(checkIn: Date, checkOut: Date, locale: Locale): 
     }).formatRange(checkIn, checkOut),
   );
 }
+
+/**
+ * The moment a session starts, in the time zone of the place that runs it ("Sat, 14 Nov, 10:00"): a guest abroad
+ * still reads the time they must be at the meeting point.
+ */
+export function formatSessionTime(
+  startsAt: Date | string,
+  locale: Locale,
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions = {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  },
+): string {
+  return plainSpaces(
+    new Intl.DateTimeFormat(dateLocale(locale), { ...options, timeZone }).format(new Date(startsAt)),
+  );
+}

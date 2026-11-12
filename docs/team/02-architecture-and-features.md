@@ -1284,12 +1284,26 @@ Hosts can sell seats in dated sessions (a hike, a wine tasting, an airport trans
   `POST .../offerings/{offeringId}/sessions`, `DELETE .../sessions/{sessionId}`, `GET .../session-bookings`,
   `POST .../session-bookings/{bookingId}/{action}`, and for guests `POST /api/public/experiences/{slug}/bookings`
   (signed in, the stay requests' rate limit), then the stay's `/api/public/bookings/{token}/checkout` and `/cancel`.
+- **What guests see** is put together in `directory` (`offering-page-service.ts`), which reads the offering from
+  `offerings` (`findPublicOffering`, `listPublicOfferings`: active, at an active place, sessions not started) and
+  the seats taken from `bookings` (`countTakenSeats`: confirmed seats, and held or unpaid ones whose time has not run
+  out). `getOfferingPage` (cached per request as `loadOffering`) gives `/o/[slug]` each session with its seats left;
+  `browseOfferings(kind, take)` gives the Experiences and Services tabs of the home and search pages, listed places
+  only, the offerings with a date first. The private link `/b/[token]` reads the stay, then the seats
+  (`getSessionBookingForGuest`), and `BookingView` shows either.
+- **The host's screens:** `/dashboard/[businessId]/offerings` (`offerings.manage`) lists them in a `DataTable`, with
+  `OfferingEditor` and `SessionScheduler` (the seats taken in each session, from `countTakenSeats`) in pop-ups. The
+  Bookings page lists the seats under the stays, by the same tabs (`listSessionBookings` with `startsFrom` or
+  `startsBefore`), with the same `BookingRow` and answers. Photos for an offering are not built yet: its card and
+  page show the place's drawn art.
 
 Tests: `src/modules/offerings/tests/offerings.integration.test.ts`,
 `src/modules/bookings/tests/session-bookings.integration.test.ts` (the modes, the race for the last seats, payments
-and refunds, guest cancel, expiry, cancelling a session, isolation), the seats case in
+and refunds, guest cancel, expiry, cancelling a session, isolation, the team's list by tab), the seats case in
 `booking-rollback.integration.test.ts`, the seat emails in `booking-notifications.integration.test.ts`, and
-`sessionHoldUntil` and `sessionDayHasCome` in `booking-policy.test.ts`.
+`sessionHoldUntil` and `sessionDayHasCome` in `booking-policy.test.ts`, and the guest's side in
+`src/modules/directory/tests/offering-page.integration.test.ts` (seats left, a switched-off offering, the browse tabs,
+the private link).
 
 ### F. Favourites (F5)
 

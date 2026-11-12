@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MAX_STAY_NIGHTS } from "@/config/booking-limits";
 import { AMENITIES } from "@/config/amenities";
-import { ACCESSIBILITY, TAGS } from "@/config/listing";
+import { ACCESSIBILITY, BROWSE_TABS, TAGS } from "@/config/listing";
 import { id, isoDate, stayDates } from "@/lib/schemas";
 import { placeParams } from "@/modules/bookings";
 import {
@@ -116,6 +116,7 @@ export const searchParams = z
     maxPrice: price,
     checkIn: isoDate.optional().catch(undefined),
     checkOut: isoDate.optional().catch(undefined),
+    tab: z.enum(BROWSE_TABS).catch("homes"),
   })
   .transform(({ checkIn, checkOut, ...search }) => {
     const range = optionalDateRange(checkIn, checkOut);

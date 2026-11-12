@@ -78,6 +78,7 @@ const settingsFields = {
   phone: true,
   whatsapp: true,
   currency: true,
+  timezone: true,
   lbpRate: true,
   commissionRateBps: true,
   holdHours: true,

@@ -13,16 +13,19 @@ type Decision = "confirm" | "decline" | "cancel";
 
 /**
  * The host's answers on one booking row: Confirm and Decline while it waits for them, Cancel once it is confirmed
- * and the stay has not started. Each one asks first; the server checks the same rules again.
+ * and the stay or the session has not started. Each one asks first; the server checks the same rules again.
  */
 export function BookingActions({
   businessId,
   bookingId,
   decisions,
+  seats = false,
 }: {
   businessId: string;
   bookingId: string;
   decisions: readonly Decision[];
+  /** Seats in a session rather than a stay: they are answered at their own address. */
+  seats?: boolean;
 }) {
   const t = useTranslations("dashboard.bookings");
   const tConfirm = useTranslations("confirm");
@@ -57,9 +60,12 @@ export function BookingActions({
     if (!answer) return;
     setSending(decision);
     await run(() =>
-      api.post(`/api/workspaces/${businessId}/bookings/${bookingId}/${decision}`, {
-        reason: answer.reason || undefined,
-      }),
+      api.post(
+        `/api/workspaces/${businessId}/${seats ? "session-bookings" : "bookings"}/${bookingId}/${decision}`,
+        {
+          reason: answer.reason || undefined,
+        },
+      ),
     );
   }
 

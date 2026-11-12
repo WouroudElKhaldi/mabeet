@@ -1,3 +1,5 @@
+import type { OfferingKind } from "./enums";
+
 // Fixed vocabularies for listings. Stored as keys; labels live in messages/*.json, so search filters stay clean.
 
 /** Tags owners pick for a place, and guests filter by. */
@@ -36,3 +38,13 @@ export type Language = (typeof LANGUAGES)[number];
 
 export const isLanguage = (value: string): value is Language =>
   (LANGUAGES as readonly string[]).includes(value);
+
+/** What a guest browses: places to stay, or experiences and services booked by the session. `?tab=` in the address. */
+export const BROWSE_TABS = ["homes", "experiences", "services"] as const;
+
+export type BrowseTab = (typeof BROWSE_TABS)[number];
+
+/** The kind of offering a tab lists, or null for the places tab. */
+export function offeringKindOf(tab: BrowseTab): OfferingKind | null {
+  return tab === "experiences" ? "EXPERIENCE" : tab === "services" ? "SERVICE" : null;
+}

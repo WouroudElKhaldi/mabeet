@@ -29,3 +29,20 @@ export function closeSession(tx: Tx, businessId: string, sessionId: string) {
 export function priceSession(offering: { priceCents: number; priceUnit: PriceUnit }, seats: number): number {
   return offering.priceUnit === "PER_PERSON" ? offering.priceCents * seats : offering.priceCents;
 }
+
+/** An experience or service guests can book, by its public link, with its next sessions. Null when there is none. */
+export function findPublicOffering(slug: string, now = new Date(), sessionsShown = 30) {
+  return offerings.findPublicOffering(prisma, slug, now, sessionsShown);
+}
+
+/** Experiences or services of listed places, for the browse tabs: the ones with a date coming first. */
+export async function listPublicOfferings(
+  filter: { kind: "EXPERIENCE" | "SERVICE"; categorySlug?: string; take: number },
+  now = new Date(),
+) {
+  const rows = await offerings.listPublicOfferings(prisma, filter, now);
+  // Something with a date to book is worth more to a guest than something newer with none.
+  return [...rows].sort(
+    (first, second) => Number(second.sessions.length > 0) - Number(first.sessions.length > 0),
+  );
+}

@@ -280,3 +280,18 @@ export async function expireAllStaleSessionHolds(now = new Date()) {
   await sendRefunds(refunds, now);
   return expired.length;
 }
+
+/** How many seats are taken in each of these sessions, for the pages that show what is left. Plain read. */
+export async function countTakenSeats(
+  sessionIds: readonly string[],
+  now = new Date(),
+): Promise<Map<string, number>> {
+  if (sessionIds.length === 0) return new Map();
+  const rows = await sessionBookings.countSeatsTaken(prisma, sessionIds, now);
+  return new Map(rows.map((row) => [row.sessionId, row._sum.seats ?? 0]));
+}
+
+/** The guest's own seats, at the private link they were sent to after booking. Null for anyone else's. */
+export function getSessionBookingForGuest(publicToken: string, guestUserId: string) {
+  return sessionBookings.findSessionBookingByPublicToken(prisma, publicToken, guestUserId);
+}

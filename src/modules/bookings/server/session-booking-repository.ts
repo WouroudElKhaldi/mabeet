@@ -104,6 +104,9 @@ export function findSessionBookingByPublicToken(db: Db, publicToken: string, gue
 
 export interface SessionBookingFilters {
   status?: BookingStatus;
+  /** Sessions that start at or after this moment, or before it. */
+  startsFrom?: Date;
+  startsBefore?: Date;
   take: number;
   skip: number;
 }
@@ -111,7 +114,12 @@ export interface SessionBookingFilters {
 /** The business's seat bookings, by when their session starts. */
 export function listSessionBookings(db: Db, businessId: string, filters: SessionBookingFilters) {
   return db.sessionBooking.findMany({
-    where: { businessId, isDeleted: false, status: filters.status },
+    where: {
+      businessId,
+      isDeleted: false,
+      status: filters.status,
+      session: { startsAt: { gte: filters.startsFrom, lt: filters.startsBefore } },
+    },
     orderBy: { session: { startsAt: "asc" } },
     take: filters.take,
     skip: filters.skip,
@@ -173,5 +181,27 @@ export function findSessionBookingForNotice(db: Db, bookingId: string) {
       // Paid online, whether or not it has been refunded since: the emails say what happened to the money.
       payments: { where: { status: { in: ["PAID", "REFUNDED"] }, isDeleted: false }, select: { id: true } },
     },
+  });
+}
+
+/**
+ * Seats held in each of these sessions now: confirmed, or waiting for the payment or the owner while their time has
+ * not run out. A hold past its time gives its seats back at the next booking, so it is not counted here either.
+ */
+export function countSeatsTaken(db: Db, sessionIds: readonly string[], now: Date) {
+  return db.sessionBooking.groupBy({
+    by: ["sessionId"],
+    where: {
+      sessionId: { in: [...sessionIds] },
+      isDeleted: false,
+      OR: [
+        { status: "CONFIRMED" },
+        {
+          status: { in: [...EXPIRING_BOOKING_STATUSES] },
+          OR: [{ holdExpiresAt: null }, { holdExpiresAt: { gte: now } }],
+        },
+      ],
+    },
+    _sum: { seats: true },
   });
 }

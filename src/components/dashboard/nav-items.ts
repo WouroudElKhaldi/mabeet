@@ -38,6 +38,7 @@ export const DASHBOARD_PAGES = {
   channels: { group: "bookings", path: "channels", icon: "channels", anyOf: ["feeds.manage"] },
   place: { group: "listings", path: "place", icon: "place", anyOf: ["settings.manage"] },
   rooms: { group: "listings", path: "rooms", icon: "rooms", anyOf: ["rooms.read"], tab: true },
+  offerings: { group: "listings", path: "offerings", icon: "offerings", anyOf: ["offerings.manage"] },
   reviews: { group: "listings", path: "reviews", icon: "reviews", anyOf: ["reviews.reply"] },
   settings: { group: "business", path: "settings", icon: "settings", anyOf: ["settings.manage"] },
   profile: { group: "business", path: "profile", icon: "profile", anyOf: [], everyone: true },
