@@ -1507,10 +1507,15 @@ Code: `src/modules/bookings/server/booking-payments.ts` (`refundPayments`, `send
 
 Bonus (F22), needs experiences and services (F8).
 
-- On a place's page, once the guest picks dates, and on the guest's booking page, `NearbySection` shows experiences
-  and services in the same region with a session during the guest's nights, nearest first (from the map pins).
-- `listNearbyOfferings(placeId, range, now = new Date())` in `offering-service.ts` reads only public, active,
-  not-deleted offerings and sessions with free seats; route `GET /api/public/places/{slug}/nearby?checkIn=&checkOut=`.
+- On a place's page, once the guest picks dates, and on the guest's booking page for a stay, `NearbyOfferings` (in
+  the "Things to do near your stay" section, above the partners) shows experiences and services of the same region
+  with a session that still has seats from the check-in day to the end of the check-out day: sponsored ones first
+  (marked), then the nearest by map pin, then the soonest, at most 12.
+- `listOfferingsNearStay(slug, range, now = new Date())` in `directory/server/offering-page-service.ts` puts it
+  together: the offerings from `listOfferingsDuring` (offerings module), the seats taken from `countTakenSeats`
+  (bookings), the sponsored ones from `listSponsoredOfferingIds` (partners). The pages call it while they render, so
+  there is no route of its own: `BookingBox` puts the picked dates in the address (`?checkIn=&checkOut=`) and the
+  place page reads them.
 - It uses the region (`src/config/regions.ts`), the map pin and the `OfferingSession` dates that already exist; no
   database change.
 - With F23, sponsored offerings and partner places come first ("F. Featured partners and sponsored listings").

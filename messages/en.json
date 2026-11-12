@@ -2726,7 +2726,8 @@
       "distance": "{km} km away",
       "website": "Website",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "experiences": "Experiences and services during your stay"
     },
     "kinds": {
       "RESTAURANT": "Restaurant",

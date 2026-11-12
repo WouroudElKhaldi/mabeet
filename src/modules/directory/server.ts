@@ -5,7 +5,7 @@ import { getPlace } from "./server/directory-service";
 import { getOfferingPage } from "./server/offering-page-service";
 
 export { listMyActivity } from "./server/activity-service";
-export { browseOfferings } from "./server/offering-page-service";
+export { browseOfferings, listOfferingsNearStay } from "./server/offering-page-service";
 export { sendHostMessage } from "./server/contact-host-service";
 export { isPlaceSaved, listMyFavorites, setFavorite } from "./server/favorite-service";
 

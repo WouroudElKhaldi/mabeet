@@ -12,14 +12,21 @@ import type { OfferingCard as OfferingCardData } from "../types";
 export async function OfferingCard({
   offering,
   categoryLabel,
+  sponsored = false,
   index = 0,
 }: {
   offering: OfferingCardData;
   /** The offering's category, in the reader's language, shown on the photo. */
   categoryLabel?: string;
+  /** Marked "Sponsored", in "Things to do near your stay". */
+  sponsored?: boolean;
   index?: number;
 }) {
-  const [t, locale] = await Promise.all([getTranslations("offering"), getLocale()]);
+  const [t, tNearby, locale] = await Promise.all([
+    getTranslations("offering"),
+    getTranslations("partners.nearby"),
+    getLocale(),
+  ]);
   return (
     <article className="group rise-in" style={stagger(index)}>
       <Link href={`/o/${offering.slug}`} className="block rounded-xl">
@@ -38,6 +45,11 @@ export async function OfferingCard({
           {categoryLabel ? (
             <span className="absolute start-2.5 top-2.5 rounded-full bg-surface/95 px-2.5 py-1 text-xs font-semibold text-ink shadow-soft">
               {categoryLabel}
+            </span>
+          ) : null}
+          {sponsored ? (
+            <span className="absolute end-2.5 top-2.5 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-ink ring-1 ring-accent-line">
+              {tNearby("sponsored")}
             </span>
           ) : null}
         </div>

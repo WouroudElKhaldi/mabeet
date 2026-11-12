@@ -114,6 +114,13 @@ export interface PublicPlace {
   nearby: NearbyPartner[];
 }
 
+/** An experience or service a guest could join during their stay: sponsored ones are marked, and how far it is. */
+export interface NearbyOffering extends OfferingCard {
+  sponsored: boolean;
+  /** From the place, by map pin; null when either has no pin. */
+  distanceKm: number | null;
+}
+
 /** One of a guest's stays, as their trips list shows it: no payment details, no guest contact, only what the list needs. */
 export interface GuestTrip {
   /** The secret in the booking's private link, /b/{publicToken}. */

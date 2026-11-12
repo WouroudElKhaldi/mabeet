@@ -234,3 +234,8 @@ export async function endPlaceFeature(actor: PlatformActor, sponsorshipId: strin
 export async function listFeaturedPlaceIds(now = new Date()): Promise<Set<string>> {
   return new Set(await partners.findFeaturedBusinessIds(prisma, todayUtc(now)));
 }
+
+/** The experiences and services sponsored today, for "Things to do near your stay", where they come first. */
+export async function listSponsoredOfferingIds(now = new Date()): Promise<Set<string>> {
+  return new Set(await partners.findSponsoredOfferingIds(prisma, todayUtc(now)));
+}
