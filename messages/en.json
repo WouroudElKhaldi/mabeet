@@ -734,7 +734,7 @@
       "allRooms": "All rooms",
       "closeDates": "Close dates",
       "hint": "Double-click a day (or use Close dates), then click the last night.",
-      "pickLastNight": "Now click the last night to close, or pick it below.",
+      "pickLastNight": "Now click the last night to close.",
       "closeRange": "Close {from} to {to} (nights included)",
       "lastNight": "Last night",
       "cancel": "Cancel",
@@ -962,7 +962,7 @@
       "title": "Experiences & services",
       "intro": "Hikes, tastings, transfers, a private chef: anything guests book by the session. Add it, then schedule its dates.",
       "new": "Add an experience or service",
-      "empty": "Nothing yet. Add your first experience or service below.",
+      "empty": "Nothing yet. Add your first experience or service.",
       "kind": "Type",
       "kinds": {
         "EXPERIENCE": "Experience",
