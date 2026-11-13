@@ -36,6 +36,6 @@ interface PlanLimits {
 
 export const PLAN_LIMITS: Record<(typeof PLANS)[number], PlanLimits> = {
   FREE: { monthlyUsd: 0, rooms: 3, offerings: 1, members: 2, ai: false },
-  PRO: { monthlyUsd: 10, rooms: 15, offerings: null, members: 10, ai: true },
-  BUSINESS: { monthlyUsd: 20, rooms: null, offerings: null, members: null, ai: true },
+  PRO: { monthlyUsd: 50, rooms: 15, offerings: null, members: 10, ai: true },
+  BUSINESS: { monthlyUsd: 100, rooms: null, offerings: null, members: null, ai: true },
 };

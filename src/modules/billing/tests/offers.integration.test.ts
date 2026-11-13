@@ -200,19 +200,19 @@ describe("a percent-off offer", () => {
     const place = await createPlace();
 
     const offers = (await getBilling(place.ctx)).offers;
-    expect(offers.find((open) => open.id === best.id)).toMatchObject({ monthlyCents: 500 });
+    expect(offers.find((open) => open.id === best.id)).toMatchObject({ monthlyCents: 2_500 });
     await expect(claimFreeOffer(place.ctx, best.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     await startWhishPlanCheckout(place.ctx, "PRO");
     const payment = await prisma.planPayment.findFirstOrThrow({ where: { businessId: place.business.id } });
-    expect(payment).toMatchObject({ plan: "PRO", amountCents: 500, offerId: best.id });
+    expect(payment).toMatchObject({ plan: "PRO", amountCents: 2_500, offerId: best.id });
 
     const other = await createPlace();
     await joinedDaysAgo(other.business.id, 90);
     await startWhishPlanCheckout(other.ctx, "PRO");
     expect(
       await prisma.planPayment.findFirstOrThrow({ where: { businessId: other.business.id } }),
-    ).toMatchObject({ amountCents: 1_000, offerId: null });
+    ).toMatchObject({ amountCents: 5_000, offerId: null });
   });
 
   it("puts a coupon on a card checkout for the months it has left", async () => {
