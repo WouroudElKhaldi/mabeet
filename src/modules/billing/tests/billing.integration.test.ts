@@ -4,6 +4,7 @@ import * as cron from "@/app/api/cron/expire-holds/route";
 import * as callback from "@/app/api/payments/whish/callback/route";
 import * as simulatorPay from "@/app/api/whish-simulator/pay/[code]/route";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import { PLAN_LIMITS } from "@/config/plans";
 import { runHousekeeping } from "@/modules/housekeeping/server";
 import { env } from "@/server/env";
 import { createPlace, memberWith, prisma } from "@tests/integration/helpers";
@@ -328,7 +329,8 @@ describe("paying by Whish (the simulator, end to end)", () => {
     const [pending] = await prisma.planPayment.findMany({ where: { businessId: place.business.id } });
     expect(pending).toMatchObject({
       plan: "PRO",
-      amountCents: 1_000,
+      // A month of Pro at its price, so a price change never breaks this test.
+      amountCents: PLAN_LIMITS.PRO.monthlyUsd * 100,
       currency: "USD",
       method: "WHISH",
       status: "PENDING",
