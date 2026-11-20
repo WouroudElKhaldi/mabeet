@@ -175,6 +175,8 @@
       "title": "What owners told us",
       "subtitle": "Real messages from owners who tried Mabeet. Only their names are left out.",
       "toMabeet": "Message to Mabeet",
+      "previous": "Previous message",
+      "next": "Next message",
       "owners": {
         "guesthouse": "Guesthouse owner",
         "chalet": "Chalet owner",
@@ -193,9 +195,8 @@
         "m5": "People are booking and asking through your link while I'm doing other things. Really nice."
       },
       "home": {
-        "m1": "Sorry for the late reply.",
-        "m2": "I loved the project. Very organised and clear.",
-        "m3": "And the subscription idea is new and nice. In the end, it all comes down to trust."
+        "m1": "I loved the project. Very organised and clear.",
+        "m2": "And the subscription idea is new and nice. In the end, it all comes down to trust."
       }
     }
   },
