@@ -153,7 +153,7 @@ describe("connecting an AI app by signing in", () => {
     await allow(staff.userId, clientId, business.id);
     expect(await listTools(await accessToken(claims))).toEqual({
       status: 200,
-      tools: ["list_places", "list_bookings"],
+      tools: ["list_bookings"],
     });
     // A token for another server, or without the read scope, is refused.
     expect((await listTools(await accessToken({ ...claims, aud: "https://elsewhere.example" }))).status).toBe(

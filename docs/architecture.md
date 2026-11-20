@@ -79,10 +79,8 @@ These are three separate questions, answered in this order:
 2. **Which business are you acting in?** (tenant isolation) Your `Membership` in that business. A workspace URL
    names a business (`/api/workspaces/{businessId}/…`), but that id only picks between businesses you belong to.
    `tenantRoute()` looks up your active membership before the handler runs. No membership means `404`, never
-   `403`, so nobody learns that a business exists. An API key or OAuth token starts in the membership it was made
-   in. An AI can switch to another of the same person's places by naming it (`resolvePlaceContext`): only places
-   they are an active member of, with their own role there, and a read-only key stays read-only. A name that fits
-   several places is refused, never guessed. A platform admin can open any business's dashboard on the website
+   `403`, so nobody learns that a business exists. An API key or OAuth token works only in the membership it was made
+   in, even when the same person belongs to other places: no AI tool takes a place, so the AI never reaches them. A platform admin can open any business's dashboard on the website
    (never through AI keys); their actions are logged under their own user id.
 3. **What may you do there?** (authorization) The membership's role gives a set of permissions. The result is a
    `TenantContext` (`src/server/auth/tenant-context.ts`): user, business, permissions and channel. Every service
@@ -452,9 +450,8 @@ person behind it, isolation included.
 We build it in this order. First the MCP (the first AI bonus): the person's own AI app brings the model, so it needs
 none of ours. Then a few host actions through the MCP. Our own model (DeepSeek) is the last bonus.
 
-- **Owner/staff MCP** (`/api/mcp`): API key or OAuth token → membership → `TenantContext`. `list_places` shows the
-  person's places, and every place-specific tool takes an optional `place`, resolved as described in the isolation
-  section. The first version only reads and reports: free rooms, bookings, revenue, the commission saved and the
+- **Owner/staff MCP** (`/api/mcp`): API key or OAuth token → membership → `TenantContext`. Its tools work only in the
+  key's or token's place, as described in the isolation section. The first version only reads and reports: free rooms, bookings, revenue, the commission saved and the
   numbers for a report over a period (the person's AI app writes the report); every key is read-only. Then a
   few write tools, only for the roles that allow them: cancel a booking, close or reopen dates, confirm or decline a
   request. They carry `destructiveHint`, so the client asks the person first, and read-only keys never see them.

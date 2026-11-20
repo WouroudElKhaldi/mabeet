@@ -1,15 +1,15 @@
 import { ZodError } from "zod";
 import { AppError } from "@/server/errors";
 import { formatMoney } from "@/utils/format";
-import type { AiTool } from "./tool";
+import type { AiTool, AskPerson } from "./tool";
 
 export type ToolOutcome = { ok: true; result: unknown } | { ok: false; error: string };
 
 /** Told about every finished tool call, for the audit log. Synchronous on purpose: it must not delay the answer. */
 export type ToolCallListener = (tool: string, outcome: ToolOutcome, latencyMs: number) => void;
 
-/** Runs a tool by name for one caller. */
-export type ToolRunner = (name: string, rawInput: unknown) => Promise<ToolOutcome>;
+/** Runs a tool by name for one caller; `ask` reaches the person when their AI app can show a pop-up. */
+export type ToolRunner = (name: string, rawInput: unknown, ask?: AskPerson) => Promise<ToolOutcome>;
 
 const CENTS_KEY = /Cents$/;
 
@@ -36,10 +36,15 @@ export const toolPayload = (outcome: ToolOutcome) =>
   outcome.ok ? presentMoney(outcome.result, null) : { error: outcome.error };
 
 /** Checks the input, runs the tool, and turns a failure into a message that is safe to hand to a model. */
-async function runTool(tool: AiTool, rawInput: unknown, context: unknown): Promise<ToolOutcome> {
+async function runTool(
+  tool: AiTool,
+  rawInput: unknown,
+  context: unknown,
+  ask?: AskPerson,
+): Promise<ToolOutcome> {
   try {
     const input = tool.input.parse(rawInput ?? {});
-    return { ok: true, result: await tool.run(input, context) };
+    return { ok: true, result: await tool.run(input, context, ask) };
   } catch (error) {
     if (error instanceof AppError) return { ok: false, error: error.message };
     if (error instanceof ZodError) {
@@ -53,18 +58,21 @@ async function runTool(tool: AiTool, rawInput: unknown, context: unknown): Promi
   }
 }
 
-/** Binds a list of tools to one caller's context. An unknown name is a tool error, never a crash. */
+/**
+ * Binds a list of tools to one caller. The context is read at each call, so a long MCP session always runs as the
+ * caller of its latest request. An unknown name is a tool error, never a crash.
+ */
 export function createToolRunner(
   tools: readonly AiTool[],
-  context: unknown,
+  context: () => unknown,
   onCall?: ToolCallListener,
 ): ToolRunner {
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
-  return async (name, rawInput) => {
+  return async (name, rawInput, ask) => {
     const tool = byName.get(name);
     const started = Date.now();
     const outcome: ToolOutcome = tool
-      ? await runTool(tool, rawInput, context)
+      ? await runTool(tool, rawInput, context(), ask)
       : { ok: false, error: `Unknown tool ${name}` };
     onCall?.(name, outcome, Date.now() - started);
     return outcome;
