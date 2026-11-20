@@ -25,6 +25,8 @@ async function createTenant(name: string): Promise<Tenant> {
   const { id: businessId } = created.body as { id: string };
   const role = await prisma.role.findFirstOrThrow({ where: { businessId, isOwner: false } });
   const membership = await prisma.membership.findFirstOrThrow({ where: { businessId } });
+  // Free is for the owner alone; Starter lets them invite one person.
+  await prisma.business.update({ where: { id: businessId }, data: { plan: "STARTER" } });
   const invited = await call(invitations.POST, {
     as: owner,
     params: { businessId },
