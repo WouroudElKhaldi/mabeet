@@ -1,8 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import { PlanUpgrade } from "@/components/billing/plan-upgrade";
 import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
 import { PageHeader, Panel } from "@/components/shell/page-header";
 import { KeyManager } from "@/modules/assistant";
 import { listConnectedApps, listKeys, listToolCalls } from "@/modules/assistant/server";
+import { planIncludes } from "@/modules/billing/server";
 import { env } from "@/server/env";
 import { requirePageAccess } from "@/server/http/session";
 
@@ -18,6 +20,15 @@ const CALLS_SHOWN = 20;
 export default async function KeysPage({ params }: PageProps) {
   const { businessId } = await params;
   const ctx = await requirePageAccess(businessId, DASHBOARD_PAGES.keys.anyOf);
+  if (!(await planIncludes(businessId, "mcp"))) {
+    const t = await getTranslations("assistant.keys");
+    return (
+      <>
+        <PageHeader title={t("title")} intro={t("intro")} />
+        <PlanUpgrade businessId={businessId} feature="mcp" />
+      </>
+    );
+  }
   const [t, locale, keys, apps, calls] = await Promise.all([
     getTranslations("assistant.keys"),
     getLocale(),

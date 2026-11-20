@@ -1,6 +1,6 @@
 import { BOOKABLE_ROOM_KIND } from "@/config/booking-limits";
 import type { AnalyticsScope } from "@/config/enums";
-import { getPlanFeesPaid } from "@/modules/billing/server";
+import { assertPlanIncludes, getPlanFeesPaid, planIncludes } from "@/modules/billing/server";
 import {
   type ChannelNights,
   getLifetimeDirectRevenue,
@@ -47,9 +47,10 @@ async function placeFor(businessId: string) {
   return place;
 }
 
-/** A place's numbers over a period. */
+/** A place's numbers over a period, when its plan includes analytics (a platform admin sees any place). */
 export async function getBusinessReport(ctx: TenantContext, range: DateRange): Promise<BusinessReport> {
   requirePermission(ctx, "analytics.read");
+  if (!ctx.platformAdmin) await assertPlanIncludes(ctx.businessId, "analytics");
   const place = await placeFor(ctx.businessId);
   const kind = BOOKABLE_ROOM_KIND[place.bookingUnit];
   const [numbers, units] = await Promise.all([
@@ -227,14 +228,20 @@ function combine(reports: BusinessReport[]) {
 
 /**
  * Analytics for the place on screen, or for every place where the person may read the numbers, over a period, with
- * the places' totals.
+ * the places' totals. Only places whose plan includes analytics: the place on screen is refused without it, and "all
+ * places" leaves the others out. A platform admin sees any place.
  */
 export async function getAnalytics(ctx: TenantContext, scope: AnalyticsScope, range: DateRange) {
   requirePermission(ctx, "analytics.read");
-  const contexts =
+  if (!ctx.platformAdmin) await assertPlanIncludes(ctx.businessId, "analytics");
+  const readable =
     scope === "place" || ctx.platformAdmin
       ? [ctx]
       : (await contextsWhere(ctx.userId, "analytics.read")).allowed;
+  const included = await Promise.all(
+    readable.map((member) => ctx.platformAdmin || planIncludes(member.businessId, "analytics")),
+  );
+  const contexts = readable.filter((_, index) => included[index]);
   const places = await findPlacesForReports(contexts.map((member) => member.businessId));
   const nameOf = new Map(places.map((place) => [place.id, place.name]));
   const reports: PlaceAnalytics[] = await Promise.all(

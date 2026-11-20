@@ -369,6 +369,8 @@ async function main() {
         description: place.description,
         ...place.pin,
         listedPublicly: true,
+        // On Pro, so the demo shows the Analytics page and AI apps, which Free and Starter don't include.
+        plan: "PRO",
         bookingMode: place.bookingMode,
         // The online modes need the owner to have accepted full refunds.
         onlineTermsAcceptedAt: place.bookingMode === "OFFLINE" ? null : new Date(),

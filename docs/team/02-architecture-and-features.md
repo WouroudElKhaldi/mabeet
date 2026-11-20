@@ -937,16 +937,22 @@ Two kinds, by how much they matter:
 
 ### B. Plans and billing
 
-Free, Pro and Business plans (`src/config/plans.ts`), with limits on rooms, experiences, members and AI. Hosts pay
+Five plans (`src/config/plans.ts`): Free, Starter, Pro, Business and Premium, with limits on rooms, experiences
+and members, and the features only some plans include. Hosts pay
 **instantly only**: by card (Stripe subscription) or by Whish (one month at a time). There is no paying by hand, no
 receipt upload and no admin approval; do not build one. Plan payments and sponsored listings ("F. Featured
 partners and sponsored listings") are the platform's only income. Code: `billing-service.ts`.
 
-| Plan     | Per month | Rooms     | Experiences and services | Team (owner included) | AI  |
-| -------- | --------- | --------- | ------------------------ | --------------------- | --- |
-| Free     | $0        | 3         | 1                        | 2                     | no  |
-| Pro      | $50       | 15        | unlimited                | 10                    | yes |
-| Business | $100      | unlimited | unlimited                | unlimited             | yes |
+| Plan     | Per month | Rooms     | Experiences and services | Team (owner included) | Analytics | AI apps (MCP) | Priority support | Featured, included |
+| -------- | --------- | --------- | ------------------------ | --------------------- | --------- | ------------- | ---------------- | ------------------ |
+| Free     | $0        | 1         | 1                        | 1                     | no        | no            | no               | no                 |
+| Starter  | $30       | 3         | 3                        | 2                     | yes       | no            | no               | no                 |
+| Pro      | $50       | 7         | unlimited                | 3                     | yes       | yes           | no               | 1 week a season    |
+| Business | $100      | 10        | unlimited                | 4                     | yes       | yes           | yes              | 1 month a year     |
+| Premium  | $200      | unlimited | unlimited                | unlimited             | yes       | yes           | yes              | 1 month a season   |
+
+Every plan has unlimited direct bookings, online payment, calendar sync, guest emails, phone alerts, and our help
+setting the place up.
 
 - **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members", tx)` inside the transaction that
   adds one: with `tx` it locks the business first, so two additions at the same moment cannot both take the last
@@ -954,6 +960,13 @@ partners and sponsored listings") are the platform's only income. Code: `billing
   rooms and experiences and removed members do not count. Inviting and joining a team call it (joining checks
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
+- **Features:** `assertPlanIncludes(businessId, "analytics" | "mcp")` refuses a feature the plan doesn't include,
+  naming the smallest plan that has it; `planIncludes` answers yes or no. `getAnalytics` checks it (a platform admin
+  sees any place, and "all my places" leaves out places without analytics); `createKey`, choosing a place when
+  signing in an AI app, and every call to `/api/mcp` check `mcp`, so a place that moves down keeps its keys but they
+  answer 403 until it moves up again. The Analytics and Connect AI pages show `PlanUpgrade` instead.
+- **Featured weeks:** a plan's included featured time is shown on its card only. The admin features the place by
+  hand on Featured places, as for a place that pays for more ("Want to be featured longer? Contact us.").
 - **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
 - **Another place, from the dashboard:** "Add a place" in the place switcher and on "All my places" opens
   `NewPlaceForm` in a pop-up (name and town only). It creates the place on Free and goes straight into its guided
@@ -1920,7 +1933,8 @@ They are only for a manual or outside run: on DigitalOcean the worker runs every
 
 - `DEEPSEEK_API_KEY`: our own AI model (last bonus). `AI_MONTHLY_BUDGET_USD`: its budget. The MCP needs neither.
 - `RESEND_API_KEY` and `EMAIL_FROM`: emails.
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_BUSINESS`: card payments.
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_BUSINESS`,
+  `STRIPE_PRICE_PREMIUM`: card payments.
 - `WHISH_MODE` (`simulator` by default), `WHISH_CHANNEL`, `WHISH_SECRET`, `WHISH_WEBSITE_URL`: real Whish.
 - `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`: push notifications.
 

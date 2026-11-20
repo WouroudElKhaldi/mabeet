@@ -15,7 +15,7 @@ describe("dynamic roles and permissions", () => {
   let place: Awaited<ReturnType<typeof createPlace>>;
 
   beforeEach(async () => {
-    place = await createPlace();
+    place = await createPlace(undefined, "STARTER");
   });
 
   it("lets an owner create a custom role with any permissions", async () => {
@@ -70,7 +70,7 @@ describe("dynamic roles and permissions", () => {
   });
 
   it("only lets an owner make someone an owner", async () => {
-    // A third person on the team: past the Free plan's two.
+    // A third person on the team: past the Starter plan's two.
     await prisma.business.update({ where: { id: place.business.id }, data: { plan: "PRO" } });
     const manager = await memberWith(place.business.id, ["team.manage", "roles.manage"]);
     const ownerRole = await prisma.role.findFirstOrThrow({

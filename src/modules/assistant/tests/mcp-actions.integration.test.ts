@@ -98,7 +98,7 @@ const ACTIONS = [
 
 /** A place in a booking mode, with a room, a guest, and the owner's key that allows changes. */
 async function placeWithWritingKey(mode: "OFFLINE" | "AUTOMATIC" | "ONLINE_APPROVAL" = "AUTOMATIC") {
-  const place = await createPlace();
+  const place = await createPlace(undefined, "PRO");
   await prisma.business.update({
     where: { id: place.business.id },
     data: { bookingMode: mode, onlineTermsAcceptedAt: mode === "OFFLINE" ? null : new Date() },
@@ -429,7 +429,7 @@ describe("ending a booking the guest paid online", () => {
     // Jordanian dinars are used by no other test, so only these rows make up Mabeet's money in them.
     const place = await placeWithWritingKey();
     const paid = await paidStay(place, 20, { currency: "JOD" });
-    const other = await createPlace();
+    const other = await createPlace(undefined, "PRO");
     await prisma.payout.create({
       data: {
         businessId: other.business.id,

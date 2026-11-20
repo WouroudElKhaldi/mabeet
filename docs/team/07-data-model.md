@@ -285,3 +285,12 @@ migration `20261112150000_archived_places`. How it is used is in `02` ("Archivin
    `ACTIVE`), but its team keeps the dashboard (`TEAM_OPEN_STATUSES` in `src/config/enums.ts`, read by
    `findActiveMembership`). Only the owner moves a place between `ACTIVE` and `ARCHIVED`; only the platform admin
    sets `SUSPENDED` (`ADMIN_BUSINESS_STATUSES`). No existing row changes.
+
+## 9. Five plans (applied)
+
+Approved by the user (the database keeper) on 20 November for the new plans, in the migration
+`20261120000000_five_plans`. How they work is in `02` ("Plans and billing").
+
+1. `Plan` has two more values, in order from the smallest: `FREE`, `STARTER`, `PRO`, `BUSINESS`, `PREMIUM`. `PLANS`
+   in `src/config/plans.ts` follows the same order, so "a higher plan" is a later one. No existing row changes:
+   a place keeps its plan, with that plan's new limits.

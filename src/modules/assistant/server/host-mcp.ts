@@ -1,3 +1,4 @@
+import { planIncludes } from "@/modules/billing/server";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 import { toIsoDate } from "@/utils/dates";
 import { toolCallRecorder } from "./api-key-service";
@@ -21,6 +22,14 @@ function unauthorized(): Response {
   );
 }
 
+/** A 403 for a place whose plan doesn't include AI apps: its keys and sign-ins wait until it upgrades again. */
+function notInPlan(): Response {
+  return new Response(
+    JSON.stringify({ error: "This place's plan doesn't include AI apps. Upgrade to Pro or higher." }),
+    { status: 403, headers: { "content-type": "application/json" } },
+  );
+}
+
 /**
  * The owner and staff MCP. The caller's key (`Authorization: Bearer mbt_…`) or OAuth access token decides the place
  * and the member, so the AI sees exactly what that member's role allows there, and nothing of their other places.
@@ -32,6 +41,7 @@ export async function answerHostMcp(request: Request, now = new Date()): Promise
   await enforceRateLimit(caller.rateKey, CALLS_PER_MINUTE, 60_000);
 
   const { ctx } = caller;
+  if (!(await planIncludes(ctx.businessId, "mcp"))) return notInPlan();
   // Told only what is true for this key: a key that allows changes is offered tools that make them, each asking first.
   const access = ctx.readOnly
     ? "These tools only read."

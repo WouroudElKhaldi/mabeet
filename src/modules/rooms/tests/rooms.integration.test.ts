@@ -14,7 +14,7 @@ describe("rooms", () => {
   let place: Awaited<ReturnType<typeof createPlace>>;
 
   beforeEach(async () => {
-    place = await createPlace();
+    place = await createPlace(undefined, "STARTER");
   });
 
   it("lets the owner add a room and find it in the list", async () => {
@@ -109,7 +109,7 @@ describe("rooms", () => {
   });
 
   it("stops at the plan's limit, and lets a bigger plan add more", async () => {
-    // The Free plan allows 3 rooms.
+    // The Starter plan allows 3 rooms.
     for (const name of ["Cedar", "Olive", "Pine"])
       await createRoom(place.ctx, { ...cedarRoom, ...defaults, name });
     await expect(createRoom(place.ctx, { ...cedarRoom, ...defaults, name: "Fig" })).rejects.toMatchObject({
@@ -122,7 +122,7 @@ describe("rooms", () => {
   });
 
   it("lets only one of several rooms added at the same moment take the plan's last place", async () => {
-    // The Free plan allows 3 rooms: with 2 saved, four added at once must leave exactly 3.
+    // The Starter plan allows 3 rooms: with 2 saved, four added at once must leave exactly 3.
     for (const name of ["Cedar", "Olive"]) await createRoom(place.ctx, { ...cedarRoom, ...defaults, name });
     const results = await Promise.allSettled(
       ["Pine", "Fig", "Oak", "Palm"].map((name) =>

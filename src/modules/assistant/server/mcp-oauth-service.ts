@@ -1,4 +1,5 @@
 import { recordAction } from "@/modules/audit/server";
+import { assertPlanIncludes, planIncludes } from "@/modules/billing/server";
 import { listWorkspaces } from "@/modules/team/server";
 import { mayConnectAi } from "@/server/auth/mcp-oauth";
 import { resolveContext } from "@/server/auth/resolve-context";
@@ -10,11 +11,15 @@ import * as oauth from "./oauth-repository";
 // Connecting an AI app by signing in instead of with a key. The person signs in, picks one place and allows the app
 // to read. Its tokens then act as that member, in that place, read only like every key, until they disconnect it.
 
-/** The places this person may connect an AI app to: they are allowed to use AI apps there. */
+/** The places this person may connect an AI app to: they may use AI apps there, and its plan includes them. */
 export async function listConnectableWorkspaces(userId: string) {
   const workspaces = await listWorkspaces(userId);
   const allowed = await Promise.all(
-    workspaces.map((workspace) => mayConnectAi(userId, workspace.business.id)),
+    workspaces.map(
+      async (workspace) =>
+        (await mayConnectAi(userId, workspace.business.id)) &&
+        (await planIncludes(workspace.business.id, "mcp")),
+    ),
   );
   return workspaces
     .filter((_, index) => allowed[index])
@@ -29,6 +34,7 @@ export async function listConnectableWorkspaces(userId: string) {
 export async function chooseWorkspace(session: { id: string; userId: string }, businessId: string) {
   if (!(await mayConnectAi(session.userId, businessId)))
     throw forbidden("You can't connect an AI app to this place");
+  await assertPlanIncludes(businessId, "mcp");
   await oauth.setSessionWorkspace(prisma, session.id, businessId);
 }
 

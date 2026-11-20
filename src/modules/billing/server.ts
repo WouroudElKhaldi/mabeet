@@ -2,10 +2,12 @@
 // private to the module.
 export {
   assertPlanAllowsAnother,
+  assertPlanIncludes,
   getBilling,
   handleStripeWebhook,
   handleWhishCallback,
   openBillingPortal,
+  planIncludes,
   planPaymentMethods,
   runPlanHousekeeping,
   settlePlanPayment,

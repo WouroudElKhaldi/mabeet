@@ -194,8 +194,10 @@ model SiteSetting {
 /// What a business pays for. Limits live in src/config/plans.ts; Stripe webhooks keep it in sync.
 enum Plan {
   FREE
+  STARTER
   PRO
   BUSINESS
+  PREMIUM
 }
 
 /// What a plan offer gives: the plan with nothing to pay, or a share off its price.
