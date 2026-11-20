@@ -6,6 +6,7 @@ import { BoardingPass } from "@/components/brand/boarding-pass";
 import { BrandScene, SceneLayer } from "@/components/brand/brand-scene";
 import { DirectReceipts } from "@/components/brand/direct-receipts";
 import { Postmark } from "@/components/brand/postmark";
+import { Testimonials } from "@/components/brand/testimonials";
 import { SearchBar } from "@/components/site/search-bar";
 import type { Locale } from "@/config/appearance";
 import { listCategories } from "@/modules/admin/server";
@@ -123,6 +124,8 @@ export default async function HomePage({ searchParams }: PageProps) {
       <Browse search={search} places={places} categories={categories} offerings={offerings} variant="home" />
 
       <DirectReceipts />
+
+      <Testimonials />
 
       <AiAppBand found={found} />
     </>
