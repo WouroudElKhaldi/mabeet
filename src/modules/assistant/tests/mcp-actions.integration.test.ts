@@ -71,6 +71,18 @@ async function tool(secret: string, name: string, args: object = {}) {
   return { isError: result.isError as boolean, payload };
 }
 
+/**
+ * An action as a member approves it: the first call only says what would happen and gives a code, and the same call
+ * with that code makes the change. A call that is refused at once (no such tool, a wrong argument) comes back as is.
+ */
+async function act(secret: string, name: string, args: object = {}) {
+  const first = await tool(secret, name, args);
+  const next = first.payload.next;
+  if (first.isError || typeof next !== "string") return first;
+  const code = /confirm set to "(YES-[0-9A-F]{6})"/.exec(next)?.[1];
+  return tool(secret, name, { ...args, confirm: code });
+}
+
 const toolNames = async (secret: string) =>
   ((await mcp(secret, "tools/list")).tools as Array<{ name: string }>).map((entry) => entry.name);
 
@@ -164,7 +176,7 @@ describe("who is offered the actions", () => {
     expect(await toolNames(readOnly.secret)).not.toEqual(expect.arrayContaining(["confirm_booking"]));
     for (const action of ACTIONS) expect(await toolNames(readOnly.secret)).not.toContain(action);
     // Even if the AI app names one anyway, it does not exist for this key.
-    expect(await tool(readOnly.secret, "close_dates", {})).toMatchObject({ isError: true });
+    expect(await act(readOnly.secret, "close_dates", {})).toMatchObject({ isError: true });
 
     const frontDesk: TenantContext = await memberWith(place.business.id, ["bookings.read", "ai.use"]);
     const staffKey = await createKey(frontDesk, { name: "Desk", expiresInDays: 30, canWrite: true });
@@ -179,14 +191,14 @@ describe("actions that move no money", () => {
   it("confirms a request, and cancels one nobody paid online for at once", async () => {
     const place = await placeWithWritingKey("OFFLINE");
     const waiting = await booking(place, 20);
-    expect(await tool(place.key.secret, "confirm_booking", { reference: waiting.reference })).toMatchObject({
+    expect(await act(place.key.secret, "confirm_booking", { reference: waiting.reference })).toMatchObject({
       isError: false,
       payload: { reference: waiting.reference, status: "CONFIRMED" },
     });
     expect(
-      await tool(place.key.secret, "cancel_booking", { reference: waiting.reference, reason: "Pipes burst" }),
+      await act(place.key.secret, "cancel_booking", { reference: waiting.reference, reason: "Pipes burst" }),
     ).toMatchObject({ isError: false, payload: { done: true, status: "CANCELLED", refund: null } });
-    expect(await tool(place.key.secret, "confirm_booking", { reference: "MB-NOPE00" })).toMatchObject({
+    expect(await act(place.key.secret, "confirm_booking", { reference: "MB-NOPE00" })).toMatchObject({
       isError: true,
     });
   });
@@ -194,7 +206,7 @@ describe("actions that move no money", () => {
   it("closes and reopens nights, keeping the closed nights outside the days asked", async () => {
     const place = await placeWithWritingKey();
     const day = (offset: number) => toIsoDate(addDays(todayUtc(), offset));
-    const closed = await tool(place.key.secret, "close_dates", {
+    const closed = await act(place.key.secret, "close_dates", {
       room: place.room.name.toUpperCase(),
       checkIn: day(30),
       checkOut: day(33),
@@ -203,7 +215,7 @@ describe("actions that move no money", () => {
     expect(closed).toMatchObject({ isError: false, payload: { checkIn: day(30), checkOut: day(33) } });
     await addBlock(place.ctx, { roomId: place.room.id, range: stay(34, 4), note: null });
 
-    const reopened = await tool(place.key.secret, "reopen_dates", {
+    const reopened = await act(place.key.secret, "reopen_dates", {
       room: place.room.id,
       checkIn: day(29),
       checkOut: day(36),
@@ -224,12 +236,12 @@ describe("actions that move no money", () => {
     const place = await placeWithWritingKey();
     const day = (offset: number) => toIsoDate(addDays(todayUtc(), offset));
     // Closed for the nights of the 12th, 13th and 14th; then the 14th is wanted back.
-    await tool(place.key.secret, "close_dates", {
+    await act(place.key.secret, "close_dates", {
       room: place.room.name,
       checkIn: day(12),
       checkOut: day(15),
     });
-    const reopened = await tool(place.key.secret, "reopen_dates", {
+    const reopened = await act(place.key.secret, "reopen_dates", {
       room: place.room.name,
       checkIn: day(14),
       checkOut: day(15),
@@ -246,11 +258,65 @@ describe("actions that move no money", () => {
   it("takes a room off the site and opens it again", async () => {
     const place = await placeWithWritingKey();
     expect(
-      (await tool(place.key.secret, "set_room_open", { room: place.room.name, open: false })).payload,
+      (await act(place.key.secret, "set_room_open", { room: place.room.name, open: false })).payload,
     ).toMatchObject({ open: false });
     expect((await prisma.room.findUniqueOrThrow({ where: { id: place.room.id } })).active).toBe(false);
-    await tool(place.key.secret, "set_room_open", { room: place.room.name, open: true });
+    await act(place.key.secret, "set_room_open", { room: place.room.name, open: true });
     expect((await prisma.room.findUniqueOrThrow({ where: { id: place.room.id } })).active).toBe(true);
+  });
+});
+
+describe("asking first", () => {
+  beforeEach(resetMemoryRateLimits);
+
+  it("changes nothing on the first call, and only the code for that exact change lets it through", async () => {
+    const place = await placeWithWritingKey();
+    const day = (offset: number) => toIsoDate(addDays(todayUtc(), offset));
+    const nights = { room: place.room.name, checkIn: day(40), checkOut: day(43) };
+    const closedNights = () =>
+      prisma.occupancy.count({ where: { roomId: place.room.id, kind: "MANUAL", active: true } });
+
+    const first = await tool(place.key.secret, "close_dates", nights);
+    expect(first).toMatchObject({
+      isError: false,
+      payload: {
+        done: false,
+        wouldDo: `Close ${place.room.name} for the nights of ${day(40)} to ${day(42)}`,
+        next: expect.stringMatching(/confirm set to "YES-[0-9A-F]{6}"/),
+      },
+    });
+    expect(await closedNights()).toBe(0);
+    const code = /"(YES-[0-9A-F]{6})"/.exec(String(first.payload.next))?.[1];
+
+    // A made-up code, or this code for other nights, is refused.
+    expect(await tool(place.key.secret, "close_dates", { ...nights, confirm: "YES-000000" })).toMatchObject({
+      isError: true,
+    });
+    expect(
+      await tool(place.key.secret, "close_dates", { ...nights, checkOut: day(45), confirm: code }),
+    ).toMatchObject({ isError: true });
+    expect(await closedNights()).toBe(0);
+
+    expect(await tool(place.key.secret, "close_dates", { ...nights, confirm: code })).toMatchObject({
+      isError: false,
+      payload: { checkIn: day(40), checkOut: day(43) },
+    });
+    expect(await closedNights()).toBe(1);
+  });
+
+  it("gives another member a different code for the same change", async () => {
+    const place = await placeWithWritingKey();
+    const manager = await memberWith(place.business.id, ["blocks.manage", "ai.use"]);
+    const managerKey = await createKey(manager, { name: "Manager", expiresInDays: 30, canWrite: true });
+    const day = (offset: number) => toIsoDate(addDays(todayUtc(), offset));
+    const nights = { room: place.room.name, checkIn: day(50), checkOut: day(51) };
+
+    const ownerCode = /"(YES-[0-9A-F]{6})"/.exec(
+      String((await tool(place.key.secret, "close_dates", nights)).payload.next),
+    )?.[1];
+    expect(await tool(managerKey.secret, "close_dates", { ...nights, confirm: ownerCode })).toMatchObject({
+      isError: true,
+    });
   });
 });
 
@@ -260,14 +326,14 @@ describe("ending a booking the guest paid online", () => {
   it("first says what would happen, and only ends it when the exact refund is repeated", async () => {
     const place = await placeWithWritingKey();
     const paid = await paidStay(place, 20);
-    const first = await tool(place.key.secret, "cancel_booking", { reference: paid.reference });
+    const first = await act(place.key.secret, "cancel_booking", { reference: paid.reference });
     expect(first).toMatchObject({
       isError: false,
       payload: { done: false, refund: "$200.00", refundMethod: ["WHISH"], status: "CONFIRMED" },
     });
     expect(await statusOf(paid.id)).toBe("CONFIRMED");
 
-    const wrong = await tool(place.key.secret, "cancel_booking", {
+    const wrong = await act(place.key.secret, "cancel_booking", {
       reference: paid.reference,
       confirmRefund: "$20.00",
     });
@@ -275,7 +341,7 @@ describe("ending a booking the guest paid online", () => {
     expect(JSON.stringify(wrong.payload)).toContain("$200.00");
     expect(await statusOf(paid.id)).toBe("CONFIRMED");
 
-    const done = await tool(place.key.secret, "cancel_booking", {
+    const done = await act(place.key.secret, "cancel_booking", {
       reference: paid.reference,
       reason: "Water cut",
       confirmRefund: "$200.00",
@@ -295,11 +361,11 @@ describe("ending a booking the guest paid online", () => {
     const paid = await paidStay(place, 25);
     await prisma.booking.update({ where: { id: paid.id }, data: { status: "HELD" } });
     expect(
-      (await tool(place.key.secret, "decline_booking", { reference: paid.reference })).payload,
+      (await act(place.key.secret, "decline_booking", { reference: paid.reference })).payload,
     ).toMatchObject({ done: false, refund: "$200.00" });
     expect(
       (
-        await tool(place.key.secret, "decline_booking", {
+        await act(place.key.secret, "decline_booking", {
           reference: paid.reference,
           confirmRefund: "$200.00",
         })
@@ -312,7 +378,7 @@ describe("ending a booking the guest paid online", () => {
     const paid = await paidStay(place, 20);
     const manager = await memberWith(place.business.id, ["bookings.read", "bookings.decide", "ai.use"]);
     const managerKey = await createKey(manager, { name: "Manager", expiresInDays: 30, canWrite: true });
-    const refused = await tool(managerKey.secret, "cancel_booking", { reference: paid.reference });
+    const refused = await act(managerKey.secret, "cancel_booking", { reference: paid.reference });
     expect(refused).toMatchObject({ isError: true });
     expect(JSON.stringify(refused.payload)).toContain("Only an owner");
     expect(await statusOf(paid.id)).toBe("CONFIRMED");
@@ -321,7 +387,7 @@ describe("ending a booking the guest paid online", () => {
   it("refuses a stay starting within two days, and logs why", async () => {
     const place = await placeWithWritingKey();
     const paid = await paidStay(place, 1);
-    const refused = await tool(place.key.secret, "cancel_booking", { reference: paid.reference });
+    const refused = await act(place.key.secret, "cancel_booking", { reference: paid.reference });
     expect(refused).toMatchObject({
       isError: true,
       payload: { error: expect.stringMatching(USE_THE_DASHBOARD) },
@@ -346,7 +412,7 @@ describe("ending a booking the guest paid online", () => {
         requestedById: place.ctx.userId,
       },
     });
-    const refused = await tool(place.key.secret, "cancel_booking", {
+    const refused = await act(place.key.secret, "cancel_booking", {
       reference: paid.reference,
       confirmRefund: "$200.00",
     });
@@ -377,9 +443,9 @@ describe("ending a booking the guest paid online", () => {
         requestedById: other.ctx.userId,
       },
     });
-    const amount = (await tool(place.key.secret, "cancel_booking", { reference: paid.reference })).payload
+    const amount = (await act(place.key.secret, "cancel_booking", { reference: paid.reference })).payload
       .refund as string;
-    const refused = await tool(place.key.secret, "cancel_booking", {
+    const refused = await act(place.key.secret, "cancel_booking", {
       reference: paid.reference,
       confirmRefund: amount,
     });
@@ -395,7 +461,7 @@ describe("ending a booking the guest paid online", () => {
   it("checks Mabeet's card balance before a card refund, and never ends one it cannot check", async () => {
     const place = await placeWithWritingKey();
     const ask = (reference: string) =>
-      tool(place.key.secret, "cancel_booking", { reference, confirmRefund: "$200.00" });
+      act(place.key.secret, "cancel_booking", { reference, confirmRefund: "$200.00" });
 
     const off = await paidStay(place, 20, { method: "STRIPE" });
     env.STRIPE_SECRET_KEY = undefined;
@@ -428,7 +494,7 @@ describe("ending a booking the guest paid online", () => {
     for (const paid of stays.slice(0, 3)) {
       expect(
         (
-          await tool(place.key.secret, "cancel_booking", {
+          await act(place.key.secret, "cancel_booking", {
             reference: paid.reference,
             confirmRefund: "$200.00",
           })
@@ -437,7 +503,7 @@ describe("ending a booking the guest paid online", () => {
     }
     const fourth = stays[3];
     if (!fourth) throw new Error("four stays were made");
-    const refused = await tool(place.key.secret, "cancel_booking", {
+    const refused = await act(place.key.secret, "cancel_booking", {
       reference: fourth.reference,
       confirmRefund: "$200.00",
     });

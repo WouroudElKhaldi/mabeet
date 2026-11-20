@@ -49,7 +49,7 @@ async function rpc(method: string, params: object = {}) {
     name: "test",
     instructions: "Testing.",
     tools: TOOLS,
-    context: { name: "Nour" },
+    context: () => ({ name: "Nour" }),
   });
   return (await response.json()) as { result?: Record<string, unknown>; error?: unknown };
 }
@@ -93,15 +93,17 @@ describe("the MCP server", () => {
 
 describe("the tool runner", () => {
   it("turns wrong input and unknown tools into tool errors", async () => {
-    const run = createToolRunner(TOOLS, { name: "Nour" });
+    const run = createToolRunner(TOOLS, () => ({ name: "Nour" }));
     expect(await run("who_am_i", { greeting: 42 })).toMatchObject({ ok: false });
     expect(await run("no_such_tool", {})).toEqual({ ok: false, error: "Unknown tool no_such_tool" });
   });
 
   it("tells the listener about every call", async () => {
     const calls: string[] = [];
-    const run = createToolRunner(TOOLS, { name: "Nour" }, (tool, outcome) =>
-      calls.push(`${tool}:${outcome.ok}`),
+    const run = createToolRunner(
+      TOOLS,
+      () => ({ name: "Nour" }),
+      (tool, outcome) => calls.push(`${tool}:${outcome.ok}`),
     );
     await run("who_am_i", { greeting: "Hi" });
     await run("close_dates", {});

@@ -705,8 +705,20 @@ Route: `POST /api/mcp`.
   dashboard button. Keys can then have write access; read-only keys never see these tools. They are marked as
   changing data, so the AI app asks the person before running them. Marking a guest as arrived needs a new booking
   state from the database keeper first.
-- Every tool can take an optional `place`, to work in another of the person's businesses (`resolvePlaceContext`). It
-  only allows places the person belongs to. If a name fits several places, it refuses.
+- No tool takes a place: a key or sign-in works only in the business it was made for, even when the person belongs
+  to others.
+- Every tool that changes data asks first (`askFirst` in `team-tools.ts`), whatever the AI app's own settings. Its
+  first call changes nothing: it says what would happen and gives a code (`YES-` and 6 characters) made from the
+  member, the place, the tool, the exact arguments and the day, so it is never stored and never fits another
+  change. The change runs only when the same arguments come back with that code. When the person's AI app can show a
+  pop-up (the MCP `elicitation` capability), the server also asks them there, in the middle of the call, and a no
+  (or no answer within two minutes) changes nothing. A paid booking still repeats its refund after that
+  (`endBookingByReference`).
+- The pop-up needs MCP sessions (`mcp-sessions.ts`): an app that starts one (`initialize`) gets a session kept in
+  the website process's memory, closed after 30 idle minutes, and only reachable by the same key or signed-in app.
+  Every request is still authenticated, and the session's tools run as the caller of its latest request. An app
+  that starts no session is answered statelessly, without pop-ups. Sessions in memory suit the one website process
+  we run; several website processes would need them shared.
 - Every call is logged in `McpAuditLog`. The key's "last used" time is updated after the answer (`touchKey`).
 
 **What exists today** (`src/modules/assistant/server/`): personal keys (`api-key-service.ts`: `createKey`, `listKeys`,
@@ -716,9 +728,9 @@ the member's own (nobody else lists or revokes it), read only, 90 days unless ch
 visiting a business cannot make one. `authenticateKey` turns a key into the member's context (`channel: "mcp"`,
 `readOnly`) only while the same membership is active, so a removed member's keys stop at once, and revoked or expired
 ones too. `POST /api/mcp` (`answerHostMcp`, `host-mcp.ts`): 401 without a working key, 60 calls a minute per key,
-the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_places`, then `list_rooms`, `check_availability`
-(`findFreeRooms`), `get_calendar` and `list_bookings`, each with the optional `place` (`resolvePlaceContext`: by
-id or one name; several matches are refused) and filtered by the member's permissions there. Guests' names and notes
+the tools of `teamToolsFor(ctx)` (`team-tools.ts`): `list_rooms`, `check_availability`
+(`findFreeRooms`), `get_calendar` and `list_bookings`, all in the key's own place only and filtered by the member's
+permissions there. Guests' names and notes
 come as `{ guestWritten }`. `toolCallRecorder` writes each call to `McpAuditLog` in the background; the guest MCP logs its calls too, as
 channel `guest` with no place. `get_report`
 (`getBusinessReport`, the last 30 days unless given) and `get_savings` (`getSavings`) need `analytics.read` and give

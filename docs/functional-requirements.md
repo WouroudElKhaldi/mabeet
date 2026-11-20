@@ -144,8 +144,8 @@ submission (Friday 13 November).
 - **F8. List experiences and services.** Hikes, tastings, transfers and the like, with repeating sessions and a
   number of seats. The database includes them from the start.
 - **F14. Connect an AI app (big bonus, the first AI bonus).** Personal keys or an OAuth sign-in to connect Claude,
-  ChatGPT, Cursor, Codex or any MCP app (the host MCP). One key reaches every place the person works in; they name
-  the place they mean. In each place, the AI sees exactly what that person's role there allows. The person's own AI
+  ChatGPT, Cursor, Codex or any MCP app (the host MCP). A key (or a sign-in) reaches only the one place it was made
+  for, even when the person works in other places too. There, the AI sees exactly what that person's role allows. The person's own AI
   app brings the model, so this needs none of ours.
   - **First version: read and report only.** Free rooms, bookings, revenue, the commission saved, and the numbers
     for a report over a period (from the same figures as the analytics page; the person's AI app writes the report).

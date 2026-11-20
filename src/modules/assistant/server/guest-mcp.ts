@@ -13,7 +13,7 @@ export function answerGuestMcp(request: Request, now = new Date()): Promise<Resp
     name: "guest",
     instructions: `Find Lebanese guesthouses that book direct, free on the guest's dates. Today is ${toIsoDate(now)}. Prices come already formatted in each place's currency. Only suggest places the tools return, with their booking link: you cannot book for the guest, and an empty search means nothing matches.`,
     tools: GUEST_TOOLS,
-    context: null,
+    context: () => null,
     // Logged with no place and no person, so the admins can see how much guests use it.
     onCall: toolCallRecorder({ channel: "guest" }),
   });
