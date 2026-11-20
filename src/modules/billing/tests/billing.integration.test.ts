@@ -32,14 +32,18 @@ const DAY_MS = 86_400_000;
 const stripeSettings = {
   STRIPE_SECRET_KEY: "sk_test_mabeet",
   STRIPE_WEBHOOK_SECRET: SECRET,
+  STRIPE_PRICE_STARTER: "price_test_starter",
   STRIPE_PRICE_PRO: PRO_PRICE,
   STRIPE_PRICE_BUSINESS: BUSINESS_PRICE,
+  STRIPE_PRICE_PREMIUM: "price_test_premium",
 };
 const saved = {
   STRIPE_SECRET_KEY: env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_PRICE_STARTER: env.STRIPE_PRICE_STARTER,
   STRIPE_PRICE_PRO: env.STRIPE_PRICE_PRO,
   STRIPE_PRICE_BUSINESS: env.STRIPE_PRICE_BUSINESS,
+  STRIPE_PRICE_PREMIUM: env.STRIPE_PRICE_PREMIUM,
   WHISH_MODE: env.WHISH_MODE,
 };
 
@@ -66,9 +70,10 @@ describe("plan limits", () => {
     const place = await createPlace();
     const id = place.business.id;
 
-    const rooms = [await addRoom(id), await addRoom(id), await addRoom(id)];
+    // Free allows 1 room, 1 experience or service, and the owner alone.
+    const room = await addRoom(id);
     await expect(assertPlanAllowsAnother(id, "rooms")).rejects.toMatchObject({ code: "CONFLICT" });
-    await prisma.room.update({ where: { id: rooms[0]!.id }, data: { isDeleted: true } });
+    await prisma.room.update({ where: { id: room.id }, data: { isDeleted: true } });
     await expect(assertPlanAllowsAnother(id, "rooms")).resolves.toBeUndefined();
 
     await prisma.offering.create({
@@ -83,7 +88,13 @@ describe("plan limits", () => {
     });
     await expect(assertPlanAllowsAnother(id, "offerings")).rejects.toMatchObject({ code: "CONFLICT" });
 
-    // The owner is the first of the two members a Free place has.
+    await expect(assertPlanAllowsAnother(id, "members")).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "Your plan is for you alone. Upgrade to add team members.",
+    });
+
+    // Starter: 3 rooms and 2 members, the owner included.
+    await prisma.business.update({ where: { id }, data: { plan: "STARTER" } });
     await expect(assertPlanAllowsAnother(id, "members")).resolves.toBeUndefined();
     await memberWith(id, ["calendar.read"]);
     await expect(assertPlanAllowsAnother(id, "members")).rejects.toMatchObject({
@@ -103,7 +114,7 @@ describe("plan limits", () => {
     await addRoom(place.business.id);
     expect(await getBilling(place.ctx)).toMatchObject({
       plan: "FREE",
-      limits: { rooms: 3, members: 2 },
+      limits: { rooms: 1, members: 1 },
       usage: { rooms: 1, offerings: 0, members: 1 },
       paysByCard: false,
       cardEnabled: true,

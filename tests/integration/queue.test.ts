@@ -45,7 +45,7 @@ describe("the job queue on Postgres", () => {
   });
 
   it("stores an invitation email on the notify queue, and sends it when the worker runs it", async () => {
-    const place = await createPlace();
+    const place = await createPlace(undefined, "STARTER");
     const role = await createRole(place.ctx, { name: "Cleaner", permissions: ["calendar.read"] });
     const email = testEmail();
     const { id } = await inviteMember(

@@ -435,7 +435,8 @@ the keyboard focus away.
 | `TiltCard`, `ReceiptCard`                           | `brand/`                   | Any card leaning toward the mouse in 3D (`--px`/`--py` for `Sheen`); promises on a till receipt in a `BrandScene`, with a postmark |
 | `PageIntro`, `PageNote`                             | `site/page-intro.tsx`      | A public page's centred poster title and line; the small print at its end                                                          |
 | `HeroHeading`, `IconPoints`                         | `site/`                    | The big title and intro of a page that sells something; reasons with an accent icon, two to a row                                  |
-| `PlanCards`, `PlanPicker`                           | `billing/`                 | The three plans side by side; the plan to start on, picked in place as `ChoiceLinks`, with its price and limits                    |
+| `PlanCards`, `PlanPicker`                           | `billing/`                 | The five plans side by side; the plan to start on, picked in place as `ChoiceLinks`, with its price and limits                     |
+| `PlanUpgrade`                                       | `billing/plan-upgrade.tsx` | A dashboard page's stand-in when the plan doesn't include it: what it gives, the smallest plan with it, and See plans              |
 
 ### 6.5 AI components: `src/components/assistant/`
 
@@ -718,10 +719,10 @@ No sign-in on this page. Every text in the three message files.
 #### `/pricing` Plans (F15, bonus)
 
 1. `PageIntro`: the title and one line.
-2. `PlanCards`: Free, Pro, Business with their limits (`CheckList`), the price, a `Pill` on Pro ("Most popular",
-   or "Your plan" where `current` is passed) and the button for each. Free goes to `/host`; Pro and Business go to
-   `/host?plan=PRO` or `?plan=BUSINESS`.
-3. `PageNote`: no commission on any plan.
+2. `PlanCards`: Free, Starter, Pro, Business, Premium with their limits and features (`CheckList`), the price, a
+   `Pill` on Pro ("Most popular", or "Your plan" where `current` is passed) and the button for each. One column on
+   phones, two from `sm`, three from `lg`, five from `xl`. Free goes to `/host`; a paid plan goes to `/host?plan=…`.
+3. `PageNote`: no commission on any plan, and a link to Contact for longer featured time.
 
 #### `/about` About Mabeet (F24, approved by Sami)
 
@@ -792,8 +793,7 @@ All use `AuthPage` (a narrow centred card, `max-w-md`) with `AuthForm`:
   (`auth.tooManyAttempts`), never "wrong password", and the forgot-password form does not claim a link was sent.
 - `/host` Become a host (inside the site frame, not `AuthPage`): two columns from `lg`. Start side: `HeroHeading`
   (title and intro) and `IconPoints` (four reasons). End side: a sticky `TicketCard` "Create your workspace": the
-  intro, a `StepTrail` (Your place, Pay, Add rooms; no Pay on Free), and as the stub a `PlanPicker` (Free, Pro,
-  Business as chips; the plan from `/pricing` is chosen, and changing it stays on this page as `?plan=`). Under the
+  intro, a `StepTrail` (Your place, Pay, Add rooms; no Pay on Free), and as the stub a `PlanPicker` (the five plans as chips; the plan from `/pricing` is chosen, and changing it stays on this page as `?plan=`). Under the
   tear line, `CreateWorkspaceForm` (the place's name and area; with a paid plan, `ChoiceChips` for card or Whish
   when both are on, and "Create and pay"). Signed out, it shows "Create an account to start" and "I already have an
   account", which carry the plan back here.

@@ -5084,8 +5084,10 @@ paths:
                 plan:
                   type: string
                   enum:
+                    - STARTER
                     - PRO
                     - BUSINESS
+                    - PREMIUM
               required:
                 - plan
       responses:
@@ -5966,8 +5968,10 @@ paths:
                 plan:
                   type: string
                   enum:
+                    - STARTER
                     - PRO
                     - BUSINESS
+                    - PREMIUM
               required:
                 - plan
       responses:
@@ -7680,8 +7684,10 @@ paths:
                 plan:
                   type: string
                   enum:
+                    - STARTER
                     - PRO
                     - BUSINESS
+                    - PREMIUM
                 kind:
                   type: string
                   enum:
@@ -7868,8 +7874,10 @@ paths:
                   type: string
                   enum:
                     - FREE
+                    - STARTER
                     - PRO
                     - BUSINESS
+                    - PREMIUM
                 lastDay:
                   default: null
                   anyOf:

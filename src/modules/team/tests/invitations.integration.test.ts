@@ -41,7 +41,7 @@ describe("team invitations", () => {
   let cleanerRole: { id: string };
 
   beforeEach(async () => {
-    place = await createPlace();
+    place = await createPlace(undefined, "STARTER");
     cleanerRole = await createRole(place.ctx, { name: "Cleaner", permissions: ["calendar.read"] });
   });
 

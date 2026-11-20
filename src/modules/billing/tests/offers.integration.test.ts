@@ -17,16 +17,20 @@ import { getBilling, startCheckout, startWhishPlanCheckout } from "../server/bil
 const DAY_MS = 86_400_000;
 const saved = {
   STRIPE_SECRET_KEY: env.STRIPE_SECRET_KEY,
+  STRIPE_PRICE_STARTER: env.STRIPE_PRICE_STARTER,
   STRIPE_PRICE_PRO: env.STRIPE_PRICE_PRO,
   STRIPE_PRICE_BUSINESS: env.STRIPE_PRICE_BUSINESS,
+  STRIPE_PRICE_PREMIUM: env.STRIPE_PRICE_PREMIUM,
   WHISH_MODE: env.WHISH_MODE,
 };
 
 beforeAll(() => {
   Object.assign(env, {
     STRIPE_SECRET_KEY: "sk_test_mabeet",
+    STRIPE_PRICE_STARTER: "price_test_starter",
     STRIPE_PRICE_PRO: "price_test_pro",
     STRIPE_PRICE_BUSINESS: "price_test_business",
+    STRIPE_PRICE_PREMIUM: "price_test_premium",
     WHISH_MODE: "simulator",
   });
 });

@@ -1,10 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { ChoiceLinks } from "@/components/ui/choice-links";
-import { PLAN_LIMITS, PLANS, type PlanName } from "@/config/plans";
+import { allowanceOf, PLAN_LIMITS, PLANS, type PlanName } from "@/config/plans";
 import { formatMoney } from "@/utils/format";
 
 /**
- * The plan to start on, picked in place: Free, Pro or Business as chips, each its own address (`hrefFor`), and under
+ * The plan to start on, picked in place: each plan as a chip, each its own address (`hrefFor`), and under
  * them what the chosen plan costs and allows, read from `PLAN_LIMITS` like `PlanCards`.
  */
 export async function PlanPicker({
@@ -16,13 +16,13 @@ export async function PlanPicker({
 }) {
   const [t, locale] = await Promise.all([getTranslations("plans"), getLocale()]);
   const limits = PLAN_LIMITS[current];
-  const limit = (value: number | null) => (value === null ? t("unlimited") : String(value));
   const price = (plan: PlanName) => formatMoney(PLAN_LIMITS[plan].monthlyUsd * 100, "USD", locale);
   const facts = [
     `${price(current)} ${t("perMonth")}`,
-    t("rooms", { count: limit(limits.rooms) }),
-    t("members", { count: limit(limits.members) }),
-    ...(limits.ai ? [t("ai")] : []),
+    t("rooms", allowanceOf(limits.rooms)),
+    t("members", allowanceOf(limits.members)),
+    ...(limits.analytics ? [t("analytics")] : []),
+    ...(limits.mcp ? [t("mcp")] : []),
   ];
 
   return (

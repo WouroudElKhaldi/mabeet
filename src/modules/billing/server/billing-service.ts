@@ -1,5 +1,13 @@
 import type { Plan } from "@prisma/client";
-import { type PaidPlan, PLAN_LIMITS, PLAN_MONTH_MS, type PlanPaymentMethod } from "@/config/plans";
+import {
+  PAID_PLANS,
+  type PaidPlan,
+  type PlanFeature,
+  PLAN_LIMITS,
+  PLAN_MONTH_MS,
+  type PlanPaymentMethod,
+  smallestPlanWith,
+} from "@/config/plans";
 import { findAccountEmail } from "@/modules/accounts/server";
 import { settleOnlinePayment } from "@/modules/bookings/server";
 import { recordAction } from "@/modules/audit/server";
@@ -19,7 +27,7 @@ import {
 import { requireOwner, requirePermission, type TenantContext } from "@/server/auth/tenant-context";
 import { type Db, prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { env } from "@/server/env";
-import { conflict, invalid, notFound, unavailable } from "@/server/errors";
+import { conflict, forbidden, invalid, notFound, unavailable } from "@/server/errors";
 import { secureToken } from "@/utils/tokens";
 import * as billing from "./billing-repository";
 import { bestDiscountFor, openOffersFor } from "./offer-service";
@@ -37,10 +45,33 @@ const HOUSEKEEPING_BATCH_SIZE = 25;
 
 type Counted = "rooms" | "offerings" | "members";
 
+/** Each paid plan's Stripe price; checkout is off until all of them are set. */
+const priceFor = (plan: PaidPlan) =>
+  ({
+    STARTER: env.STRIPE_PRICE_STARTER,
+    PRO: env.STRIPE_PRICE_PRO,
+    BUSINESS: env.STRIPE_PRICE_BUSINESS,
+    PREMIUM: env.STRIPE_PRICE_PREMIUM,
+  })[plan];
+
+const FEATURE_NAMES: Record<PlanFeature, string> = {
+  analytics: "the Analytics page",
+  mcp: "connecting AI apps",
+};
+
 const LIMIT_MESSAGES: Record<Counted, (max: number) => string> = {
-  rooms: (max) => `Your plan allows up to ${max} rooms. Upgrade to add more.`,
-  offerings: (max) => `Your plan allows up to ${max} experiences or services. Upgrade to add more.`,
-  members: (max) => `Your plan allows up to ${max} team members, you included. Upgrade to add more.`,
+  rooms: (max) =>
+    max === 1
+      ? "Your plan allows 1 room. Upgrade to add more."
+      : `Your plan allows up to ${max} rooms. Upgrade to add more.`,
+  offerings: (max) =>
+    max === 1
+      ? "Your plan allows 1 experience or service. Upgrade to add more."
+      : `Your plan allows up to ${max} experiences or services. Upgrade to add more.`,
+  members: (max) =>
+    max === 1
+      ? "Your plan is for you alone. Upgrade to add team members."
+      : `Your plan allows up to ${max} team members, you included. Upgrade to add more.`,
 };
 
 async function loadBilling(businessId: string, db: Db = prisma) {
@@ -61,13 +92,28 @@ export async function assertPlanAllowsAnother(businessId: string, what: Counted,
   if (max !== null && used >= max) throw conflict(LIMIT_MESSAGES[what](max));
 }
 
+/** Whether the place's plan includes a feature that only some plans have (analytics, AI apps). */
+export async function planIncludes(businessId: string, feature: PlanFeature): Promise<boolean> {
+  const row = await loadBilling(businessId);
+  return PLAN_LIMITS[row.plan][feature];
+}
+
+/** Refuses a feature the place's plan doesn't include, naming the smallest plan that does. */
+export async function assertPlanIncludes(businessId: string, feature: PlanFeature): Promise<void> {
+  if (await planIncludes(businessId, feature)) return;
+  const plan = smallestPlanWith(feature);
+  throw forbidden(
+    `Your plan doesn't include ${FEATURE_NAMES[feature]}. Upgrade to ${plan.charAt(0)}${plan.slice(1).toLowerCase()} or higher.`,
+  );
+}
+
 /**
  * Which ways to pay for a plan are on. Public: a future host sees them before their business exists, so the
  * sign-up page offers only what works.
  */
 export function planPaymentMethods(): Record<PlanPaymentMethod, boolean> {
   return {
-    card: stripeEnabled() && Boolean(env.STRIPE_PRICE_PRO && env.STRIPE_PRICE_BUSINESS),
+    card: stripeEnabled() && PAID_PLANS.every((plan) => Boolean(priceFor(plan))),
     whish: whishEnabled(),
   };
 }
@@ -99,14 +145,11 @@ export async function getBilling(ctx: TenantContext, now = new Date()) {
   };
 }
 
-const priceFor = (plan: PaidPlan) => (plan === "PRO" ? env.STRIPE_PRICE_PRO : env.STRIPE_PRICE_BUSINESS);
-
 const OWNER_ONLY = "Only an owner can change the plan";
 
 function planForPrice(priceId: string | null | undefined): Plan | null {
-  if (priceId && priceId === env.STRIPE_PRICE_PRO) return "PRO";
-  if (priceId && priceId === env.STRIPE_PRICE_BUSINESS) return "BUSINESS";
-  return null;
+  if (!priceId) return null;
+  return PAID_PLANS.find((plan) => priceFor(plan) === priceId) ?? null;
 }
 
 const billingUrl = (businessId: string, query = "") =>

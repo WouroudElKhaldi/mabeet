@@ -65,8 +65,8 @@ describe("choosing how the place is booked", () => {
   });
 
   it("does not count the whole-place unit against the plan's rooms", async () => {
-    const place = await createPlace();
-    // The free plan allows three rooms.
+    const place = await createPlace(undefined, "STARTER");
+    // The Starter plan allows three rooms.
     await createRoom(place.ctx, { ...room, baseRateCents: 8_000 });
     await createRoom(place.ctx, { ...room, baseRateCents: 8_000 });
     await chooseBookingUnit(place.ctx, "WHOLE_PLACE");

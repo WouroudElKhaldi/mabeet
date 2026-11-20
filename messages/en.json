@@ -2163,26 +2163,40 @@
   },
   "plans": {
     "title": "Plans for hosts",
-    "subtitle": "Start free. Upgrade when you add rooms, a team or the AI assistant. Guests never pay a fee.",
+    "subtitle": "Start free. Upgrade when you add rooms, a team, analytics or AI apps. Guests never pay a fee.",
     "perMonth": "/ month",
     "unlimited": "Unlimited",
-    "rooms": "{count} rooms",
-    "offerings": "{count} experiences or services",
-    "members": "{count} team members",
-    "basics": "Booking page, calendar sync, guest emails",
-    "ai": "AI team assistant and MCP for AI apps",
+    "rooms": "{unlimited, select, yes {Unlimited rooms} other {{count, plural, one {# room} other {# rooms}}}}",
+    "offerings": "{unlimited, select, yes {Unlimited experiences and services} other {{count, plural, one {# experience or service} other {# experiences or services}}}}",
+    "members": "{unlimited, select, yes {Unlimited team members} other {{count, plural, one {# team member} other {# team members}}}}",
+    "basics": "Unlimited direct bookings, online payment, calendar sync, guest emails and phone alerts",
+    "setupHelp": "We help you set up your place",
+    "analytics": "Analytics page",
+    "mcp": "Connect AI apps (Claude, ChatGPT) with MCP",
+    "prioritySupport": "Priority support",
+    "featured": {
+      "none": "Featured on the home page",
+      "weekPerSeason": "Featured on the home page 1 week a season",
+      "monthPerYear": "Featured on the home page 1 month a year",
+      "monthPerSeason": "Featured on the home page 1 month a season"
+    },
+    "moreFeatured": "Want to be featured longer? Contact us.",
     "notIncluded": "Not included:",
     "current": "Your plan",
     "popular": "Most popular",
     "names": {
       "FREE": "Free",
+      "STARTER": "Starter",
       "PRO": "Pro",
-      "BUSINESS": "Business"
+      "BUSINESS": "Business",
+      "PREMIUM": "Premium"
     },
     "blurbs": {
-      "FREE": "For a small guesthouse trying direct bookings.",
-      "PRO": "For a busy place with a team.",
-      "BUSINESS": "For several places and bigger teams."
+      "FREE": "For one room trying direct bookings.",
+      "STARTER": "For a small guesthouse with a few rooms.",
+      "PRO": "For a busy place with a team and AI.",
+      "BUSINESS": "For a bigger place that needs quick answers.",
+      "PREMIUM": "Everything, with no limits."
     },
     "startFree": "Start free",
     "startWith": "Start with {plan}",
@@ -2212,6 +2226,12 @@
       "free": "{plan} free until {date}. Nothing to pay.",
       "percent": "{plan} at {percent}% off: {price} a month until {date}. Taken off at checkout, nothing to do.",
       "claim": "Get {plan} free"
+    },
+    "upgrade": {
+      "title": "Comes with {plan} and higher",
+      "analytics": "See your occupancy, revenue, channels and requests over any period, for this place or all of them.",
+      "mcp": "Ask Claude or ChatGPT about your bookings, calendar and reports, and let it close dates or answer requests after you approve.",
+      "seePlans": "See plans"
     }
   },
   "oauth": {

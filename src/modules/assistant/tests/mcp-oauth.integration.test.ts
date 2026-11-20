@@ -106,14 +106,14 @@ describe("connecting an AI app by signing in", () => {
 
   it("offers only the places where the member may use AI apps, and keeps the pick on the sign-in session", async () => {
     const host = await signUp("Rana Khoury");
-    const own = await createPlace(`Beit ${randomUUID().slice(0, 6)}`);
+    const own = await createPlace(`Beit ${randomUUID().slice(0, 6)}`, "PRO");
     const ownerRole = await prisma.role.findFirstOrThrow({
       where: { businessId: own.business.id, isOwner: true },
     });
     await prisma.membership.create({
       data: { userId: host.userId, businessId: own.business.id, roleId: ownerRole.id },
     });
-    const other = await createPlace(`Dar ${randomUUID().slice(0, 6)}`);
+    const other = await createPlace(`Dar ${randomUUID().slice(0, 6)}`, "PRO");
     const readerRole = await prisma.role.create({
       data: { businessId: other.business.id, name: `reader-${randomUUID()}`, permissions: ["bookings.read"] },
     });
@@ -142,7 +142,7 @@ describe("connecting an AI app by signing in", () => {
   });
 
   it("acts as the member in the place they allowed, read only, until they leave", async () => {
-    const { business, ctx: owner } = await createPlace();
+    const { business, ctx: owner } = await createPlace(undefined, "PRO");
     const staff = await memberWith(business.id, ["bookings.read", "ai.use"]);
     const clientId = await registerApp();
     const claims = { sub: staff.userId, business_id: business.id, client_id: clientId };
@@ -161,7 +161,7 @@ describe("connecting an AI app by signing in", () => {
     );
     expect((await listTools(await accessToken({ ...claims, scope: "openid" }))).status).toBe(401);
     // The place comes from the token: naming another business in it needs a consent there too.
-    const stranger = await createPlace();
+    const stranger = await createPlace(undefined, "PRO");
     expect(
       (await listTools(await accessToken({ ...claims, business_id: stranger.business.id }))).status,
     ).toBe(401);
@@ -172,7 +172,7 @@ describe("connecting an AI app by signing in", () => {
 
   it("stops at once when the member disconnects the app, and only they can", async () => {
     const owner = await signUp("Nour Haddad");
-    const { business } = await createPlace();
+    const { business } = await createPlace(undefined, "PRO");
     const ownerRole = await prisma.role.findFirstOrThrow({
       where: { businessId: business.id, isOwner: true },
     });

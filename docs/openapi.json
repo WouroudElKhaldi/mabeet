@@ -7273,7 +7273,7 @@
                 "properties": {
                   "plan": {
                     "type": "string",
-                    "enum": ["PRO", "BUSINESS"]
+                    "enum": ["STARTER", "PRO", "BUSINESS", "PREMIUM"]
                   }
                 },
                 "required": ["plan"]
@@ -8550,7 +8550,7 @@
                 "properties": {
                   "plan": {
                     "type": "string",
-                    "enum": ["PRO", "BUSINESS"]
+                    "enum": ["STARTER", "PRO", "BUSINESS", "PREMIUM"]
                   }
                 },
                 "required": ["plan"]
@@ -11019,7 +11019,7 @@
                   },
                   "plan": {
                     "type": "string",
-                    "enum": ["PRO", "BUSINESS"]
+                    "enum": ["STARTER", "PRO", "BUSINESS", "PREMIUM"]
                   },
                   "kind": {
                     "type": "string",
@@ -11286,7 +11286,7 @@
                 "properties": {
                   "plan": {
                     "type": "string",
-                    "enum": ["FREE", "PRO", "BUSINESS"]
+                    "enum": ["FREE", "STARTER", "PRO", "BUSINESS", "PREMIUM"]
                   },
                   "lastDay": {
                     "default": null,

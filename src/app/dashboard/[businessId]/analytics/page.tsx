@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
+import { PlanUpgrade } from "@/components/billing/plan-upgrade";
 import { DASHBOARD_PAGES } from "@/components/dashboard/nav-items";
 import { PageHeader, Panel } from "@/components/shell/page-header";
 import { BarChart, ShareBar } from "@/components/ui/bar-chart";
@@ -11,6 +12,7 @@ import type { Locale } from "@/config/appearance";
 import { BOOKING_STATUSES } from "@/config/enums";
 import { analyticsQuery, channelColor } from "@/modules/analytics";
 import { getAnalytics } from "@/modules/analytics/server";
+import { planIncludes } from "@/modules/billing/server";
 import { requirePageAccess } from "@/server/http/session";
 import { addDays, toIsoDate, todayUtc } from "@/utils/dates";
 import { formatMoney } from "@/utils/format";
@@ -42,6 +44,15 @@ const STATUS_COLOR: Record<(typeof BOOKING_STATUSES)[number], string> = {
 export default async function AnalyticsPage({ params, searchParams }: PageProps) {
   const [{ businessId }, asked] = await Promise.all([params, searchParams]);
   const ctx = await requirePageAccess(businessId, DASHBOARD_PAGES.analytics.anyOf);
+  if (!ctx.platformAdmin && !(await planIncludes(businessId, "analytics"))) {
+    const t = await getTranslations("analytics");
+    return (
+      <>
+        <PageHeader title={t("title")} intro={t("intro")} />
+        <PlanUpgrade businessId={businessId} feature="analytics" />
+      </>
+    );
+  }
   const today = todayUtc();
   const end = toIsoDate(addDays(today, 1));
   const parsed = analyticsQuery.safeParse({
