@@ -173,30 +173,29 @@
     },
     "testimonials": {
       "title": "What owners told us",
-      "subtitle": "Real messages from owners who tried Mabeet. Only their names are left out.",
-      "toMabeet": "Message to Mabeet",
+      "subtitle": "Real messages from owners who tried Mabeet.",
       "previous": "Previous message",
       "next": "Next message",
+      "places": {
+        "guesthouse": "Beit Toureef",
+        "chalet": "Chalet El Yasmine",
+        "home": "Najmotel"
+      },
       "owners": {
         "guesthouse": "Guesthouse owner",
         "chalet": "Chalet owner",
         "home": "Holiday home owner"
       },
       "guesthouse": {
-        "m1": "I'm genuinely impressed with the website you've created.",
-        "m2": "The fact that there are no commissions is a major advantage and a very attractive feature. It could encourage many people to join, benefit from the platform, and save money while increasing their earnings.",
-        "m3": "The sign-up process is also incredibly smooth and user-friendly, which makes the whole experience even better. Wishing you great success with this project!"
+        "m1": "The fact that there are no commissions is a major advantage and a very attractive feature. It could encourage many people to join, benefit from the platform, and save money while increasing their earnings.",
+        "m2": "The sign-up process is also incredibly smooth and user-friendly, which makes the whole experience even better. Wishing you great success with this project!"
       },
       "chalet": {
-        "m1": "I loved how organised the addresses are, and how you're making booking easy for everyone.",
-        "m2": "Honestly, as a chalet owner, this makes things so much easier for me. It saves me the calls, and the questions and answers about every detail.",
-        "m3": "It also spares me from dealing with people directly all the time, and above all from always having to be available to answer guests' questions, even though that's every guest's right.",
-        "m4": "So it saves time I can use for something else. That really caught my eye.",
-        "m5": "People are booking and asking through your link while I'm doing other things. Really nice."
+        "m1": "Honestly, as a chalet owner, this makes things so much easier for me. It saves me the calls, and the questions and answers about every detail.",
+        "m2": "People are booking and asking through your link while I'm doing other things. Really nice."
       },
       "home": {
-        "m1": "I loved the project. Very organised and clear.",
-        "m2": "And the subscription idea is new and nice. In the end, it all comes down to trust."
+        "m1": "And the subscription idea is new and nice. In the end, it all comes down to trust."
       }
     }
   },
