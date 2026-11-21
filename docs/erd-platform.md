@@ -45,9 +45,7 @@ erDiagram
     BookingUnit bookingUnit
     BookingMode bookingMode
     BusinessStatus status
-    Plan plan
-    String stripeCustomerId UK
-    String stripeSubscriptionId UK
+    String hostId FK
   }
   Role {
     String id PK
@@ -160,7 +158,7 @@ erDiagram
   }
   PlanPayment {
     String id PK
-    String businessId FK
+    String hostId FK
     String paidById FK
     Plan plan
     String offerId FK
@@ -172,13 +170,19 @@ erDiagram
     String id PK
     Plan plan
     OfferKind kind
-    String businessId FK
+    String hostId FK
     String createdById FK
   }
   PlanOfferClaim {
     String id PK
     String offerId FK
-    String businessId FK
+    String hostId FK
+  }
+  HostPlan {
+    String userId PK, FK
+    Plan plan
+    String stripeCustomerId UK
+    String stripeSubscriptionId UK
   }
   WhishSandboxPayment {
     String externalId PK
@@ -266,6 +270,7 @@ erDiagram
   User ||--o{ Session : "user"
   User ||--o{ Account : "user"
   User |o--o{ SiteSetting : "updatedBy"
+  User ||--o{ Business : "host"
   Business ||--o{ Role : "business"
   User ||--o{ Membership : "user"
   Business ||--o{ Membership : "business"
@@ -302,13 +307,14 @@ erDiagram
   Business ||--o{ Payout : "business"
   User ||--o{ Payout : "requestedBy"
   User |o--o{ Payout : "decidedBy"
-  Business ||--o{ PlanPayment : "business"
+  User ||--o{ PlanPayment : "host"
   User |o--o{ PlanPayment : "paidBy"
   PlanOffer |o--o{ PlanPayment : "offer"
-  Business |o--o{ PlanOffer : "business"
+  User |o--o{ PlanOffer : "host"
   User ||--o{ PlanOffer : "createdBy"
   PlanOffer ||--o{ PlanOfferClaim : "offer"
-  Business ||--o{ PlanOfferClaim : "business"
+  User ||--o{ PlanOfferClaim : "host"
+  User ||--o{ HostPlan : "user"
   User ||--o{ Favorite : "user"
   Business ||--o{ Favorite : "business"
   Business ||--o{ Review : "business"
@@ -450,10 +456,7 @@ erDiagram
     String_list accessibility
     Int minGuestAge
     BusinessStatus status
-    Plan plan
-    String stripeCustomerId UK
-    String stripeSubscriptionId UK
-    DateTime planRenewsAt
+    String hostId FK
     Boolean isDeleted
     DateTime createdAt
     DateTime updatedAt
@@ -659,7 +662,7 @@ erDiagram
   }
   PlanPayment {
     String id PK
-    String businessId FK
+    String hostId FK
     String paidById FK
     Plan plan
     Int months
@@ -680,7 +683,7 @@ erDiagram
     Plan plan
     OfferKind kind
     Int percentOff
-    String businessId FK
+    String hostId FK
     Int firstMonths
     DateTime startsAt
     DateTime endsAt
@@ -691,10 +694,19 @@ erDiagram
   PlanOfferClaim {
     String id PK
     String offerId FK
-    String businessId FK
+    String hostId FK
     DateTime endsAt
     Boolean isDeleted
     DateTime createdAt
+  }
+  HostPlan {
+    String userId PK, FK
+    Plan plan
+    String stripeCustomerId UK
+    String stripeSubscriptionId UK
+    DateTime planRenewsAt
+    DateTime createdAt
+    DateTime updatedAt
   }
   WhishSandboxPayment {
     String externalId PK
@@ -879,6 +891,7 @@ erDiagram
   User ||--o{ Session : "user"
   User ||--o{ Account : "user"
   User |o--o{ SiteSetting : "updatedBy"
+  User ||--o{ Business : "host"
   Business ||--o{ Role : "business"
   User ||--o{ Membership : "user"
   Business ||--o{ Membership : "business"
@@ -915,13 +928,14 @@ erDiagram
   Business ||--o{ Payout : "business"
   User ||--o{ Payout : "requestedBy"
   User |o--o{ Payout : "decidedBy"
-  Business ||--o{ PlanPayment : "business"
+  User ||--o{ PlanPayment : "host"
   User |o--o{ PlanPayment : "paidBy"
   PlanOffer |o--o{ PlanPayment : "offer"
-  Business |o--o{ PlanOffer : "business"
+  User |o--o{ PlanOffer : "host"
   User ||--o{ PlanOffer : "createdBy"
   PlanOffer ||--o{ PlanOfferClaim : "offer"
-  Business ||--o{ PlanOfferClaim : "business"
+  User ||--o{ PlanOfferClaim : "host"
+  User ||--o{ HostPlan : "user"
   User ||--o{ Favorite : "user"
   Business ||--o{ Favorite : "business"
   Business ||--o{ Review : "business"

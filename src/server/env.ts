@@ -32,8 +32,10 @@ const schema = z.object({
   // Stripe, for host plans. Without the secret key, /pricing shows the plans with checkout turned off.
   STRIPE_SECRET_KEY: optional(z.string().startsWith("sk_")),
   STRIPE_WEBHOOK_SECRET: optional(z.string().startsWith("whsec_")),
+  STRIPE_PRICE_STARTER: optional(z.string().startsWith("price_")),
   STRIPE_PRICE_PRO: optional(z.string().startsWith("price_")),
   STRIPE_PRICE_BUSINESS: optional(z.string().startsWith("price_")),
+  STRIPE_PRICE_PREMIUM: optional(z.string().startsWith("price_")),
   // Whish Pay, Mabeet's own Whish account, for guests paying online and hosts paying for plans.
   // "simulator" runs a stand-in Whish server inside the app (no keys needed); "sandbox" and "production" call
   // Whish with the channel, secret and website URL Whish issues.

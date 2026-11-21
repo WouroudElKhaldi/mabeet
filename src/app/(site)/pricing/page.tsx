@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PlanCards } from "@/components/billing/plan-cards";
 import { PageIntro, PageNote } from "@/components/site/page-intro";
@@ -18,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PricingPage() {
   const t = await getTranslations("plans");
   return (
-    <div className="mx-auto max-w-280 px-4 pt-12 pb-8 sm:px-6 lg:px-10">
+    <div className="mx-auto max-w-360 px-4 pt-12 pb-8 sm:px-6 lg:px-10">
       <PageIntro title={t("title")} intro={t("subtitle")} />
       <PlanCards
         action={(plan) => (
@@ -33,7 +34,12 @@ export default async function PricingPage() {
           </ButtonLink>
         )}
       />
-      <PageNote>{t("noCommission")}</PageNote>
+      <PageNote>
+        {t("noCommission")}{" "}
+        <Link href="/contact" className="font-semibold text-accent underline-offset-4 hover:underline">
+          {t("moreFeatured")}
+        </Link>
+      </PageNote>
     </div>
   );
 }

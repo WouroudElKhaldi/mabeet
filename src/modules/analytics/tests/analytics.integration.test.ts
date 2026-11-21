@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import * as analyticsRoute from "@/app/api/workspaces/[businessId]/analytics/route";
-import { addRoom, createPlace, createUser, memberWith, prisma, stay } from "@tests/integration/helpers";
+import {
+  addRoom,
+  createPlace,
+  createUser,
+  memberWith,
+  prisma,
+  putHostOnPlan,
+  stay,
+} from "@tests/integration/helpers";
 import { call, signUp } from "@tests/integration/http";
 import { addBlock, confirmBooking, requestBooking } from "@/modules/bookings/server";
 import { createWorkspace } from "@/modules/workspaces/server";
@@ -16,7 +24,7 @@ import { getAnalytics, getBusinessReport, getPlacesOverview, getSavings } from "
 const period = () => ({ checkIn: stay(0, 1).checkIn, checkOut: stay(60, 1).checkIn });
 
 async function placeWithRoom(currency = "USD", rateBps = 1500) {
-  const place = await createPlace();
+  const place = await createPlace(undefined, "STARTER");
   await prisma.business.update({
     where: { id: place.business.id },
     data: { currency, commissionRateBps: rateBps, bookingMode: "OFFLINE" },
@@ -97,7 +105,7 @@ describe("savings and totals", () => {
     await book(place, 5, 2);
     await prisma.planPayment.create({
       data: {
-        businessId: place.business.id,
+        hostId: place.owner.id,
         plan: "PRO",
         amountCents: 1_000,
         currency: "USD",
@@ -117,6 +125,7 @@ describe("savings and totals", () => {
     const dollars = await createWorkspace(owner.userId, { name: "Beit Dollars" });
     const pounds = await createWorkspace(owner.userId, { name: "Beit Lira" });
     await prisma.business.update({ where: { id: pounds.id }, data: { currency: "LBP" } });
+    await putHostOnPlan(owner.userId, "STARTER");
     const guest = await createUser("Guest");
     const contexts = [];
     for (const [business, rate] of [
@@ -154,12 +163,38 @@ describe("savings and totals", () => {
   });
 });
 
+describe("the plan", () => {
+  it("refuses analytics on a Free place, and leaves Free places out of all my places", async () => {
+    const place = await placeWithRoom();
+    await book(place, 0, 2);
+    const onFree = await createPlace(undefined, "FREE");
+    const reader = await prisma.role.create({
+      data: {
+        businessId: onFree.business.id,
+        name: `Reader ${place.business.id}`,
+        permissions: ["analytics.read"],
+      },
+    });
+    await prisma.membership.create({
+      data: { userId: place.owner.id, businessId: onFree.business.id, roleId: reader.id },
+    });
+    const freeCtx = await resolveContext(place.owner.id, onFree.business.id);
+
+    await expect(getAnalytics(freeCtx!, "place", period())).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Your plan doesn't include the Analytics page. Upgrade to Starter or higher.",
+    });
+    const all = await getAnalytics(place.ctx, "all", period());
+    expect(all.places.map((row) => row.businessId)).toEqual([place.business.id]);
+  });
+});
+
 describe("all my places", () => {
   it("shows today's numbers where the person may read bookings, and the place alone elsewhere", async () => {
     const place = await placeWithRoom();
     await book(place, 0, 2);
     await book(place, 3, 1, { confirm: false });
-    const elsewhere = await createPlace();
+    const elsewhere = await createPlace(undefined, "STARTER");
     const role = await prisma.role.create({
       data: {
         businessId: elsewhere.business.id,
@@ -187,6 +222,14 @@ describe("the analytics route", () => {
     const business = await createWorkspace(owner.userId, { name: "Beit Route" });
     const from = toIsoDate(stay(0, 1).checkIn);
     const to = toIsoDate(stay(10, 1).checkIn);
+    // Free doesn't include analytics; Starter does.
+    const onFree = await call(analyticsRoute.GET, {
+      as: owner,
+      params: { businessId: business.id },
+      query: { from, to },
+    });
+    expect(onFree.status).toBe(403);
+    await putHostOnPlan(owner.userId, "STARTER");
     const mine = await call(analyticsRoute.GET, {
       as: owner,
       params: { businessId: business.id },

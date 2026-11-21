@@ -4,36 +4,46 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PLAN_MONTH_MS } from "@/config/plans";
 import { runHousekeeping } from "@/modules/housekeeping/server";
 import { env } from "@/server/env";
-import { createPlace, createPlatformAdmin, memberWith, prisma } from "@tests/integration/helpers";
+import {
+  createPlace,
+  createPlatformAdmin,
+  memberWith,
+  prisma,
+  putHostOnPlan,
+} from "@tests/integration/helpers";
 import { sendPaymentsToTheApp } from "@tests/integration/payments-in-process";
 import { offerInput } from "../schemas";
 import { claimFreeOffer, createOffer, endOffer, listOffersForAdmin } from "../server/offer-service";
 import { getBilling, startCheckout, startWhishPlanCheckout } from "../server/billing-service";
 
-// Plan offers: an admin gives hosts a plan free or a share off it, for every place or one, during each place's first
-// months or between two dates. A free offer is taken from the billing page and runs out like a paid Whish month; a
+// Plan offers: an admin gives hosts a plan free or a share off it, for every host or one, during each host's first
+// months (from their first place) or between two dates. A free offer is taken from the billing page and runs out like a paid Whish month; a
 // percent-off offer lowers what the checkout charges, on Whish and by card.
 
 const DAY_MS = 86_400_000;
 const saved = {
   STRIPE_SECRET_KEY: env.STRIPE_SECRET_KEY,
+  STRIPE_PRICE_STARTER: env.STRIPE_PRICE_STARTER,
   STRIPE_PRICE_PRO: env.STRIPE_PRICE_PRO,
   STRIPE_PRICE_BUSINESS: env.STRIPE_PRICE_BUSINESS,
+  STRIPE_PRICE_PREMIUM: env.STRIPE_PRICE_PREMIUM,
   WHISH_MODE: env.WHISH_MODE,
 };
 
 beforeAll(() => {
   Object.assign(env, {
     STRIPE_SECRET_KEY: "sk_test_mabeet",
+    STRIPE_PRICE_STARTER: "price_test_starter",
     STRIPE_PRICE_PRO: "price_test_pro",
     STRIPE_PRICE_BUSINESS: "price_test_business",
+    STRIPE_PRICE_PREMIUM: "price_test_premium",
     WHISH_MODE: "simulator",
   });
 });
 afterAll(() => {
   Object.assign(env, saved);
 });
-// An offer for every place would reach the other tests' places, so each test ends the offers it made.
+// An offer for every host would reach the other tests' places, so each test ends the offers it made.
 afterEach(async () => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -44,6 +54,7 @@ const offer = (fields: Record<string, unknown>) =>
   offerInput.parse({ name: "Welcome months", plan: "PRO", kind: "FREE", ...fields });
 
 const businessOf = (id: string) => prisma.business.findUniqueOrThrow({ where: { id } });
+const planOf = (userId: string) => prisma.hostPlan.findUniqueOrThrow({ where: { userId } });
 
 async function joinedDaysAgo(businessId: string, days: number) {
   await prisma.business.update({
@@ -72,7 +83,7 @@ describe("making an offer", () => {
       createOffer(admin, offer({ startsOn: "2020-01-01", lastDay: "2020-01-31" })),
     ).rejects.toMatchObject({ code: "VALIDATION" });
     await expect(
-      createOffer(admin, offer({ firstMonths: 1, businessId: "00000000-0000-4000-8000-000000000000" })),
+      createOffer(admin, offer({ firstMonths: 1, hostId: "00000000-0000-4000-8000-000000000000" })),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
@@ -114,7 +125,7 @@ describe("a free offer", () => {
     const { createdAt } = await businessOf(fresh.business.id);
     const claimed = await claimFreeOffer(fresh.ctx, made.id);
     expect(claimed.until.getTime()).toBe(createdAt.getTime() + 3 * PLAN_MONTH_MS);
-    expect(await businessOf(fresh.business.id)).toMatchObject({ plan: "PRO", planRenewsAt: claimed.until });
+    expect(await planOf(fresh.owner.id)).toMatchObject({ plan: "PRO", planRenewsAt: claimed.until });
     expect((await getBilling(fresh.ctx)).offers).toEqual([]);
     await expect(claimFreeOffer(fresh.ctx, made.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(claimFreeOffer(old.ctx, made.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -122,11 +133,11 @@ describe("a free offer", () => {
     expect((await listOffersForAdmin(admin)).offers.find((row) => row.id === made.id)).toMatchObject({
       state: "running",
       claims: 1,
-      placeName: null,
+      hostName: null,
     });
   });
 
-  it("for one host is seen by that place only, and ending it hides it", async () => {
+  it("for one host is seen by that host only, and ending it hides it", async () => {
     const admin = await createPlatformAdmin();
     const chosen = await createPlace();
     const other = await createPlace();
@@ -134,7 +145,7 @@ describe("a free offer", () => {
     const lastDay = new Date(Date.now() + 30 * DAY_MS).toISOString().slice(0, 10);
     const made = await createOffer(
       admin,
-      offer({ plan: "BUSINESS", businessId: chosen.business.id, startsOn: today, lastDay }),
+      offer({ plan: "BUSINESS", hostId: chosen.owner.id, startsOn: today, lastDay }),
     );
 
     expect((await getBilling(other.ctx)).offers).toEqual([]);
@@ -146,26 +157,24 @@ describe("a free offer", () => {
     await expect(endOffer(admin, made.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect((await listOffersForAdmin(admin)).offers.find((row) => row.id === made.id)).toMatchObject({
       state: "ended",
-      placeName: chosen.business.name,
+      hostName: chosen.owner.name,
     });
   });
 
-  it("is refused to a card payer, to a bigger plan, and to anyone but an owner", async () => {
+  it("is refused to a card payer, to a bigger plan, and to anyone but the host", async () => {
     const admin = await createPlatformAdmin();
     const made = await createOffer(admin, offer({ firstMonths: 2 }));
 
     const byCard = await createPlace();
-    await prisma.business.update({
-      where: { id: byCard.business.id },
-      data: { plan: "PRO", stripeSubscriptionId: `sub_${randomUUID()}` },
+    await putHostOnPlan(byCard.owner.id, "PRO");
+    await prisma.hostPlan.update({
+      where: { userId: byCard.owner.id },
+      data: { stripeSubscriptionId: `sub_${randomUUID()}` },
     });
     await expect(claimFreeOffer(byCard.ctx, made.id)).rejects.toMatchObject({ code: "CONFLICT" });
 
     const bigger = await createPlace();
-    await prisma.business.update({
-      where: { id: bigger.business.id },
-      data: { plan: "BUSINESS", planRenewsAt: new Date(Date.now() + 10 * DAY_MS) },
-    });
+    await putHostOnPlan(bigger.owner.id, "BUSINESS", new Date(Date.now() + 10 * DAY_MS));
     await expect(claimFreeOffer(bigger.ctx, made.id)).rejects.toMatchObject({ code: "CONFLICT" });
     expect(await prisma.planOfferClaim.count({ where: { offerId: made.id } })).toBe(0);
 
@@ -174,16 +183,16 @@ describe("a free offer", () => {
     await expect(claimFreeOffer(manager, made.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("ends with its months: housekeeping puts the place back on Free", async () => {
+  it("ends with its months: housekeeping puts the host back on Free", async () => {
     const admin = await createPlatformAdmin();
     const made = await createOffer(admin, offer({ firstMonths: 1 }));
     const place = await createPlace();
     const { until } = await claimFreeOffer(place.ctx, made.id);
 
     await runHousekeeping(new Date(until.getTime() - DAY_MS));
-    expect((await businessOf(place.business.id)).plan).toBe("PRO");
+    expect((await planOf(place.owner.id)).plan).toBe("PRO");
     await runHousekeeping(new Date(until.getTime() + DAY_MS));
-    expect(await businessOf(place.business.id)).toMatchObject({ plan: "FREE", planRenewsAt: null });
+    expect(await planOf(place.owner.id)).toMatchObject({ plan: "FREE", planRenewsAt: null });
   });
 });
 
@@ -204,15 +213,16 @@ describe("a percent-off offer", () => {
     await expect(claimFreeOffer(place.ctx, best.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
 
     await startWhishPlanCheckout(place.ctx, "PRO");
-    const payment = await prisma.planPayment.findFirstOrThrow({ where: { businessId: place.business.id } });
+    const payment = await prisma.planPayment.findFirstOrThrow({ where: { hostId: place.owner.id } });
     expect(payment).toMatchObject({ plan: "PRO", amountCents: 2_500, offerId: best.id });
 
     const other = await createPlace();
     await joinedDaysAgo(other.business.id, 90);
     await startWhishPlanCheckout(other.ctx, "PRO");
-    expect(
-      await prisma.planPayment.findFirstOrThrow({ where: { businessId: other.business.id } }),
-    ).toMatchObject({ amountCents: 5_000, offerId: null });
+    expect(await prisma.planPayment.findFirstOrThrow({ where: { hostId: other.owner.id } })).toMatchObject({
+      amountCents: 5_000,
+      offerId: null,
+    });
   });
 
   it("puts a coupon on a card checkout for the months it has left", async () => {

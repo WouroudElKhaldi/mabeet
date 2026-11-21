@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { RoomKind } from "@prisma/client";
+import type { Plan, RoomKind } from "@prisma/client";
 import { toPermissions, type Permission } from "@/config/permissions";
 import { createWorkspace } from "@/modules/workspaces/server";
 import { resolveContext, resolvePlatformActor } from "@/server/auth/resolve-context";
@@ -25,11 +25,24 @@ async function contextOf(userId: string, businessId: string): Promise<TenantCont
   return ctx;
 }
 
-/** A new workspace and its owner's context. */
-export async function createPlace(name = "Beit Test") {
+/**
+ * A new workspace and its owner's context, on the Free plan unless a test needs what a bigger plan allows (more rooms
+ * or members, analytics, AI apps).
+ */
+export async function createPlace(name = "Beit Test", plan: Plan = "FREE") {
   const owner = await createUser(`${name} owner`);
   const business = await createWorkspace(owner.id, { name });
+  if (plan !== "FREE") await putHostOnPlan(owner.id, plan);
   return { owner, business, ctx: await contextOf(owner.id, business.id) };
+}
+
+/** Puts a host on a plan, for all their places, until the end date given or with no end. */
+export function putHostOnPlan(hostId: string, plan: Plan, planRenewsAt: Date | null = null) {
+  return prisma.hostPlan.upsert({
+    where: { userId: hostId },
+    create: { userId: hostId, plan, planRenewsAt },
+    update: { plan, planRenewsAt },
+  });
 }
 
 /** A room in a place, written straight to the database: booking tests need rooms, not the rooms screens. */

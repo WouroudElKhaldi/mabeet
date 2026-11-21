@@ -144,8 +144,8 @@ submission (Friday 13 November).
 - **F8. List experiences and services.** Hikes, tastings, transfers and the like, with repeating sessions and a
   number of seats. The database includes them from the start.
 - **F14. Connect an AI app (big bonus, the first AI bonus).** Personal keys or an OAuth sign-in to connect Claude,
-  ChatGPT, Cursor, Codex or any MCP app (the host MCP). One key reaches every place the person works in; they name
-  the place they mean. In each place, the AI sees exactly what that person's role there allows. The person's own AI
+  ChatGPT, Cursor, Codex or any MCP app (the host MCP). A key (or a sign-in) reaches only the one place it was made
+  for, even when the person works in other places too. There, the AI sees exactly what that person's role allows. The person's own AI
   app brings the model, so this needs none of ours.
   - **First version: read and report only.** Free rooms, bookings, revenue, the commission saved, and the numbers
     for a report over a period (from the same figures as the analytics page; the person's AI app writes the report).
@@ -165,8 +165,10 @@ submission (Friday 13 November).
   the worker: the screen says what it is doing ("Searching what's free…"), then shows the answer word by word. The website and other
   people's requests are never held up by it. Built with queues (pg-boss) and a worker process; see
   `02-architecture-and-features.md`, "B. Queues and the worker".
-- **F15. Choose a plan (bonus).** Free, Pro or Business, each with its limits (rooms, experiences, team members,
-  AI). Paid instantly, by card through Stripe (a subscription, turned on as soon as Stripe confirms it) or with
+- **F15. Choose a plan (bonus).** Free ($0), Starter ($30), Pro ($50), Business ($100) or Premium ($200), each with its
+  limits (rooms, experiences, team members) and what it includes (the Analytics page from Starter, AI apps over MCP
+  from Pro, priority support from Business, featured weeks on the home page from Pro). Every plan has unlimited
+  direct bookings, online payment, calendar sync, guest emails, phone alerts and our help setting up. Paid instantly, by card through Stripe (a subscription, turned on as soon as Stripe confirms it) or with
   Whish (a month at a time). There is no paying by hand and nothing waits for an admin's approval. Plans and
   sponsored listings (F23) are the platform's only income: no commission or fee on bookings, on any plan.
 

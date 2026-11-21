@@ -1,5 +1,6 @@
 import type { BusinessStatus } from "@prisma/client";
 import { recordPlatformAction } from "@/modules/audit/server";
+import { getHostPlans } from "@/modules/billing/server";
 import { type PlatformActor, requirePlatformAdmin } from "@/server/auth/tenant-context";
 import { prisma } from "@/server/db/client";
 import { notFound } from "@/server/errors";
@@ -21,8 +22,9 @@ export async function listPlatformBusinesses(actor: PlatformActor) {
   ]);
   return {
     total,
-    businesses: list.map(({ memberships, _count, ...business }) => ({
+    businesses: list.map(({ memberships, _count, host, ...business }) => ({
       ...business,
+      hostName: host.name,
       owners: memberships.map((membership) => membership.user),
       roomCount: _count.rooms,
       bookingCount: _count.bookings,
@@ -32,18 +34,20 @@ export async function listPlatformBusinesses(actor: PlatformActor) {
 
 /**
  * One page of the hosts (people who own a live place) for the admin's table, the newest first, filtered by words
- * and by their places' status or plan, with the places each owns.
+ * and by their places' status or their plan, with their plan and the places each owns.
  */
 export async function listPlatformHosts(actor: PlatformActor, filters: HostFilters, page = 1) {
   requirePlatformAdmin(actor);
   const total = await countHostsForAdmin(prisma, filters);
   const { skip, take, ...paging } = pageOf(total, page);
   const rows = await listHostsForAdmin(prisma, filters, { skip, take });
+  const plans = await getHostPlans(rows.map((host) => host.id));
   return {
     total,
     ...paging,
     hosts: rows.map(({ memberships, ...host }) => ({
       ...host,
+      plan: plans.get(host.id)?.plan ?? "FREE",
       places: memberships.map((membership) => membership.business),
     })),
   };
@@ -66,22 +70,24 @@ export async function setBusinessStatus(actor: PlatformActor, businessId: string
 
 /**
  * One host for the admin: their contacts, their host profile (even a private one: the admin helps them fill it in)
- * and every live business they own. A person who owns nothing is not a host, so their page answers 404.
+ * their plan (one for all their places) and every live business they own. A person who owns nothing is not a host, so
+ * their page answers 404.
  */
 export async function getPlatformHost(actor: PlatformActor, userId: string) {
   requirePlatformAdmin(actor);
   const host = await findHostForAdmin(prisma, userId);
   if (!host) throw notFound("Host");
   const { memberships, hostProfile, ...account } = host;
+  const plan = (await getHostPlans([userId])).get(userId);
   return {
     ...account,
+    plan: plan ?? { plan: "FREE" as const, renewsAt: null, paysByCard: false },
     profile: hostProfile && !hostProfile.isDeleted ? hostProfile : null,
     businesses: memberships
       .map(({ business }) => business)
       .filter((business) => !business.isDeleted)
-      .map(({ _count, isDeleted: _, stripeSubscriptionId, ...business }) => ({
+      .map(({ _count, isDeleted: _, ...business }) => ({
         ...business,
-        paysByCard: stripeSubscriptionId !== null,
         roomCount: _count.rooms,
         offeringCount: _count.offerings,
         bookingCount: _count.bookings,

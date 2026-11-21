@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { moneyNumber, prisma } from "@/server/db/client";
 import { secureToken } from "@/utils/tokens";
+import { testEmail } from "./helpers";
 
 describe("money columns", () => {
   it("reads an LBP price past the 32-bit limit back exactly, as a plain number", async () => {
     const business = await prisma.business.create({
-      data: { name: "Beit Batroun", slug: `beit-batroun-${secureToken(4)}`, currency: "LBP" },
+      data: {
+        name: "Beit Batroun",
+        slug: `beit-batroun-${secureToken(4)}`,
+        currency: "LBP",
+        host: { create: { id: secureToken(), name: "Host", email: testEmail() } },
+      },
     });
     // 2.25 billion minor units, past the old INTEGER limit of about 2.1 billion.
     const room = await prisma.room.create({

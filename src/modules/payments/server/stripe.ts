@@ -75,10 +75,10 @@ export async function createPlanCoupon(input: { percentOff: number; months: numb
   return coupon.id;
 }
 
-/** A Stripe Checkout page for a plan subscription. The business id travels with it, so the webhook knows whose it is. */
+/** A Stripe Checkout page for a plan subscription. The host's id travels with it, so the webhook knows whose plan it is. */
 export function createSubscriptionCheckout(input: {
   priceId: string;
-  businessId: string;
+  hostId: string;
   customerId: string | null;
   email: string;
   successUrl: string;
@@ -95,11 +95,11 @@ export function createSubscriptionCheckout(input: {
       "line_items[0][quantity]": 1,
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
-      client_reference_id: input.businessId,
+      client_reference_id: input.hostId,
       customer: input.customerId ?? undefined,
       customer_email: input.customerId ? undefined : input.email,
-      "metadata[businessId]": input.businessId,
-      "subscription_data[metadata][businessId]": input.businessId,
+      "metadata[hostId]": input.hostId,
+      "subscription_data[metadata][hostId]": input.hostId,
     },
     urlResult,
   );

@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { recordAction } from "@/modules/audit/server";
+import { assertPlanIncludes } from "@/modules/billing/server";
 import { requirePermission, type TenantContext } from "@/server/auth/tenant-context";
 import { resolveContext } from "@/server/auth/resolve-context";
 import { inBackground } from "@/server/background";
@@ -32,6 +33,7 @@ export async function createKey(
   // A key acts as a member of the team; a platform admin visiting a business is not one.
   if (ctx.platformAdmin)
     throw forbidden("Platform admins can't create AI keys for a business they don't belong to");
+  await assertPlanIncludes(ctx.businessId, "mcp");
   const raw = `${KEY_PREFIX}${randomBytes(32).toString("base64url")}`;
   const key = await keys.createApiKey(prisma, {
     businessId: ctx.businessId,

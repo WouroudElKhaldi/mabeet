@@ -7246,7 +7246,7 @@
     "/api/workspaces/{businessId}/billing/checkout": {
       "post": {
         "tags": ["Workspaces"],
-        "summary": "Start Stripe Checkout for a paid plan (owners)",
+        "summary": "Start Stripe Checkout for a paid plan (the host, for all their places)",
         "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
         "security": [
           {
@@ -7273,7 +7273,7 @@
                 "properties": {
                   "plan": {
                     "type": "string",
-                    "enum": ["PRO", "BUSINESS"]
+                    "enum": ["STARTER", "PRO", "BUSINESS", "PREMIUM"]
                   }
                 },
                 "required": ["plan"]
@@ -7331,7 +7331,7 @@
     "/api/workspaces/{businessId}/billing/portal": {
       "post": {
         "tags": ["Workspaces"],
-        "summary": "Open the Stripe billing portal (owners)",
+        "summary": "Open the Stripe billing portal (the host)",
         "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
         "security": [
           {
@@ -8523,7 +8523,7 @@
     "/api/workspaces/{businessId}/billing/whish": {
       "post": {
         "tags": ["Payments"],
-        "summary": "Pay one month of a plan with Whish (owners)",
+        "summary": "Pay one month of a plan with Whish (the host, for all their places)",
         "description": "Signed-in member of the workspace; each call checks the member's permissions. Non-members get 404.",
         "security": [
           {
@@ -8550,7 +8550,7 @@
                 "properties": {
                   "plan": {
                     "type": "string",
-                    "enum": ["PRO", "BUSINESS"]
+                    "enum": ["STARTER", "PRO", "BUSINESS", "PREMIUM"]
                   }
                 },
                 "required": ["plan"]
@@ -10910,7 +10910,7 @@
       "get": {
         "tags": ["Platform"],
         "summary": "Plan offers and their use",
-        "description": "Platform admins only (anyone else gets 404). One page of the offers, newest first, ended ones too: { total, page, pages, offers: [{ id, name, plan, kind, percentOff, businessId, firstMonths, startsAt, endsAt, createdAt, placeName, claims, payments, state }] }. state is running, upcoming, over (its dates passed) or ended (an admin ended it). A wrong filter value is ignored.",
+        "description": "Platform admins only (anyone else gets 404). One page of the offers, newest first, ended ones too: { total, page, pages, offers: [{ id, name, plan, kind, percentOff, hostId, firstMonths, startsAt, endsAt, createdAt, hostName, claims, payments, state }] }. state is running, upcoming, over (its dates passed) or ended (an admin ended it). A wrong filter value is ignored.",
         "security": [
           {
             "session": []
@@ -10997,7 +10997,7 @@
       "post": {
         "tags": ["Platform"],
         "summary": "Add a plan offer",
-        "description": "Platform admins only (anyone else gets 404). kind FREE gives the plan with nothing to pay; PERCENT_OFF needs percentOff (1-99). The time is either firstMonths (1-24, counted from the day each place joined) or startsOn and lastDay (both days included). businessId is one place, or null for every place. Dates already past are 400; an unknown place is 404. Answers 201 with { id }.",
+        "description": "Platform admins only (anyone else gets 404). kind FREE gives the plan with nothing to pay; PERCENT_OFF needs percentOff (1-99). The time is either firstMonths (1-24, counted from the day each host's first place joined) or startsOn and lastDay (both days included). hostId is one host (all their places), or null for every host. Dates already past are 400; an unknown host is 404. Answers 201 with { id }.",
         "security": [
           {
             "session": []
@@ -11019,7 +11019,7 @@
                   },
                   "plan": {
                     "type": "string",
-                    "enum": ["PRO", "BUSINESS"]
+                    "enum": ["STARTER", "PRO", "BUSINESS", "PREMIUM"]
                   },
                   "kind": {
                     "type": "string",
@@ -11030,7 +11030,7 @@
                     "minimum": 1,
                     "maximum": 99
                   },
-                  "businessId": {
+                  "hostId": {
                     "default": null,
                     "anyOf": [
                       {
@@ -11184,8 +11184,8 @@
     "/api/workspaces/{businessId}/billing/offers/{offerId}/claim": {
       "post": {
         "tags": ["Payments"],
-        "summary": "Take a free plan offer (owners)",
-        "description": "Owners only. The place is on the offer's plan until the offer ends for it, then back on Free unless it pays: { plan, until }. Offers open to the place are listed in the billing page's data. An offer not open to the place, already taken, or a share-off offer is 404; a place paying by card or already on a bigger plan is 409.",
+        "summary": "Take a free plan offer (the host)",
+        "description": "The host only (whoever created the place; anyone else is 403). The host, with all their places, is on the offer's plan until the offer ends for them, then back on Free unless they pay: { plan, until }. Offers open to the host are listed in the billing page's data. An offer not open to the host, already taken, or a share-off offer is 404; a host paying by card or already on a bigger plan is 409.",
         "security": [
           {
             "session": []
@@ -11256,11 +11256,11 @@
         }
       }
     },
-    "/api/admin/businesses/{businessId}/plan": {
+    "/api/admin/hosts/{userId}/plan": {
       "patch": {
         "tags": ["Platform"],
-        "summary": "Set a place's plan by hand",
-        "description": "Platform admins only (anyone else gets 404). A paid plan runs to the end of lastDay (then housekeeping puts the place back on Free), or with no end when lastDay is null; Free has no lastDay. A place paying by card is 409 (its plan follows its Stripe subscription); a lastDay already past is 400; an unknown place is 404. Logged as business.plan_changed. Answers { plan, renewsAt }.",
+        "summary": "Set a host's plan by hand, for all their places",
+        "description": "Platform admins only (anyone else gets 404). A paid plan runs to the end of lastDay (then housekeeping puts the host back on Free), or with no end when lastDay is null; Free has no lastDay. A host paying by card is 409 (their plan follows their Stripe subscription); a lastDay already past is 400; an unknown host (no place of their own) is 404. Logged as host.plan_changed. Answers { plan, renewsAt }.",
         "security": [
           {
             "session": []
@@ -11268,7 +11268,7 @@
         ],
         "parameters": [
           {
-            "name": "businessId",
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
@@ -11286,7 +11286,7 @@
                 "properties": {
                   "plan": {
                     "type": "string",
-                    "enum": ["FREE", "PRO", "BUSINESS"]
+                    "enum": ["FREE", "STARTER", "PRO", "BUSINESS", "PREMIUM"]
                   },
                   "lastDay": {
                     "default": null,

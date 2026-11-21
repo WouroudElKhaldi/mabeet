@@ -1,66 +1,27 @@
 # Changes since Checkpoint 1 (Tuesday 3 November)
 
-From the 73 commits on `development`.
+The main ones only.
 
 ## Added
 
-- Calendar sync with Airbnb and Booking.com (every 10 minutes, and again before each booking)
-- Channels page (calendar links, Sync now)
-- Payouts (owners ask, admin marks sent) and Payouts page
-- Admin API and admin pages: overview, hosts with suspend, people, money, categories, site palette
-- Admin host page and user details page
-- Admin health page (calendar links that need a look)
-- Admin plan offers, and the admin setting a place's plan
-- Admin AI apps page (MCP usage)
-- Notification bell, with API and full list
-- Host profile, with API and page
-- Profile pages (name, phone, password) for hosts and admins
-- Billing page (plan, usage, pay by card or Whish)
-- Favourites (saved places)
-- Guest reviews of stays
-- Reviews page for hosts (reply, hide, show)
-- Guest Activity page
-- Contact host and Meet your host
-- Map, photo tour and Share on the place page
-- Featured partners, with API, admin page and demo partners
-- Featured guesthouses
-- "Things to do near your stay": partners, then experiences and services
-- Booking page: phone alerts to follow the booking
-- Experiences and services: API, host page, sessions, seat bookings, guest page, browse tabs
-- Experience photos, gallery, Show all photos, reviews and Meet your host
-- MCP actions: confirm, decline, cancel, close and reopen dates, open or close rooms, sync calendars
-- Guest connector: more results and host info
-- Reopening part of closed dates
+- Calendar sync with Airbnb and Booking.com, so a room is never booked twice
+- Payouts: hosts ask for their money, the admin marks it sent
+- Admin area: hosts, people, money, health and categories
+- Guest reviews, and a reviews page where hosts reply
+- Billing page: plans paid by card or Whish
+- Favourites and the guest's Activity page
+- Contact host, Meet your host, map and photo tour on the place page
+- Featured guesthouses and featured partners ("Things to do near your stay")
+- Notification bell
 - Email confirmation for every new account
-- Guided setup for a new place
-- Setup checklist on a new place's home
-- Place switcher in the dashboard
-- Adding a place from the dashboard
-- Archiving a place from Settings
-- Maintenance page while the site is down (nginx)
-- About us and Contact us in the header
-- Playwright browser tests: phone, core flow, no double booking, 3 languages, buttons, money flows, Chrome journeys
+- Guided setup for a new place, and adding more places from the dashboard
+- AI (MCP) actions: confirm, decline and cancel bookings, close and reopen dates, sync calendars
+- Playwright browser tests: core flow, no double booking, phone, 3 languages
 
 ## Changed
 
-- Dashboard lists became tables, and adding opens in pop-ups
-- Admin lists became tables with search, filters and pages
-- Place and rooms pages simplified
-- Close dates opens as a pop-up
-- Tables and calendar scroll inside their box on phones
-- Back button returns to the previous page
-- Not-found pages show inside the site and dashboard frame
-- Error page reloads once after a deploy
-- Place gallery with fewer than 5 photos shows the large one alone
-- Sign-in pages show photos of listed places
-- Search bar and home hero layout on laptops
-- Whish: an unknown payment reads as not paid
-- Whish simulator secured with a server secret
-- Contact host form kept when a place has no WhatsApp number
-- Dates match on the server and in the browser; demo places have map pins
-- Form fixes: silent refusals, real 404 for hidden places, 10-character password rule
-- Pop-up text lines up at the start; pop-up buttons take their icon as an element
-- Admin businesses list leaves out removed owners
-- An existing account made admin gets its email confirmed
-- `body-parser` updated to fix a security issue
-- Texts in 3 languages and the team docs updated throughout
+- Dashboard and admin lists became tables with search and filters, and adding opens in pop-ups
+- Place, rooms and close-dates screens simplified
+- Phones: tables and the calendar scroll inside their box
+- Whish payments made safer and clearer
+- Security fixes: the Whish simulator secret and the `body-parser` update

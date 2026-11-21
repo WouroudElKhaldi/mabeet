@@ -65,7 +65,9 @@ export function CreateWorkspaceForm({
     });
   };
 
-  const label = createdId ? t("retryPay") : paying ? t("createAndPay") : t("create");
+  // "Try paying again" only after a paid plan's payment failed; on Free, the page is already moving on to the setup.
+  const retrying = createdId !== null && paying;
+  const label = retrying ? t("retryPay") : paying ? t("createAndPay") : t("create");
 
   return (
     <form onSubmit={submit} className="rise-in-sequence grid gap-5">
@@ -94,7 +96,9 @@ export function CreateWorkspaceForm({
           {label}
         </SlideLabel>
       </Button>
-      {createdId ? <ArrowLink href={dashboardOf(createdId)}>{t("startFreeInstead")}</ArrowLink> : null}
+      {retrying && createdId ? (
+        <ArrowLink href={dashboardOf(createdId)}>{t("startFreeInstead")}</ArrowLink>
+      ) : null}
     </form>
   );
 }

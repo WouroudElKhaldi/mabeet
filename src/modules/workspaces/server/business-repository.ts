@@ -7,7 +7,7 @@ export function slugExists(db: Db, slug: string) {
 }
 
 export interface NewBusinessWithOwner {
-  business: Omit<Prisma.BusinessCreateInput, "roles" | "memberships">;
+  business: Omit<Prisma.BusinessCreateInput, "roles" | "memberships" | "host">;
   ownerUserId: string;
   starterRoles: ReadonlyArray<{ name: string; description: string; permissions: string[] }>;
 }
@@ -16,6 +16,8 @@ export async function createBusinessWithOwner(tx: Tx, input: NewBusinessWithOwne
   const business = await tx.business.create({
     data: {
       ...input.business,
+      // Whoever opens a place is its host: its rooms and team count against their plan.
+      host: { connect: { id: input.ownerUserId } },
       roles: { create: input.starterRoles.map((role) => ({ ...role })) },
     },
   });
@@ -274,8 +276,9 @@ export function listPlatformBusinesses(db: Db, take: number) {
       slug: true,
       area: true,
       status: true,
-      plan: true,
       createdAt: true,
+      hostId: true,
+      host: { select: { name: true } },
       memberships: {
         where: {
           status: "ACTIVE",

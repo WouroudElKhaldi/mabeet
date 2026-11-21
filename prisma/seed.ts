@@ -350,6 +350,12 @@ async function main() {
   async function seedPlace(place: DemoPlace, ownerId: string) {
     if (await prisma.business.findFirst({ where: { name: place.name } })) return null;
     const business = await createWorkspace(ownerId, { name: place.name, area: place.area });
+    // The host is on Pro, so the demo shows the Analytics page and AI apps, which Free and Starter don't include.
+    await prisma.hostPlan.upsert({
+      where: { userId: ownerId },
+      create: { userId: ownerId, plan: "PRO" },
+      update: { plan: "PRO" },
+    });
     const rooms = place.rooms.map((room) => ({
       name: room.name,
       description: room.description,

@@ -12,20 +12,21 @@ import { MAX_OFFER_FIRST_MONTHS, OFFER_KINDS, PAID_PLANS } from "@/config/plans"
 import { useAction } from "@/hooks/use-action";
 import { api } from "@/lib/api-client";
 
-// Platform admins give hosts a plan free, or a share off it: for every place or one host's place, during each place's
-// first months or between two dates. The admin's table lists the offers; making one opens this form in a pop-up, and
+// Platform admins give hosts a plan free, or a share off it: for every host or one host (all their places), during
+// each host's first months or between two dates. The admin's table lists the offers; making one opens this form in a pop-up, and
 // ending one stops it now while keeping what it already gave.
 
 const TIMINGS = ["firstMonths", "dates"] as const;
 type Timing = (typeof TIMINGS)[number];
 
-export interface OfferPlace {
+/** A host an offer can be for, with the names of their places so the admin knows who is who. */
+export interface OfferHost {
   id: string;
   name: string;
-  owner: string | null;
+  places: string[];
 }
 
-function OfferForm({ places }: { places: OfferPlace[] }) {
+function OfferForm({ hosts }: { hosts: OfferHost[] }) {
   const t = useTranslations("admin.offers");
   const plans = useTranslations("plans");
   const { run, pending, error } = useAction();
@@ -42,7 +43,7 @@ function OfferForm({ places }: { places: OfferPlace[] }) {
       plan: text("plan"),
       kind,
       percentOff: kind === "PERCENT_OFF" ? Number(text("percentOff")) : undefined,
-      businessId: text("businessId") || null,
+      hostId: text("hostId") || null,
       ...(timing === "firstMonths"
         ? { firstMonths: Number(text("firstMonths")) }
         : { startsOn: text("startsOn"), lastDay: text("lastDay") }),
@@ -156,11 +157,11 @@ function OfferForm({ places }: { places: OfferPlace[] }) {
 
       <label className={labelledControlClass}>
         {t("for")}
-        <select name="businessId" defaultValue="" className={inputClass}>
-          <option value="">{t("forEveryPlace")}</option>
-          {places.map((place) => (
-            <option key={place.id} value={place.id}>
-              {place.owner ? `${place.name} (${place.owner})` : place.name}
+        <select name="hostId" defaultValue="" className={inputClass}>
+          <option value="">{t("forEveryHost")}</option>
+          {hosts.map((host) => (
+            <option key={host.id} value={host.id}>
+              {`${host.name} (${host.places.join(", ")})`}
             </option>
           ))}
         </select>
@@ -175,11 +176,11 @@ function OfferForm({ places }: { places: OfferPlace[] }) {
 }
 
 /** The page's "New offer" button: the form in a pop-up. */
-export function NewOfferButton({ places }: { places: OfferPlace[] }) {
+export function NewOfferButton({ hosts }: { hosts: OfferHost[] }) {
   const t = useTranslations("admin.offers");
   return (
     <FormDialog label={t("newTitle")} title={t("newTitle")} intro={t("newIntro")} size="lg">
-      <OfferForm places={places} />
+      <OfferForm hosts={hosts} />
     </FormDialog>
   );
 }

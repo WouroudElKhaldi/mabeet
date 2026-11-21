@@ -3,7 +3,15 @@ import { beforeEach, describe, expect, it } from "vitest";
 import * as hostMcpRoute from "@/app/api/mcp/route";
 import * as keyRoute from "@/app/api/workspaces/[businessId]/keys/[keyId]/route";
 import * as keysRoute from "@/app/api/workspaces/[businessId]/keys/route";
-import { addRoom, createPlace, createUser, memberWith, prisma, stay } from "@tests/integration/helpers";
+import {
+  addRoom,
+  createPlace,
+  createUser,
+  memberWith,
+  prisma,
+  putHostOnPlan,
+  stay,
+} from "@tests/integration/helpers";
 import { addBlock, requestBooking } from "@/modules/bookings/server";
 import { removeMember } from "@/modules/team/server";
 import { resolveContext } from "@/server/auth/resolve-context";
@@ -45,7 +53,7 @@ const toolNames = async (secret: string) =>
   ((await mcp(secret, "tools/list")).result?.tools as Array<{ name: string }>).map((entry) => entry.name);
 
 async function placeWithKey(name = `Beit ${randomUUID().slice(0, 6)}`) {
-  const place = await createPlace(name);
+  const place = await createPlace(name, "PRO");
   const room = await addRoom(place.business.id, { capacity: 2 });
   const key = await createKey(place.ctx, { name: "Claude", expiresInDays: 30 });
   return { ...place, room, key };
@@ -53,6 +61,21 @@ async function placeWithKey(name = `Beit ${randomUUID().slice(0, 6)}`) {
 
 describe("the host MCP", () => {
   beforeEach(resetMemoryRateLimits);
+
+  it("needs a plan that includes AI apps: no key on Free, and a key stops when the place moves down", async () => {
+    const free = await createPlace(undefined, "FREE");
+    await expect(createKey(free.ctx, { name: "Claude", expiresInDays: 30 })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Your plan doesn't include connecting AI apps. Upgrade to Pro or higher.",
+    });
+
+    const { owner, key } = await placeWithKey();
+    expect((await mcp(key.secret, "tools/list")).status).toBe(200);
+    await putHostOnPlan(owner.id, "STARTER");
+    expect((await mcp(key.secret, "tools/list")).status).toBe(403);
+    await putHostOnPlan(owner.id, "BUSINESS");
+    expect((await mcp(key.secret, "tools/list")).status).toBe(200);
+  });
 
   it("answers only with a working key", async () => {
     expect((await mcp(null, "tools/list")).status).toBe(401);
@@ -132,7 +155,7 @@ describe("the host MCP", () => {
     const { business } = await placeWithKey();
     const reader = await memberWith(business.id, ["bookings.read", "ai.use"]);
     const key = await createKey(reader, { name: "Reader", expiresInDays: 30 });
-    expect(await toolNames(key.secret)).toEqual(["list_places", "list_bookings"]);
+    expect(await toolNames(key.secret)).toEqual(["list_bookings"]);
 
     const { result } = await mcp(key.secret, "tools/list");
     const annotations = (result?.tools as Array<{ annotations: { readOnlyHint: boolean } }>).map(
@@ -141,40 +164,26 @@ describe("the host MCP", () => {
     expect(annotations.every(Boolean)).toBe(true);
   });
 
-  it("reaches the member's other places by name, and never anyone else's", async () => {
+  it("reads only the place the key was made in, even when its member owns other places", async () => {
     const first = await placeWithKey(`Dar Ehden ${randomUUID().slice(0, 6)}`);
-    const second = await createPlace(`Beit Batroun ${randomUUID().slice(0, 6)}`);
-    const secondRoom = await addRoom(second.business.id);
+    const second = await createPlace(`Beit Batroun ${randomUUID().slice(0, 6)}`, "PRO");
+    await addRoom(second.business.id);
     const ownerRole = await prisma.role.findFirstOrThrow({
       where: { businessId: second.business.id, isOwner: true },
     });
     await prisma.membership.create({
       data: { userId: first.owner.id, businessId: second.business.id, roleId: ownerRole.id },
     });
-    const stranger = await createPlace(`Beit Stranger ${randomUUID().slice(0, 6)}`);
-    await addRoom(stranger.business.id);
 
-    const places = (await tool(first.key.secret, "list_places")).payload as Array<{
-      id: string;
-      current: boolean;
-    }>;
-    expect(places.map((place) => place.id).sort()).toEqual([first.business.id, second.business.id].sort());
-    expect(places.find((place) => place.current)?.id).toBe(first.business.id);
+    // No tool lists the member's places or takes one.
+    const { result } = await mcp(first.key.secret, "tools/list");
+    const tools = result?.tools as Array<{ name: string; inputSchema: { properties?: object } }>;
+    expect(tools.map((entry) => entry.name)).not.toContain("list_places");
+    expect(tools.every((entry) => !("place" in (entry.inputSchema.properties ?? {})))).toBe(true);
 
+    // Naming the other place changes nothing: the answer is still the key's own place.
     expect(await tool(first.key.secret, "list_rooms", { place: second.business.name })).toMatchObject({
-      payload: [{ id: secondRoom.id }],
-    });
-    expect(await tool(first.key.secret, "list_rooms", { place: stranger.business.name })).toEqual({
-      isError: true,
-      payload: { error: "Place not found" },
-    });
-    expect(await tool(first.key.secret, "list_rooms", { place: stranger.business.id })).toMatchObject({
-      isError: true,
-    });
-    // "a" is in both of the member's places: refused rather than guessed.
-    expect(await tool(first.key.secret, "list_rooms", { place: "a" })).toMatchObject({
-      isError: true,
-      payload: { error: expect.stringContaining("Several of your places match") },
+      payload: [{ id: first.room.id }],
     });
   });
 
@@ -197,7 +206,7 @@ describe("the host MCP", () => {
 
 describe("MCP keys", () => {
   it("are the member's own: shown once, listed without the secret, revoked only by them", async () => {
-    const place = await createPlace();
+    const place = await createPlace(undefined, "PRO");
     const owner = await resolveContext(place.owner.id, place.business.id);
     const key = await createKey(owner as TenantContext, { name: "Claude", expiresInDays: 90 });
     expect(key.secret).toMatch(/^mbt_/);
@@ -219,6 +228,7 @@ describe("MCP keys", () => {
   it("are made, listed and revoked through their routes", async () => {
     const owner = await signUp("Nour Haddad");
     const business = await createWorkspace(owner.userId, { name: `Beit ${randomUUID().slice(0, 6)}` });
+    await putHostOnPlan(owner.userId, "PRO");
     const params = { businessId: business.id };
 
     const created = await call(keysRoute.POST, { as: owner, params, body: { name: "Claude" } });

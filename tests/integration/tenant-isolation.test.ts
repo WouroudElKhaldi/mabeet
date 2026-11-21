@@ -7,7 +7,7 @@ import * as members from "@/app/api/workspaces/[businessId]/members/route";
 import * as roleItem from "@/app/api/workspaces/[businessId]/roles/[roleId]/route";
 import * as roles from "@/app/api/workspaces/[businessId]/roles/route";
 import * as workspaces from "@/app/api/workspaces/route";
-import { prisma, testEmail } from "./helpers";
+import { prisma, putHostOnPlan, testEmail } from "./helpers";
 import { call, type Caller, signUp, TEST_PASSWORD } from "./http";
 
 interface Tenant {
@@ -25,6 +25,8 @@ async function createTenant(name: string): Promise<Tenant> {
   const { id: businessId } = created.body as { id: string };
   const role = await prisma.role.findFirstOrThrow({ where: { businessId, isOwner: false } });
   const membership = await prisma.membership.findFirstOrThrow({ where: { businessId } });
+  // Free is for the owner alone; Starter lets them invite one person.
+  await putHostOnPlan(owner.userId, "STARTER");
   const invited = await call(invitations.POST, {
     as: owner,
     params: { businessId },

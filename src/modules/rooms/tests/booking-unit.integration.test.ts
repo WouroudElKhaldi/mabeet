@@ -5,7 +5,7 @@ import { call, signUp } from "@tests/integration/http";
 import { chooseBookingUnit, createRoom } from "../server";
 
 // Booking a place room by room, or as a whole: the whole place gets its one unit, started from its rooms added up,
-// which takes turns with the rooms; it is never doubled and never uses up the plan's rooms.
+// which takes turns with the rooms; it is never doubled, and the place counts as one room of the host's plan.
 
 const room = {
   name: "Room",
@@ -20,7 +20,8 @@ const room = {
 
 describe("choosing how the place is booked", () => {
   it("gives a place booked whole its unit from its rooms added up, once, and keeps it when going back to rooms", async () => {
-    const place = await createPlace("Beit Zaatar");
+    // Starter, so going back to its two rooms fits the plan.
+    const place = await createPlace("Beit Zaatar", "STARTER");
     await addRoom(place.business.id, { capacity: 2, baseRateCents: 9_000 });
     await addRoom(place.business.id, { capacity: 3, baseRateCents: 11_000 });
 
@@ -64,17 +65,24 @@ describe("choosing how the place is booked", () => {
     });
   });
 
-  it("does not count the whole-place unit against the plan's rooms", async () => {
-    const place = await createPlace();
-    // The free plan allows three rooms.
+  it("counts a place booked whole as one room, and refuses going back to rooms past the plan", async () => {
+    const place = await createPlace(undefined, "STARTER");
+    // The Starter plan allows three rooms.
     await createRoom(place.ctx, { ...room, baseRateCents: 8_000 });
     await createRoom(place.ctx, { ...room, baseRateCents: 8_000 });
     await chooseBookingUnit(place.ctx, "WHOLE_PLACE");
-    await expect(createRoom(place.ctx, { ...room, baseRateCents: 8_000 })).resolves.toMatchObject({
-      kind: "ROOM",
-    });
-    await expect(createRoom(place.ctx, { ...room, baseRateCents: 8_000 })).rejects.toMatchObject({
+    // Booked whole, the rooms only describe the place: adding them uses nothing more of the plan.
+    for (let count = 0; count < 2; count += 1) {
+      await expect(createRoom(place.ctx, { ...room, baseRateCents: 8_000 })).resolves.toMatchObject({
+        kind: "ROOM",
+      });
+    }
+    await expect(chooseBookingUnit(place.ctx, "ROOMS")).rejects.toMatchObject({
       code: "CONFLICT",
+      message: "Your plan allows up to 3 rooms. Upgrade to add more.",
+    });
+    expect(await prisma.business.findUniqueOrThrow({ where: { id: place.business.id } })).toMatchObject({
+      bookingUnit: "WHOLE_PLACE",
     });
   });
 

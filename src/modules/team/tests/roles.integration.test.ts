@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resolveContext } from "@/server/auth/resolve-context";
-import { createPlace, createUser, memberWith, prisma } from "@tests/integration/helpers";
+import { createPlace, createUser, memberWith, prisma, putHostOnPlan } from "@tests/integration/helpers";
 import { acceptInvitation, inviteMember } from "../server/invitation-service";
 import {
   changeMemberRole,
@@ -15,7 +15,7 @@ describe("dynamic roles and permissions", () => {
   let place: Awaited<ReturnType<typeof createPlace>>;
 
   beforeEach(async () => {
-    place = await createPlace();
+    place = await createPlace(undefined, "STARTER");
   });
 
   it("lets an owner create a custom role with any permissions", async () => {
@@ -70,8 +70,8 @@ describe("dynamic roles and permissions", () => {
   });
 
   it("only lets an owner make someone an owner", async () => {
-    // A third person on the team: past the Free plan's two.
-    await prisma.business.update({ where: { id: place.business.id }, data: { plan: "PRO" } });
+    // A third person on the team: past the Starter plan's two.
+    await putHostOnPlan(place.owner.id, "PRO");
     const manager = await memberWith(place.business.id, ["team.manage", "roles.manage"]);
     const ownerRole = await prisma.role.findFirstOrThrow({
       where: { businessId: place.business.id, isOwner: true },

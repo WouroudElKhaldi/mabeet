@@ -285,3 +285,35 @@ migration `20261112150000_archived_places`. How it is used is in `02` ("Archivin
    `ACTIVE`), but its team keeps the dashboard (`TEAM_OPEN_STATUSES` in `src/config/enums.ts`, read by
    `findActiveMembership`). Only the owner moves a place between `ACTIVE` and `ARCHIVED`; only the platform admin
    sets `SUSPENDED` (`ADMIN_BUSINESS_STATUSES`). No existing row changes.
+
+## 9. Five plans (applied)
+
+Approved by the user (the database keeper) on 20 November for the new plans, in the migration
+`20261120000000_five_plans`. How they work is in `02` ("Plans and billing").
+
+1. `Plan` has two more values, in order from the smallest: `FREE`, `STARTER`, `PRO`, `BUSINESS`, `PREMIUM`. `PLANS`
+   in `src/config/plans.ts` follows the same order, so "a higher plan" is a later one. No existing row changes:
+   a place keeps its plan, with that plan's new limits.
+
+## 10. One plan per host (applied)
+
+Approved by the user (the database keeper) on 21 November, in the migration `20261121000000_host_plans`. A plan
+belongs to the host's account, not to each place: one plan covers all the places a host hosts, and its limits are
+counted across them. How it works is in `02` ("Plans and billing").
+
+1. `Business.hostId` (required, `onDelete: Restrict`) is the host whose plan covers the place: whoever created it.
+   The migration filled it with each place's first owner, else its first member, else (a place nobody ever joined)
+   the first platform admin.
+2. `HostPlan` (one row per host, `userId` as its key) holds `plan`, `stripeCustomerId`, `stripeSubscriptionId` and
+   `planRenewsAt`, moved off `Business`, which loses those four columns. A host with no row is on Free; the row is
+   made the first time something locks or sets the plan. The migration gave each host their highest plan, the card
+   subscription first among equal plans, then no end date, then the latest end.
+3. `PlanPayment.hostId`, `PlanOffer.hostId` (null for every host) and `PlanOfferClaim.hostId` replace `businessId`.
+   A claim is unique per offer and host; where two places of one host had claimed the same offer, the claim that
+   runs longest was kept.
+4. Rooms used are, across the host's live places: 1 for a place booked whole, else its live `ROOM` rooms. Members
+   are the distinct people active on any of the host's teams, the host included. Experiences and services are
+   added up.
+
+The live site may have a host with two card subscriptions from before (one per place); the migration keeps the
+higher one on the host, and the other must be cancelled in Stripe by hand.
