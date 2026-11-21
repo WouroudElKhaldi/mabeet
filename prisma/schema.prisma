@@ -57,7 +57,12 @@ model User {
   pushSubscriptions       PushSubscription[]
   hostProfile             HostProfile?
   aiChats                 AiChat[]
-  planPayments            PlanPayment[]
+  planPayments            PlanPayment[]       @relation("PlanPaymentPaidBy")
+  hostPlan                HostPlan?
+  hostedPlaces            Business[]          @relation("HostedPlaces")
+  hostPlanPayments        PlanPayment[]       @relation("HostPlanPayments")
+  planOffers              PlanOffer[]         @relation("PlanOfferHost")
+  planOfferClaims         PlanOfferClaim[]
   invitationsSent         Invitation[]        @relation("InvitationsSent")
   auditLogs               AuditLog[]          @relation("AuditActor")
   // Who did what: audit fields on the rows they touched. Never cleared, since users are never deleted.
@@ -191,7 +196,7 @@ model SiteSetting {
 
 // ---------- Tenancy and dynamic roles ----------
 
-/// What a business pays for. Limits live in src/config/plans.ts; Stripe webhooks keep it in sync.
+/// What a host pays for (HostPlan). Limits live in src/config/plans.ts; Stripe webhooks keep it in sync.
 enum Plan {
   FREE
   STARTER
@@ -300,11 +305,9 @@ model Business {
   accessibility         String[]
   minGuestAge           Int?
   status                BusinessStatus @default(ACTIVE)
-  plan                  Plan           @default(FREE)
-  stripeCustomerId      String?        @unique
-  stripeSubscriptionId  String?        @unique
-  /// When the paid plan renews, or ends if it was cancelled.
-  planRenewsAt          DateTime?
+  /// The account whose plan covers this place: whoever created it. Its rooms and team count on that host's plan.
+  hostId                String
+  host                  User           @relation("HostedPlaces", fields: [hostId], references: [id], onDelete: Restrict)
   isDeleted             Boolean        @default(false)
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
@@ -329,9 +332,6 @@ model Business {
   images          StoredImage[]
   refunds         Refund[]
   payouts         Payout[]
-  planPayments    PlanPayment[]
-  planOffers      PlanOffer[]
-  planOfferClaims PlanOfferClaim[]
   aiChats         AiChat[]
   rateOverrides   RateOverride[]
   invitations     Invitation[]
@@ -339,6 +339,7 @@ model Business {
   /// The dates the platform features this place in search and on the home page (F23).
   sponsorships    Sponsorship[]
 
+  @@index([hostId])
   @@index([region])
   @@index([tags], type: Gin)
   @@index([accessibility], type: Gin)
@@ -763,11 +764,12 @@ model Payout {
 /// Rows from the old hand-paid flow keep their method (BANK_TRANSFER, CASH...) as history.
 model PlanPayment {
   id          String        @id @default(cuid())
-  businessId  String
-  business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  /// The host whose plan this pays for.
+  hostId      String
+  host        User          @relation("HostPlanPayments", fields: [hostId], references: [id], onDelete: Restrict)
   /// The owner who started the payment; null for Stripe renewals, which arrive by webhook.
   paidById    String?
-  paidBy      User?         @relation(fields: [paidById], references: [id], onDelete: Restrict)
+  paidBy      User?         @relation("PlanPaymentPaidBy", fields: [paidById], references: [id], onDelete: Restrict)
   plan        Plan
   /// Months of the plan this payment buys. A Whish payment buys one; Stripe renews by itself.
   months      Int           @default(1)
@@ -784,12 +786,12 @@ model PlanPayment {
   isDeleted   Boolean       @default(false)
   createdAt   DateTime      @default(now())
 
-  @@index([businessId])
+  @@index([hostId])
   @@index([status, paidAt])
 }
 
-/// A platform admin's offer on a paid plan: the plan free, or a share off its price. For every place or one host's
-/// place, and either for each place's first months (counted from the day it joined) or between two dates. The
+/// A platform admin's offer on a paid plan: the plan free, or a share off its price. For every host or one host, and
+/// either for each host's first months (counted from the day their first place joined) or between two dates. The
 /// database refuses a half-filled offer (plan_offer_shape). Ending one early sets isDeleted.
 model PlanOffer {
   id          String           @id @default(cuid())
@@ -800,10 +802,10 @@ model PlanOffer {
   kind        OfferKind
   /// 1 to 99, for PERCENT_OFF only.
   percentOff  Int?
-  /// One host's place, or null for every place.
-  businessId  String?
-  business    Business?        @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  /// "The first N months" of each place, counted from the day it joined. Null for an offer between two dates.
+  /// One host, or null for every host.
+  hostId      String?
+  host        User?            @relation("PlanOfferHost", fields: [hostId], references: [id], onDelete: Restrict)
+  /// "The first N months" of each host, counted from the day their first place joined. Null for an offer between two dates.
   firstMonths Int?
   /// An offer between two dates, from startsAt until endsAt. Both null for a first-months offer.
   startsAt    DateTime?
@@ -815,24 +817,38 @@ model PlanOffer {
   claims      PlanOfferClaim[]
   payments    PlanPayment[]
 
-  @@index([businessId])
+  @@index([hostId])
 }
 
-/// A place taking a free offer, once per offer: the plan is the offer's until endsAt, then housekeeping puts the place
-/// back on Free unless it pays.
+/// A host taking a free offer, once per offer: the plan is the offer's until endsAt, then housekeeping puts the host
+/// back on Free unless they pay.
 model PlanOfferClaim {
-  id         String    @id @default(cuid())
-  offerId    String
-  offer      PlanOffer @relation(fields: [offerId], references: [id], onDelete: Restrict)
-  businessId String
-  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  offerId   String
+  offer     PlanOffer @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  hostId    String
+  host      User      @relation(fields: [hostId], references: [id], onDelete: Restrict)
   /// When the free plan it gave ends.
-  endsAt     DateTime
-  isDeleted  Boolean   @default(false)
-  createdAt  DateTime  @default(now())
+  endsAt    DateTime
+  isDeleted Boolean   @default(false)
+  createdAt DateTime  @default(now())
 
-  @@unique([offerId, businessId])
-  @@index([businessId])
+  @@unique([offerId, hostId])
+  @@index([hostId])
+}
+
+/// A host's plan: one per account that hosts places, shared by every place it hosts (Business.hostId). No row means
+/// Free. Limits live in src/config/plans.ts; Stripe webhooks and Whish payments keep it true.
+model HostPlan {
+  userId               String    @id
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  plan                 Plan      @default(FREE)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  /// When the paid plan renews, or ends if it was cancelled.
+  planRenewsAt         DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 /// TEST ONLY: the Whish simulator's own records, written only when WHISH_MODE=simulator (local development, tests,

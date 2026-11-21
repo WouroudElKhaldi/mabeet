@@ -4,7 +4,7 @@ import * as sessionsRoute from "@/app/api/workspaces/[businessId]/offerings/[off
 import * as offeringsRoute from "@/app/api/workspaces/[businessId]/offerings/route";
 import * as workspaces from "@/app/api/workspaces/route";
 import { addDays, toIsoDate, todayUtc } from "@/utils/dates";
-import { createPlace, memberWith, prisma } from "@tests/integration/helpers";
+import { createPlace, memberWith, prisma, putHostOnPlan } from "@tests/integration/helpers";
 import { call, signUp } from "@tests/integration/http";
 import { offeringInput } from "../schemas";
 import { createOffering, listOfferings, scheduleSessions, updateOffering } from "../server";
@@ -42,7 +42,7 @@ describe("experiences and services", () => {
     const place = await createPlace();
     await createOffering(place.ctx, hike);
     await expect(createOffering(place.ctx, hike)).rejects.toMatchObject({ code: "CONFLICT" });
-    await prisma.business.update({ where: { id: place.business.id }, data: { plan: "PRO" } });
+    await putHostOnPlan(place.owner.id, "PRO");
     const second = await createOffering(place.ctx, hike);
     expect(second.slug).not.toBe((await listOfferings(place.ctx))[1]?.slug);
   });

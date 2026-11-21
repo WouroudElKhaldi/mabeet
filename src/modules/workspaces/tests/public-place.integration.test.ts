@@ -12,7 +12,6 @@ describe("a place's public page", () => {
       data: {
         whatsapp: "+96171123456",
         paymentInstructions: "Whish 71 123 456",
-        stripeCustomerId: `cus_${business.id}`,
         commissionRateBps: 1800,
       },
     });

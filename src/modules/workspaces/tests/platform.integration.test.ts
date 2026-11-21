@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { resolveContext } from "@/server/auth/resolve-context";
-import { createPlace, createPlatformAdmin, prisma } from "@tests/integration/helpers";
+import { createPlace, createPlatformAdmin, prisma, putHostOnPlan } from "@tests/integration/helpers";
 import {
   getPlatformHost,
   getPublicPlace,
@@ -62,15 +62,13 @@ describe("one host for the admin", () => {
 });
 
 describe("the admin's hosts table", () => {
-  it("finds a host by their name, email or place, filters by their places' status and plan, and pages", async () => {
+  it("finds a host by their name, email or place, filters by their places' status and their plan, and pages", async () => {
     const admin = await createPlatformAdmin();
     const word = randomUUID().slice(0, 8);
     const first = await createPlace(`Beit ${word} One`);
     const second = await createPlace(`Dar ${word} Two`);
-    await prisma.business.update({
-      where: { id: second.business.id },
-      data: { plan: "PRO", status: "SUSPENDED" },
-    });
+    await prisma.business.update({ where: { id: second.business.id }, data: { status: "SUSPENDED" } });
+    await putHostOnPlan(second.owner.id, "PRO");
     const ids = async (filters: Parameters<typeof listPlatformHosts>[1], page = 1) =>
       (await listPlatformHosts(admin, filters, page)).hosts.map((host) => host.id);
 
@@ -83,9 +81,10 @@ describe("the admin's hosts table", () => {
 
     const one = await listPlatformHosts(admin, { q: word }, 1);
     expect(one).toMatchObject({ total: 2, page: 1, pages: 1 });
-    expect(one.hosts.find((host) => host.id === second.owner.id)?.places).toEqual([
-      expect.objectContaining({ id: second.business.id, plan: "PRO", status: "SUSPENDED" }),
-    ]);
+    expect(one.hosts.find((host) => host.id === second.owner.id)).toMatchObject({
+      plan: "PRO",
+      places: [expect.objectContaining({ id: second.business.id, status: "SUSPENDED" })],
+    });
     // A page past the end shows the last one.
     expect((await listPlatformHosts(admin, { q: word }, 9)).page).toBe(1);
   });

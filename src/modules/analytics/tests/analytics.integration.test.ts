@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import * as analyticsRoute from "@/app/api/workspaces/[businessId]/analytics/route";
-import { addRoom, createPlace, createUser, memberWith, prisma, stay } from "@tests/integration/helpers";
+import {
+  addRoom,
+  createPlace,
+  createUser,
+  memberWith,
+  prisma,
+  putHostOnPlan,
+  stay,
+} from "@tests/integration/helpers";
 import { call, signUp } from "@tests/integration/http";
 import { addBlock, confirmBooking, requestBooking } from "@/modules/bookings/server";
 import { createWorkspace } from "@/modules/workspaces/server";
@@ -97,7 +105,7 @@ describe("savings and totals", () => {
     await book(place, 5, 2);
     await prisma.planPayment.create({
       data: {
-        businessId: place.business.id,
+        hostId: place.owner.id,
         plan: "PRO",
         amountCents: 1_000,
         currency: "USD",
@@ -117,10 +125,7 @@ describe("savings and totals", () => {
     const dollars = await createWorkspace(owner.userId, { name: "Beit Dollars" });
     const pounds = await createWorkspace(owner.userId, { name: "Beit Lira" });
     await prisma.business.update({ where: { id: pounds.id }, data: { currency: "LBP" } });
-    await prisma.business.updateMany({
-      where: { id: { in: [dollars.id, pounds.id] } },
-      data: { plan: "STARTER" },
-    });
+    await putHostOnPlan(owner.userId, "STARTER");
     const guest = await createUser("Guest");
     const contexts = [];
     for (const [business, rate] of [
@@ -224,7 +229,7 @@ describe("the analytics route", () => {
       query: { from, to },
     });
     expect(onFree.status).toBe(403);
-    await prisma.business.update({ where: { id: business.id }, data: { plan: "STARTER" } });
+    await putHostOnPlan(owner.userId, "STARTER");
     const mine = await call(analyticsRoute.GET, {
       as: owner,
       params: { businessId: business.id },

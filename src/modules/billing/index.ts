@@ -4,6 +4,7 @@ export {
   adminPlanInput,
   checkoutInput,
   claimOfferParams,
+  hostParams,
   offerInput,
   offerParams,
   offersQuery,
@@ -11,6 +12,6 @@ export {
   whishCallbackQuery,
 } from "./schemas";
 export { ManageBillingButton, UpgradeButton, WhishPlanButton } from "./components/billing-buttons";
-export { EndOfferButton, NewOfferButton } from "./components/offer-manager";
+export { EndOfferButton, NewOfferButton, type OfferHost } from "./components/offer-manager";
 export { PlanOffers } from "./components/plan-offers";
 export { AdminPlanButton } from "./components/admin-plan-button";

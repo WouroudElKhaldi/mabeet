@@ -79,9 +79,7 @@ export function findHostForAdmin(db: Db, userId: string) {
               slug: true,
               area: true,
               status: true,
-              plan: true,
-              planRenewsAt: true,
-              stripeSubscriptionId: true,
+              bookingUnit: true,
               isDeleted: true,
               createdAt: true,
               _count: {
@@ -140,7 +138,7 @@ export interface HostFilters {
   q: string;
   /** Hosts with at least one place in this status. */
   status?: BusinessStatus;
-  /** Hosts with at least one place on this plan. */
+  /** Hosts on this plan. */
   plan?: Plan;
 }
 
@@ -152,10 +150,17 @@ const ownedPlace = {
 } as const satisfies Prisma.MembershipWhereInput;
 
 function hostWhere({ q, status, plan }: HostFilters): Prisma.UserWhereInput {
-  const business = { isDeleted: false, ...(status ? { status } : {}), ...(plan ? { plan } : {}) };
+  const business = { isDeleted: false, ...(status ? { status } : {}) };
   const words = { contains: q, mode: "insensitive" } as const;
+  // A host who never had a plan has no plan row: they are on Free.
+  const onPlan: Prisma.UserWhereInput = !plan
+    ? {}
+    : plan === "FREE"
+      ? { OR: [{ hostPlan: null }, { hostPlan: { plan } }] }
+      : { hostPlan: { plan } };
   return {
     isDeleted: false,
+    ...onPlan,
     memberships: { some: { ...ownedPlace, business } },
     ...(q
       ? {
@@ -185,7 +190,7 @@ export function listHostsForAdmin(db: Db, filters: HostFilters, page: { skip: nu
       memberships: {
         where: { ...ownedPlace, business: { isDeleted: false } },
         orderBy: { createdAt: "asc" },
-        select: { business: { select: { id: true, name: true, status: true, plan: true } } },
+        select: { business: { select: { id: true, name: true, status: true } } },
       },
     },
   });

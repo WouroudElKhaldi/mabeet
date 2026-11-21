@@ -264,7 +264,7 @@ export function findPersonForAdmin(db: Db, userId: string) {
         select: {
           createdAt: true,
           role: { select: { name: true, isOwner: true } },
-          business: { select: { id: true, name: true, slug: true, status: true, plan: true } },
+          business: { select: { id: true, name: true, slug: true, status: true } },
         },
       },
       _count: {

@@ -19,8 +19,8 @@ export const whishCallbackQuery = z.object({
 
 /**
  * A platform admin's offer. `kind` FREE gives the plan with nothing to pay; PERCENT_OFF takes `percentOff` off its
- * price. `businessId` is one host's place, or null for every place. The time is either `firstMonths` (each place's
- * first months, from the day it joined) or `startsOn` to `lastDay`, both days included.
+ * price. `hostId` is one host (all their places), or null for every host. The time is either `firstMonths` (each host's
+ * first months, from the day their first place joined) or `startsOn` to `lastDay`, both days included.
  */
 export const offerInput = z
   .object({
@@ -28,7 +28,7 @@ export const offerInput = z
     plan: paidPlan,
     kind: z.enum(OFFER_KINDS),
     percentOff: z.number().int().min(1).max(99).optional(),
-    businessId: id.nullable().default(null),
+    hostId: id.nullable().default(null),
     firstMonths: z.number().int().min(1).max(MAX_OFFER_FIRST_MONTHS).optional(),
     startsOn: isoDate.optional(),
     lastDay: isoDate.optional(),
@@ -70,6 +70,9 @@ export const claimOfferParams = workspaceParams.extend({ offerId: id });
  * A platform admin setting a place's plan by hand: a paid plan until its last day (included), or with no end until
  * an admin changes it again; Free has no end.
  */
+/** A host, for the platform admin setting their plan. */
+export const hostParams = z.object({ userId: id });
+
 export const adminPlanInput = z
   .object({ plan: z.enum(PLANS), lastDay: isoDate.nullable().default(null) })
   .refine((input) => input.plan !== "FREE" || input.lastDay === null, {

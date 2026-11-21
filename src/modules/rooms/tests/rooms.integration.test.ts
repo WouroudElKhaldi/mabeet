@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import * as roomItem from "@/app/api/workspaces/[businessId]/rooms/[roomId]/route";
 import * as roomList from "@/app/api/workspaces/[businessId]/rooms/route";
-import { createPlace, memberWith, prisma } from "@tests/integration/helpers";
+import { createPlace, memberWith, prisma, putHostOnPlan } from "@tests/integration/helpers";
 import { call, signUp } from "@tests/integration/http";
 import { createRoom, getRoom, listRooms, updateRoom } from "../server/room-service";
 
@@ -117,7 +117,7 @@ describe("rooms", () => {
     });
     expect(await prisma.room.count({ where: { businessId: place.business.id } })).toBe(3);
 
-    await prisma.business.update({ where: { id: place.business.id }, data: { plan: "PRO" } });
+    await putHostOnPlan(place.owner.id, "PRO");
     await expect(createRoom(place.ctx, { ...cedarRoom, ...defaults, name: "Fig" })).resolves.toBeDefined();
   });
 

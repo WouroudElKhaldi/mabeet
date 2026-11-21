@@ -7,7 +7,14 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PLAN_LIMITS } from "@/config/plans";
 import { runHousekeeping } from "@/modules/housekeeping/server";
 import { env } from "@/server/env";
-import { createPlace, memberWith, prisma } from "@tests/integration/helpers";
+import { createWorkspace } from "@/modules/workspaces/server";
+import {
+  addRoom as addRoomTo,
+  createPlace,
+  memberWith,
+  prisma,
+  putHostOnPlan,
+} from "@tests/integration/helpers";
 import { call } from "@tests/integration/http";
 import {
   assertPlanAllowsAnother,
@@ -58,7 +65,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const businessOf = (id: string) => prisma.business.findUniqueOrThrow({ where: { id } });
+/** A host's plan row, or Free with nothing set when they never had one. */
+const planOf = async (userId: string) => ({
+  plan: "FREE",
+  stripeCustomerId: null as string | null,
+  stripeSubscriptionId: null as string | null,
+  planRenewsAt: null as Date | null,
+  ...(await prisma.hostPlan.findUnique({ where: { userId } })),
+});
+
+/** Sets a host's card fields, as a Stripe checkout would. */
+const payByCard = (userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string }) =>
+  prisma.hostPlan.upsert({ where: { userId }, create: { userId, ...data }, update: data });
 
 const addRoom = (businessId: string) =>
   prisma.room.create({
@@ -94,7 +112,7 @@ describe("plan limits", () => {
     });
 
     // Starter: 3 rooms and 2 members, the owner included.
-    await prisma.business.update({ where: { id }, data: { plan: "STARTER" } });
+    await putHostOnPlan(place.owner.id, "STARTER");
     await expect(assertPlanAllowsAnother(id, "members")).resolves.toBeUndefined();
     await memberWith(id, ["calendar.read"]);
     await expect(assertPlanAllowsAnother(id, "members")).rejects.toMatchObject({
@@ -102,20 +120,21 @@ describe("plan limits", () => {
       message: "Your plan allows up to 2 team members, you included. Upgrade to add more.",
     });
 
-    await prisma.business.update({ where: { id }, data: { plan: "PRO" } });
+    await putHostOnPlan(place.owner.id, "PRO");
     await addRoom(id);
     for (const what of ["rooms", "offerings", "members"] as const) {
       await expect(assertPlanAllowsAnother(id, what)).resolves.toBeUndefined();
     }
   });
 
-  it("shows the plan and what is used to whoever manages settings; only an owner can change it", async () => {
+  it("shows the plan and what is used to whoever manages settings; only the host can change it", async () => {
     const place = await createPlace();
     await addRoom(place.business.id);
     expect(await getBilling(place.ctx)).toMatchObject({
       plan: "FREE",
       limits: { rooms: 1, members: 1 },
       usage: { rooms: 1, offerings: 0, members: 1 },
+      places: [{ id: place.business.id, name: place.business.name }],
       paysByCard: false,
       cardEnabled: true,
       whishEnabled: true,
@@ -128,6 +147,59 @@ describe("plan limits", () => {
   });
 });
 
+describe("one plan per host", () => {
+  it("counts rooms across all the host's places, a place booked whole as one room", async () => {
+    const place = await createPlace(undefined, "PRO");
+    const host = place.owner.id;
+    // Pro allows 7 rooms: 4 in the first place and 3 in a second fill it.
+    for (let count = 0; count < 4; count += 1) await addRoomTo(place.business.id);
+    const second = await createWorkspace(host, { name: `Dar ${randomUUID().slice(0, 6)}` });
+    for (let count = 0; count < 3; count += 1) await addRoomTo(second.id);
+    await expect(assertPlanAllowsAnother(second.id, "rooms")).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "Your plan allows up to 7 rooms. Upgrade to add more.",
+    });
+    await expect(assertPlanAllowsAnother(place.business.id, "rooms")).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+
+    // Booked whole, the second place counts as one room, and adding rooms to it uses nothing more.
+    await prisma.business.update({ where: { id: second.id }, data: { bookingUnit: "WHOLE_PLACE" } });
+    await expect(assertPlanAllowsAnother(place.business.id, "rooms")).resolves.toBeUndefined();
+    await expect(assertPlanAllowsAnother(second.id, "rooms")).resolves.toBeUndefined();
+    expect(await getBilling(place.ctx)).toMatchObject({ plan: "PRO", usage: { rooms: 5 } });
+  });
+
+  it("counts each team member once across the host's places, the host included", async () => {
+    const place = await createPlace(undefined, "STARTER");
+    const second = await createWorkspace(place.owner.id, { name: `Dar ${randomUUID().slice(0, 6)}` });
+    const helper = await memberWith(place.business.id, ["calendar.read"]);
+    // Starter allows 2 people: the host and the helper, whichever places they work in.
+    await expect(assertPlanAllowsAnother(second.id, "members")).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(
+      assertPlanAllowsAnother(second.id, "members", undefined, { userId: helper.userId }),
+    ).resolves.toBeUndefined();
+    const role = await prisma.role.findFirstOrThrow({ where: { businessId: second.id, isOwner: false } });
+    await prisma.membership.create({
+      data: { userId: helper.userId, businessId: second.id, roleId: role.id },
+    });
+    expect(await getBilling(place.ctx)).toMatchObject({ usage: { members: 2 } });
+  });
+
+  it("covers every place of the host, and lists them all on the billing page", async () => {
+    const place = await createPlace(undefined, "PRO");
+    const second = await createWorkspace(place.owner.id, { name: `Dar ${randomUUID().slice(0, 6)}` });
+    expect(await getBilling({ ...place.ctx, businessId: second.id })).toMatchObject({
+      plan: "PRO",
+      canManage: true,
+      places: [
+        { id: place.business.id, name: place.business.name },
+        { id: second.id, name: second.name },
+      ],
+    });
+  });
+});
+
 describe("paying by card (Stripe)", () => {
   const signed = (body: string, secret = SECRET, at = Math.floor(Date.now() / 1000)) =>
     `t=${at},v1=${createHmac("sha256", secret).update(`${at}.${body}`).digest("hex")}`;
@@ -137,7 +209,7 @@ describe("paying by card (Stripe)", () => {
   };
   const subscriptionEvent = (
     type: string,
-    o: { businessId: string; subscription: string; customer: string; status: string; price?: string },
+    o: { hostId: string; subscription: string; customer: string; status: string; price?: string },
   ) => ({
     id: `evt_${randomUUID()}`,
     type,
@@ -146,13 +218,13 @@ describe("paying by card (Stripe)", () => {
         id: o.subscription,
         customer: o.customer,
         status: o.status,
-        metadata: { businessId: o.businessId },
+        metadata: { hostId: o.hostId },
         items: { data: [{ price: { id: o.price ?? PRO_PRICE }, current_period_end: 1_900_000_000 }] },
       },
     },
   });
 
-  it("lets only an owner start checkout, and sends a paying business to the billing portal instead", async () => {
+  it("lets only the host start checkout, and sends a paying host to the billing portal instead", async () => {
     const place = await createPlace();
     const fetchMock = vi.fn(async (_url: string, _init: RequestInit) =>
       Response.json({ url: "https://checkout.stripe.com/c/test" }),
@@ -166,7 +238,7 @@ describe("paying by card (Stripe)", () => {
     expect(await startCheckout(place.ctx, "BUSINESS")).toBe("https://checkout.stripe.com/c/test");
     const form = new URLSearchParams(String(fetchMock.mock.calls[0]![1].body));
     expect(form.get("line_items[0][price]")).toBe(BUSINESS_PRICE);
-    expect(form.get("client_reference_id")).toBe(place.business.id);
+    expect(form.get("client_reference_id")).toBe(place.owner.id);
     expect(form.get("customer_email")).toBe(place.owner.email);
     expect(
       await prisma.auditLog.count({
@@ -174,12 +246,12 @@ describe("paying by card (Stripe)", () => {
       }),
     ).toBe(1);
     // The plan only changes when Stripe confirms it.
-    expect((await businessOf(place.business.id)).plan).toBe("FREE");
+    expect((await planOf(place.owner.id)).plan).toBe("FREE");
 
     await expect(openBillingPortal(place.ctx)).rejects.toMatchObject({ code: "VALIDATION" });
-    await prisma.business.update({
-      where: { id: place.business.id },
-      data: { stripeCustomerId: `cus_${randomUUID()}`, stripeSubscriptionId: `sub_${randomUUID()}` },
+    await payByCard(place.owner.id, {
+      stripeCustomerId: `cus_${randomUUID()}`,
+      stripeSubscriptionId: `sub_${randomUUID()}`,
     });
     await expect(startCheckout(place.ctx, "PRO")).rejects.toMatchObject({ code: "CONFLICT" });
     fetchMock.mockImplementation(async () => Response.json({ url: "https://billing.stripe.com/p/test" }));
@@ -201,17 +273,17 @@ describe("paying by card (Stripe)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("moves a business to Pro, applies a replayed event once, and back to Free when the subscription ends", async () => {
+  it("moves a host to Pro, applies a replayed event once, and back to Free when the subscription ends", async () => {
     const place = await createPlace();
     const ids = {
-      businessId: place.business.id,
+      hostId: place.owner.id,
       subscription: `sub_${randomUUID()}`,
       customer: `cus_${randomUUID()}`,
     };
     const created = subscriptionEvent("customer.subscription.created", { ...ids, status: "active" });
     expect(await deliver(created)).toBe("applied");
     expect(await deliver(created)).toBe("duplicate");
-    expect(await businessOf(place.business.id)).toMatchObject({
+    expect(await planOf(place.owner.id)).toMatchObject({
       plan: "PRO",
       stripeCustomerId: ids.customer,
       stripeSubscriptionId: ids.subscription,
@@ -222,7 +294,7 @@ describe("paying by card (Stripe)", () => {
     expect(
       await deliver(subscriptionEvent("customer.subscription.updated", { ...ids, status: "unpaid" })),
     ).toBe("applied");
-    expect((await businessOf(place.business.id)).plan).toBe("FREE");
+    expect((await planOf(place.owner.id)).plan).toBe("FREE");
     expect(
       await deliver(
         subscriptionEvent("customer.subscription.updated", {
@@ -232,7 +304,7 @@ describe("paying by card (Stripe)", () => {
         }),
       ),
     ).toBe("applied");
-    expect((await businessOf(place.business.id)).plan).toBe("BUSINESS");
+    expect((await planOf(place.owner.id)).plan).toBe("BUSINESS");
     expect(
       await deliver(
         subscriptionEvent("customer.subscription.deleted", {
@@ -242,12 +314,12 @@ describe("paying by card (Stripe)", () => {
         }),
       ),
     ).toBe("applied");
-    expect((await businessOf(place.business.id)).plan).toBe("BUSINESS");
+    expect((await planOf(place.owner.id)).plan).toBe("BUSINESS");
 
     expect(
       await deliver(subscriptionEvent("customer.subscription.deleted", { ...ids, status: "canceled" })),
     ).toBe("applied");
-    expect(await businessOf(place.business.id)).toMatchObject({
+    expect(await planOf(place.owner.id)).toMatchObject({
       plan: "FREE",
       stripeSubscriptionId: null,
       planRenewsAt: null,
@@ -257,7 +329,7 @@ describe("paying by card (Stripe)", () => {
   it("records each paid invoice once as plan revenue", async () => {
     const place = await createPlace();
     const customer = `cus_${randomUUID()}`;
-    await prisma.business.update({ where: { id: place.business.id }, data: { stripeCustomerId: customer } });
+    await payByCard(place.owner.id, { stripeCustomerId: customer });
     const invoice = {
       id: `evt_${randomUUID()}`,
       type: "invoice.paid",
@@ -273,7 +345,7 @@ describe("paying by card (Stripe)", () => {
     };
     expect(await deliver(invoice)).toBe("applied");
     expect(await deliver(invoice)).toBe("duplicate");
-    const payments = await prisma.planPayment.findMany({ where: { businessId: place.business.id } });
+    const payments = await prisma.planPayment.findMany({ where: { hostId: place.owner.id } });
     expect(payments).toEqual([
       expect.objectContaining({
         plan: "BUSINESS",
@@ -289,7 +361,7 @@ describe("paying by card (Stripe)", () => {
   it("keeps nothing of an event that fails halfway, so Stripe's retry can apply it", async () => {
     const place = await createPlace();
     const customer = `cus_${randomUUID()}`;
-    await prisma.business.update({ where: { id: place.business.id }, data: { stripeCustomerId: customer } });
+    await payByCard(place.owner.id, { stripeCustomerId: customer });
     const invoiceId = `in_${randomUUID()}`;
     const paid = (eventId: string) => ({
       id: eventId,
@@ -308,7 +380,7 @@ describe("paying by card (Stripe)", () => {
   it("rejects an unsigned or wrongly signed event without touching anything", async () => {
     const place = await createPlace();
     const forged = subscriptionEvent("customer.subscription.created", {
-      businessId: place.business.id,
+      hostId: place.owner.id,
       subscription: `sub_${randomUUID()}`,
       customer: `cus_${randomUUID()}`,
       status: "active",
@@ -317,7 +389,7 @@ describe("paying by card (Stripe)", () => {
     expect(await handleStripeWebhook(body, "t=1,v1=bad")).toBe("rejected");
     expect(await handleStripeWebhook(body, signed(body, "whsec_someone_else"))).toBe("rejected");
     expect(await handleStripeWebhook(body, null)).toBe("rejected");
-    expect((await businessOf(place.business.id)).plan).toBe("FREE");
+    expect((await planOf(place.owner.id)).plan).toBe("FREE");
     expect(await prisma.webhookEvent.count({ where: { eventId: forged.id } })).toBe(0);
   });
 });
@@ -337,7 +409,7 @@ describe("paying by Whish (the simulator, end to end)", () => {
 
     const url = await startWhishPlanCheckout(place.ctx, "PRO");
     expect(url).toMatch(/\/whish-simulator\/pay\/[\w-]+$/);
-    const [pending] = await prisma.planPayment.findMany({ where: { businessId: place.business.id } });
+    const [pending] = await prisma.planPayment.findMany({ where: { hostId: place.owner.id } });
     expect(pending).toMatchObject({
       plan: "PRO",
       // A month of Pro at its price, so a price change never breaks this test.
@@ -350,7 +422,7 @@ describe("paying by Whish (the simulator, end to end)", () => {
     });
 
     expect((await payOnSimulator(url, "000000")).body).toEqual({ ok: false, redirect: null });
-    expect((await businessOf(place.business.id)).plan).toBe("FREE");
+    expect((await planOf(place.owner.id)).plan).toBe("FREE");
     expect((await prisma.planPayment.findUniqueOrThrow({ where: { id: pending!.id } })).status).toBe(
       "PENDING",
     );
@@ -358,9 +430,9 @@ describe("paying by Whish (the simulator, end to end)", () => {
     const before = Date.now();
     const paid = await payOnSimulator(url, "111111");
     expect(paid.body).toMatchObject({ ok: true });
-    const business = await businessOf(place.business.id);
-    expect(business.plan).toBe("PRO");
-    expect(business.planRenewsAt!.getTime()).toBeGreaterThanOrEqual(before + 30 * DAY_MS - 1_000);
+    const hostPlan = await planOf(place.owner.id);
+    expect(hostPlan.plan).toBe("PRO");
+    expect(hostPlan.planRenewsAt!.getTime()).toBeGreaterThanOrEqual(before + 30 * DAY_MS - 1_000);
     expect(await prisma.planPayment.findUniqueOrThrow({ where: { id: pending!.id } })).toMatchObject({
       status: "PAID",
       paidAt: expect.any(Date),
@@ -369,26 +441,23 @@ describe("paying by Whish (the simulator, end to end)", () => {
     // Whish calling again, or anyone calling the callback, adds nothing.
     const replay = await call(callback.GET, { query: { plan: pending!.id } });
     expect(replay).toEqual({ status: 200, body: { ok: true, result: "paid" } });
-    expect((await businessOf(place.business.id)).planRenewsAt).toEqual(business.planRenewsAt);
+    expect((await planOf(place.owner.id)).planRenewsAt).toEqual(hostPlan.planRenewsAt);
 
     const second = await startWhishPlanCheckout(place.ctx, "PRO");
     await payOnSimulator(second, "111111");
-    expect((await businessOf(place.business.id)).planRenewsAt!.getTime()).toBe(
-      business.planRenewsAt!.getTime() + 30 * DAY_MS,
+    expect((await planOf(place.owner.id)).planRenewsAt!.getTime()).toBe(
+      hostPlan.planRenewsAt!.getTime() + 30 * DAY_MS,
     );
   });
 
-  it("lets only an owner pay, and sends a card subscriber to the billing portal", async () => {
+  it("lets only the host pay, and sends a card subscriber to the billing portal", async () => {
     const place = await createPlace();
     sendPaymentsToTheApp();
     const manager = await memberWith(place.business.id, [...ALL_PERMISSIONS]);
     await expect(startWhishPlanCheckout(manager, "PRO")).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await prisma.business.update({
-      where: { id: place.business.id },
-      data: { stripeSubscriptionId: `sub_${randomUUID()}` },
-    });
+    await payByCard(place.owner.id, { stripeSubscriptionId: `sub_${randomUUID()}` });
     await expect(startWhishPlanCheckout(place.ctx, "PRO")).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(await prisma.planPayment.count({ where: { businessId: place.business.id } })).toBe(0);
+    expect(await prisma.planPayment.count({ where: { hostId: place.owner.id } })).toBe(0);
   });
 
   it("leaves nothing waiting, and the plan as it was, when Whish is down", async () => {
@@ -403,8 +472,8 @@ describe("paying by Whish (the simulator, end to end)", () => {
     await expect(startWhishPlanCheckout(place.ctx, "BUSINESS")).rejects.toMatchObject({
       code: "UNAVAILABLE",
     });
-    expect(await businessOf(place.business.id)).toMatchObject({ plan: "FREE", planRenewsAt: null });
-    const payments = await prisma.planPayment.findMany({ where: { businessId: place.business.id } });
+    expect(await planOf(place.owner.id)).toMatchObject({ plan: "FREE", planRenewsAt: null });
+    const payments = await prisma.planPayment.findMany({ where: { hostId: place.owner.id } });
     expect(payments.map((payment) => payment.status)).toEqual(["FAILED"]);
     await expect(settlePlanPayment(payments[0]!.id)).resolves.toBe("failed");
   });
@@ -417,24 +486,15 @@ describe("housekeeping", () => {
     const now = new Date();
 
     const lapsed = await createPlace();
-    await prisma.business.update({
-      where: { id: lapsed.business.id },
-      data: { plan: "PRO", planRenewsAt: new Date(now.getTime() - DAY_MS) },
-    });
+    await putHostOnPlan(lapsed.owner.id, "PRO", new Date(now.getTime() - DAY_MS));
     const byCard = await createPlace();
-    await prisma.business.update({
-      where: { id: byCard.business.id },
-      data: {
-        plan: "BUSINESS",
-        planRenewsAt: new Date(now.getTime() - DAY_MS),
-        stripeSubscriptionId: `sub_${randomUUID()}`,
-      },
-    });
+    await putHostOnPlan(byCard.owner.id, "BUSINESS", new Date(now.getTime() - DAY_MS));
+    await payByCard(byCard.owner.id, { stripeSubscriptionId: `sub_${randomUUID()}` });
 
     // Paid on Whish, but the callback never reached us.
     const lost = await createPlace();
     await startWhishPlanCheckout(lost.ctx, "PRO");
-    const payment = await prisma.planPayment.findFirstOrThrow({ where: { businessId: lost.business.id } });
+    const payment = await prisma.planPayment.findFirstOrThrow({ where: { hostId: lost.owner.id } });
     await prisma.whishSandboxPayment.update({
       where: { externalId: payment.id },
       data: { status: "success", payerPhone: "96170123456" },
@@ -442,14 +502,14 @@ describe("housekeeping", () => {
 
     // Too recent to be stale: its callback may still be on its way.
     await runHousekeeping(now);
-    expect((await businessOf(lost.business.id)).plan).toBe("FREE");
+    expect((await planOf(lost.owner.id)).plan).toBe("FREE");
 
     const later = new Date(now.getTime() + 3 * 60_000);
     const result = await runHousekeeping(later);
     expect(result.plans.checked).toBeGreaterThanOrEqual(1);
-    expect(await businessOf(lapsed.business.id)).toMatchObject({ plan: "FREE", planRenewsAt: null });
-    expect((await businessOf(byCard.business.id)).plan).toBe("BUSINESS");
-    expect((await businessOf(lost.business.id)).plan).toBe("PRO");
+    expect(await planOf(lapsed.owner.id)).toMatchObject({ plan: "FREE", planRenewsAt: null });
+    expect((await planOf(byCard.owner.id)).plan).toBe("BUSINESS");
+    expect((await planOf(lost.owner.id)).plan).toBe("PRO");
   });
 
   it("runs on demand only with the cron secret", async () => {

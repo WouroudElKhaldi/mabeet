@@ -12,7 +12,7 @@ import { PLANS } from "@/config/plans";
 import { useAction } from "@/hooks/use-action";
 import { api } from "@/lib/api-client";
 
-function AdminPlanForm({ businessId, plan }: { businessId: string; plan: Plan }) {
+function AdminPlanForm({ hostId, plan }: { hostId: string; plan: Plan }) {
   const t = useTranslations("admin.plan");
   const names = useTranslations("plans.names");
   const { run, pending, error } = useAction();
@@ -23,7 +23,7 @@ function AdminPlanForm({ businessId, plan }: { businessId: string; plan: Plan })
     event.preventDefault();
     const lastDay = String(new FormData(event.currentTarget).get("lastDay") ?? "");
     const saved = await run(() =>
-      api.patch(`/api/admin/businesses/${businessId}/plan`, {
+      api.patch(`/api/admin/hosts/${hostId}/plan`, {
         plan: chosen,
         lastDay: chosen === "FREE" || !lastDay ? null : lastDay,
       }),
@@ -63,17 +63,17 @@ function AdminPlanForm({ businessId, plan }: { businessId: string; plan: Plan })
 }
 
 /**
- * On the admin's host page, next to each place: set its plan by hand, until a last day or with no end. A place paying
- * by card has its plan from Stripe, so the button says so instead of opening.
+ * On the admin's host page: set the host's plan by hand, for all their places, until a last day or with no end. A
+ * host paying by card has their plan from Stripe, so the button says so instead of opening.
  */
 export function AdminPlanButton({
-  businessId,
-  businessName,
+  hostId,
+  hostName,
   plan,
   paysByCard,
 }: {
-  businessId: string;
-  businessName: string;
+  hostId: string;
+  hostName: string;
   plan: Plan;
   paysByCard: boolean;
 }) {
@@ -82,12 +82,12 @@ export function AdminPlanButton({
   return (
     <FormDialog
       label={t("change")}
-      title={t("title", { name: businessName })}
+      title={t("title", { name: hostName })}
       intro={t("intro")}
       icon={<CreditCard className="size-4" aria-hidden />}
       variant="secondary"
     >
-      <AdminPlanForm businessId={businessId} plan={plan} />
+      <AdminPlanForm hostId={hostId} plan={plan} />
     </FormDialog>
   );
 }
