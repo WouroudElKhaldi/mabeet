@@ -19,9 +19,10 @@ type PageProps = {
 const noticeClass = "rounded-xl bg-surface-2 p-4 text-sm";
 
 /**
- * The business's plan, what it uses against the plan's limits, and the ways to pay for a bigger one: by card (a
- * Stripe subscription, changed later in Stripe's portal) or a month at a time with Whish. Plans are paid instantly;
- * nothing is paid by hand and nothing waits for an admin. Offers from Mabeet open to the place show above the plans.
+ * The host's plan, one for all their places, what those places use against its limits (counted across them), and
+ * the ways to pay for a bigger one: by card (a Stripe subscription, changed later in Stripe's portal) or a month at a
+ * time with Whish. Plans are paid instantly; nothing is paid by hand and nothing waits for an admin. Offers from
+ * Mabeet open to the host show above the plans.
  */
 export default async function BillingPage({ params, searchParams }: PageProps) {
   const { businessId } = await params;
@@ -40,7 +41,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
     { label: t("usage.members"), used: billing.usage.members, max: billing.limits.members },
   ];
   const higher = (plan: PlanName) => PLANS.indexOf(plan) > PLANS.indexOf(billing.plan);
-  // A business paying by card changes plan in Stripe's portal, so it never ends up with two subscriptions.
+  // A host paying by card changes plan in Stripe's portal, so it never ends up with two subscriptions.
   const canPay = billing.canManage && !billing.paysByCard;
   const renews = billing.renewsAt
     ? t("renews", {
@@ -78,16 +79,21 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
         )}
         {!billing.canManage && <p className="text-sm text-muted">{t("ownersOnly")}</p>}
 
-        <section aria-label={t("usage.title")} className="grid gap-3 sm:grid-cols-3">
-          {usage.map((row) => (
-            <StatTile
-              key={row.label}
-              kind="count"
-              label={row.label}
-              value={row.used}
-              note={allowed(row.max)}
-            />
-          ))}
+        <section aria-label={t("usage.title")} className="grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {usage.map((row) => (
+              <StatTile
+                key={row.label}
+                kind="count"
+                label={row.label}
+                value={row.used}
+                note={allowed(row.max)}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-muted">
+            {t("sharedAcross", { places: billing.places.map((place) => place.name).join(", ") })}
+          </p>
         </section>
 
         {billing.offers.length > 0 && (

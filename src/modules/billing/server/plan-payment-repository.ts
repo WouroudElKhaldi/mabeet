@@ -6,8 +6,9 @@ import { type Db, moneyNumber, type Tx } from "@/server/db/client";
 export function createPlanPayment(
   db: Db,
   input: {
-    businessId: string;
-    /** The owner who started it; null for Stripe renewals. */
+    /** The host whose plan it pays for. */
+    hostId: string;
+    /** The host who started it; null for Stripe renewals. */
     paidById?: string | null;
     plan: Plan;
     months?: number;
@@ -66,35 +67,30 @@ export function listStalePlanPayments(db: Db, window: { from: Date; to: Date }, 
 
 /** Whish plans are paid month by month; a month that ran out without a new payment goes back to Free. */
 export async function expireWhishPlans(db: Db, now: Date): Promise<number> {
-  const { count } = await db.business.updateMany({
+  const { count } = await db.hostPlan.updateMany({
     where: { plan: { not: "FREE" }, stripeSubscriptionId: null, planRenewsAt: { lt: now } },
     data: { plan: "FREE", planRenewsAt: null },
   });
   return count;
 }
 
-export function extendPlan(tx: Tx, businessId: string, plan: Plan, renewsAt: Date) {
-  return tx.business.update({
-    where: { id: businessId },
-    data: { plan, planRenewsAt: renewsAt },
-    select: { id: true },
+/**
+ * Puts a host on a plan until a date, or with no end (`renewsAt` null) when a platform admin decides it, making their
+ * plan row if they have none yet.
+ */
+export async function setPlan(tx: Tx, hostId: string, plan: Plan, renewsAt: Date | null): Promise<void> {
+  await tx.hostPlan.upsert({
+    where: { userId: hostId },
+    create: { userId: hostId, plan, planRenewsAt: renewsAt },
+    update: { plan, planRenewsAt: renewsAt },
   });
 }
 
-/** Sets a place's plan as a platform admin decides it: until a date, or with no end (`renewsAt` null). */
-export function setPlan(tx: Tx, businessId: string, plan: Plan, renewsAt: Date | null) {
-  return tx.business.update({
-    where: { id: businessId },
-    data: { plan, planRenewsAt: renewsAt },
-    select: { id: true },
-  });
-}
-
-/** What a place paid Mabeet for plans, by currency: paid payments only, a refunded one no longer counts. */
-export async function sumPaidPlans(db: Db, businessId: string) {
+/** What a host paid Mabeet for plans, by currency: paid payments only, a refunded one no longer counts. */
+export async function sumPaidPlans(db: Db, hostId: string) {
   const rows = await db.planPayment.groupBy({
     by: ["currency"],
-    where: { businessId, status: "PAID", isDeleted: false },
+    where: { hostId, status: "PAID", isDeleted: false },
     _sum: { amountCents: true },
   });
   return rows.map((row) => ({ currency: row.currency, cents: moneyNumber(row._sum.amountCents ?? 0) }));

@@ -43,7 +43,8 @@ export async function inviteMember(
   if (await invitations.findOpenInvitation(prisma, ctx.businessId, email, now)) {
     throw conflict("This person already has an invitation waiting. Cancel it to send a new one.");
   }
-  await assertPlanAllowsAnother(ctx.businessId, "members");
+  // Someone already on another of the host's teams uses nothing more of the plan.
+  await assertPlanAllowsAnother(ctx.businessId, "members", undefined, { userId: user?.id });
   const invitation = await runInTransaction(async (tx) => {
     const created = await invitations.createInvitation(tx, {
       businessId: ctx.businessId,
@@ -133,14 +134,14 @@ async function assertCanJoin(invitation: FoundInvitation, userId: string | null)
     throw conflict("The role on this invitation no longer exists. Ask the host to send a new one.");
   }
   // Checked again here: the team may have filled up since the invitation was sent.
-  await assertPlanAllowsAnother(invitation.businessId, "members");
+  await assertPlanAllowsAnother(invitation.businessId, "members", undefined, { userId: userId ?? undefined });
 }
 
 /** Creates the membership with the invitation's role, once, and records it for the person and the business. */
 async function join(invitation: FoundInvitation, userId: string, now: Date) {
   await runInTransaction(async (tx) => {
-    // Counted again with the business locked: two people joining at once cannot both take the last place.
-    await assertPlanAllowsAnother(invitation.businessId, "members", tx);
+    // Counted again with the host's plan locked: two people joining at once cannot both take the last place.
+    await assertPlanAllowsAnother(invitation.businessId, "members", tx, { userId });
     if (!(await invitations.markAccepted(tx, invitation.id, userId, now))) {
       throw conflict("This invitation can't be used any more.");
     }

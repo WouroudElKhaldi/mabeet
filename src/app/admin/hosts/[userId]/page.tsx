@@ -12,7 +12,10 @@ import { formatDate } from "@/utils/format";
 
 type PageProps = { params: Promise<{ userId: string }> };
 
-/** One host: their contacts and host profile, and each of their businesses to open, view or suspend. */
+/**
+ * One host: their contacts and host profile, their plan (one for all their places), and each of their businesses to
+ * open, view or suspend.
+ */
 export default async function AdminHostPage({ params }: PageProps) {
   const { userId } = await params;
   const actor = await requirePageAdmin();
@@ -96,6 +99,28 @@ export default async function AdminHostPage({ params }: PageProps) {
           )}
         </Panel>
 
+        <Panel
+          title={tPlan("plan")}
+          action={
+            <AdminPlanButton
+              hostId={userId}
+              hostName={profile?.displayName ?? host.name}
+              plan={host.plan.plan}
+              paysByCard={host.plan.paysByCard}
+            />
+          }
+        >
+          <p className="text-sm font-semibold">
+            {host.plan.renewsAt
+              ? // A plan runs to the end of its last day, so the day shown is the one before it ends.
+                tPlan("current", {
+                  plan: planNames(host.plan.plan),
+                  date: day(new Date(host.plan.renewsAt.getTime() - 1)),
+                })
+              : tPlan("currentNoEnd", { plan: planNames(host.plan.plan) })}
+          </p>
+        </Panel>
+
         <Panel title={t("businesses")}>
           <ul className="divide-y divide-line">
             {host.businesses.map((business) => (
@@ -122,11 +147,6 @@ export default async function AdminHostPage({ params }: PageProps) {
                     )}
                     {tAdmin("since")} {day(business.createdAt)}
                   </p>
-                  <p className="text-sm font-semibold">
-                    {business.planRenewsAt
-                      ? tPlan("current", { plan: planNames(business.plan), date: day(business.planRenewsAt) })
-                      : tPlan("currentNoEnd", { plan: planNames(business.plan) })}
-                  </p>
                 </div>
                 <div className="flex flex-wrap items-start gap-2">
                   <ButtonLink href={`/dashboard/${business.id}`} size="sm" variant="secondary">
@@ -137,12 +157,6 @@ export default async function AdminHostPage({ params }: PageProps) {
                       {t("openPage")}
                     </ButtonLink>
                   )}
-                  <AdminPlanButton
-                    businessId={business.id}
-                    businessName={business.name}
-                    plan={business.plan}
-                    paysByCard={business.paysByCard}
-                  />
                   <BusinessStatusToggle
                     businessId={business.id}
                     businessName={business.name}

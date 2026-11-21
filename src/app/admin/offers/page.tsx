@@ -5,13 +5,24 @@ import { ListFilters } from "@/components/ui/list-filters";
 import { Pagination } from "@/components/ui/pagination";
 import { Pill } from "@/components/ui/pill";
 import { OFFER_KINDS } from "@/config/plans";
-import { EndOfferButton, NewOfferButton, offersQuery } from "@/modules/billing";
+import { EndOfferButton, NewOfferButton, type OfferHost, offersQuery } from "@/modules/billing";
 import { listOffersForAdmin } from "@/modules/billing/server";
 import { listPlatformBusinesses } from "@/modules/workspaces/server";
 import { requirePageAdmin } from "@/server/http/session";
 import { addDays, toIsoDate } from "@/utils/dates";
 import { formatDate } from "@/utils/format";
 import { listHref } from "@/utils/paging";
+
+/** Each host once, with their places: an offer is for a host and all their places. */
+function hostsOf(businesses: { name: string; hostId: string; hostName: string }[]): OfferHost[] {
+  const hosts = new Map<string, OfferHost>();
+  for (const business of businesses) {
+    const host = hosts.get(business.hostId) ?? { id: business.hostId, name: business.hostName, places: [] };
+    host.places.push(business.name);
+    hosts.set(business.hostId, host);
+  }
+  return [...hosts.values()];
+}
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -36,15 +47,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps) {
       <PageHeader
         title={t("title")}
         intro={t("intro")}
-        actions={
-          <NewOfferButton
-            places={businesses.map((business) => ({
-              id: business.id,
-              name: business.name,
-              owner: business.owners[0]?.name ?? null,
-            }))}
-          />
-        }
+        actions={<NewOfferButton hosts={hostsOf(businesses)} />}
       />
       <ListFilters
         label={t("filters")}
@@ -99,7 +102,7 @@ export default async function AdminOffersPage({ searchParams }: PageProps) {
                       t("whenDates", { from: day(offer.startsAt), to: day(addDays(offer.endsAt, -1)) })
                     : null}
               </DataCell>
-              <DataCell wide>{offer.placeName ? <bdi>{offer.placeName}</bdi> : t("forEveryPlace")}</DataCell>
+              <DataCell wide>{offer.hostName ? <bdi>{offer.hostName}</bdi> : t("forEveryHost")}</DataCell>
               <DataCell align="end" wide className="text-muted">
                 {offer.kind === "FREE"
                   ? t("claims", { count: offer.claims })

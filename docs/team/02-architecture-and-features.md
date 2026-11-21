@@ -626,9 +626,10 @@ site's colour palette. Code: `src/app/admin/**`.
   (`src/utils/paging.ts`, 20 a page). `getHostBalances` (bookings) is the one list paged after it is worked out:
   balances are computed from payments, never stored, so it names each place with `listPlaceNames` (workspaces, any
   status), filters by that name and pages the result.
-- **Setting a plan by hand:** `setPlanAsAdmin` (billing, `PATCH /api/admin/businesses/{businessId}/plan`) sets a
-  plan until a last day (housekeeping ends it like a Whish month) or with no end. A place paying by card is refused:
-  its plan follows Stripe, and the next webhook would undo the change.
+- **Setting a plan by hand:** `setPlanAsAdmin` (billing, `PATCH /api/admin/hosts/{userId}/plan`, logged
+  `host.plan_changed`) sets a host's plan, for all their places, until a last day (housekeeping ends it like a Whish
+  month) or with no end. A host paying by card is refused: their plan follows Stripe, and the next webhook would undo
+  the change. Someone who hosts no place is 404.
 - Suspending writes only `Business.status`: every public read and `resolveContext` already ask for `ACTIVE`, so the
   page, the listing and the team's access go at once, and come back with `ACTIVE`.
 - A category's slug is its key: creating a deleted slug brings the row back. A category still used is never
@@ -938,7 +939,9 @@ Two kinds, by how much they matter:
 ### B. Plans and billing
 
 Five plans (`src/config/plans.ts`): Free, Starter, Pro, Business and Premium, with limits on rooms, experiences
-and members, and the features only some plans include. Hosts pay
+and members, and the features only some plans include. **A plan is the host's, not a place's:** one plan (`HostPlan`)
+covers every place the host hosts (`Business.hostId`, whoever created it), and its limits are counted across all of
+them. On Pro (7 rooms), a host can have two places with 4 and 3 rooms, or seven places each booked whole. Hosts pay
 **instantly only**: by card (Stripe subscription) or by Whish (one month at a time). There is no paying by hand, no
 receipt upload and no admin approval; do not build one. Plan payments and sponsored listings ("F. Featured
 partners and sponsored listings") are the platform's only income. Code: `billing-service.ts`.
@@ -954,9 +957,13 @@ partners and sponsored listings") are the platform's only income. Code: `billing
 Every plan has unlimited direct bookings, online payment, calendar sync, guest emails, phone alerts, and our help
 setting the place up.
 
-- **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members", tx)` inside the transaction that
-  adds one: with `tx` it locks the business first, so two additions at the same moment cannot both take the last
-  place. The whole-place unit is the place itself, so it never counts. Deleted
+- **Limits:** `assertPlanAllowsAnother(businessId, "rooms" | "offerings" | "members", tx, { userId })` inside the
+  transaction that adds one: with `tx` it locks the host's `HostPlan` row first (making it, as Free, if there is
+  none), so two additions in any of the host's places at the same moment cannot both take the last place. Usage is
+  counted across the host's live places (`countHostUsage`): a place booked whole counts as one room whatever rooms
+  it describes, so adding a room to it uses nothing more; members are each person once, so inviting someone already
+  on another of the host's teams (`userId`) uses nothing more. Switching a place between rooms and whole
+  (`chooseBookingUnit`) calls `assertPlanAllowsBookingUnit`, which refuses going back to rooms past the plan. Deleted
   rooms and experiences and removed members do not count. Inviting and joining a team call it (joining checks
   again, before any account is created). `createRoom` (room-service) and creating an experience or service call it
   too.
@@ -967,10 +974,13 @@ setting the place up.
   answer 403 until it moves up again. The Analytics and Connect AI pages show `PlanUpgrade` instead.
 - **Featured weeks:** a plan's included featured time is shown on its card only. The admin features the place by
   hand on Featured places, as for a place that pays for more ("Want to be featured longer? Contact us.").
-- **Owners only** start a checkout or open the portal (`requireOwner`); `getBilling` needs `settings.manage`.
+- **The host only** starts a checkout, takes an offer or opens the portal (`ctx.userId` must be the place's
+  `hostId`; another owner gets 403); `getBilling` needs `settings.manage` and returns the host's plan, the usage across
+  their places, and the places it covers (`places`), shown on every place's billing page.
 - **Another place, from the dashboard:** "Add a place" in the place switcher and on "All my places" opens
-  `NewPlaceForm` in a pop-up (name and town only). It creates the place on Free and goes straight into its guided
-  setup; the plan pitch of `/host` is for new hosts only. Each place has its own plan.
+  `NewPlaceForm` in a pop-up (name and town only). It creates the place under the host's plan and goes straight
+  into its guided setup; the plan pitch of `/host` is for new hosts only. A host who already has places sees no plan
+  picker on `/host` either (`findHostPlanOf`): the new place joins their plan.
 - **Getting a new place ready:** `getSetupChecklist` (rooms) works out each step of `SETUP_STEPS`
   (`src/config/setup.ts`) from what is saved, so a step ticks itself wherever it is done. Until the place is listed,
   its home shows `SetupChecklist`, each step leading to its screen of the guided setup. The guided setup
@@ -989,24 +999,24 @@ setting the place up.
 - **Card (Stripe):** `POST .../billing/checkout` returns Stripe Checkout; the plan only changes when the signed
   webhook (`POST /api/webhooks/stripe`) says so. Each event is recorded in `WebhookEvent` in the same transaction
   that applies it, so a replay changes nothing and a failure leaves nothing (Stripe retries). Paid invoices are
-  recorded as `PlanPayment` rows. A paying business changes plan in the portal (`POST .../billing/portal`).
+  recorded as `PlanPayment` rows. A paying host changes plan in the portal (`POST .../billing/portal`).
 - **Whish:** `POST .../billing/whish` writes a `PENDING` plan payment, then asks Whish for the payment page; if
   Whish refuses, the row is marked `FAILED`. Whish's callback (`GET /api/payments/whish/callback?plan=`) only makes
   us ask Whish for the real status; once paid, 30 days are added (following on from what is left of the same plan),
   once. Housekeeping re-checks pending Whish plan payments from the last day whose callback never came, and puts a
-  business whose Whish month ran out back on Free.
+  host whose Whish month ran out back on Free.
 - **Plan offers:** a platform admin gives hosts a paid plan free (`FREE`) or a share off its price (`PERCENT_OFF`,
-  1 to 99 %), for every place or one place, either for each place's first months (1 to 24, counted from the day it
-  joined) or between two dates (both days included; `endsAt` is the day after the last one). Code: `offer-service.ts`
+  1 to 99 %), for every host or one host (`hostId`), either for each host's first months (1 to 24, counted from the day
+  their first place joined) or between two dates (both days included; `endsAt` is the day after the last one). Code: `offer-service.ts`
   and `src/modules/billing/offers.ts` (`offerWindow`, `offerMonthlyCents`, pure, so the billing page shows the price
   the checkout charges). Admin routes `GET`/`POST /api/admin/offers` and `DELETE /api/admin/offers/{offerId}` (ends
   it, logged `plan_offer.created` and `plan_offer.ended`); page `/admin/offers` (`OfferManager`). `getBilling`
-  returns the offers open to the place now, shown above the plans (`PlanOffers`).
-  - A **free** offer is taken by an owner (`POST .../billing/offers/{offerId}/claim`, `claimFreeOffer`): one
-    transaction locks the business money, writes a `PlanOfferClaim` (unique per offer and place, so a second claim is
-    409), and sets the plan until the offer ends for the place, the way a paid Whish month does, so the same
-    housekeeping puts it back on Free afterwards. Months already paid on the same plan past that date are kept. A
-    place paying by card, or on a bigger plan that is still running, is refused (409).
+  returns the offers open to the host now, shown above the plans (`PlanOffers`).
+  - A **free** offer is taken by the host (`POST .../billing/offers/{offerId}/claim`, `claimFreeOffer`): one
+    transaction locks the host's plan, writes a `PlanOfferClaim` (unique per offer and host, so a second claim is
+    409), and sets the plan until the offer ends for the host, the way a paid Whish month does, so the same
+    housekeeping puts them back on Free afterwards. Months already paid on the same plan past that date are kept. A
+    host paying by card, or on a bigger plan that is still running, is refused (409).
   - A **percent-off** offer needs nothing from the host: the Whish checkout charges the lower price and stores
     `PlanPayment.offerId`; the card checkout first creates a one-use Stripe coupon (`createPlanCoupon`, repeating for
     the months the offer has left, rounded up) and passes it as `discounts[0][coupon]`. With two offers on the same

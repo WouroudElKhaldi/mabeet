@@ -16,10 +16,9 @@ type PageProps = { params: Promise<{ userId: string }> };
 export default async function AdminPersonPage({ params }: PageProps) {
   const { userId } = await params;
   const actor = await requirePageAdmin();
-  const [t, tStatus, tPlans, locale, person, trips] = await Promise.all([
+  const [t, tStatus, locale, person, trips] = await Promise.all([
     getTranslations("admin.people"),
     getTranslations("account.status"),
-    getTranslations("plans.names"),
     getLocale(),
     getPlatformPerson(actor, userId),
     listPersonTripsForAdmin(actor, userId),
@@ -73,9 +72,7 @@ export default async function AdminPersonPage({ params }: PageProps) {
                       <bdi>{place.name}</bdi>
                       <Pill tone={place.isOwner ? "accent" : "quiet"}>{place.roleName}</Pill>
                     </p>
-                    <p className="text-sm text-muted">
-                      {tPlans(place.plan)} · {t("since", { date: day(place.joinedAt) })}
-                    </p>
+                    <p className="text-sm text-muted">{t("since", { date: day(place.joinedAt) })}</p>
                   </div>
                   <ArrowLink href={`/dashboard/${place.id}`}>{t("openDashboard")}</ArrowLink>
                 </li>

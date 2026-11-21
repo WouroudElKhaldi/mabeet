@@ -1,4 +1,4 @@
-import type { Plan } from "@prisma/client";
+import type { BookingUnit, Plan } from "@prisma/client";
 import {
   PAID_PLANS,
   type PaidPlan,
@@ -17,14 +17,13 @@ import {
   createSubscriptionCheckout,
   createWhishPayment,
   getWhishStatus,
-  lockBusinessMoney,
   type StripeEvent,
   stripeEnabled,
   stripeEvent,
   verifyWebhookSignature,
   whishEnabled,
 } from "@/modules/payments/server";
-import { requireOwner, requirePermission, type TenantContext } from "@/server/auth/tenant-context";
+import { requirePermission, type TenantContext } from "@/server/auth/tenant-context";
 import { type Db, prisma, runInTransaction, type Tx } from "@/server/db/client";
 import { env } from "@/server/env";
 import { conflict, forbidden, invalid, notFound, unavailable } from "@/server/errors";
@@ -74,28 +73,63 @@ const LIMIT_MESSAGES: Record<Counted, (max: number) => string> = {
       : `Your plan allows up to ${max} team members, you included. Upgrade to add more.`,
 };
 
-async function loadBilling(businessId: string, db: Db = prisma) {
-  const row = await billing.findBilling(db, businessId);
-  if (!row) throw notFound("Business");
-  return row;
+/** The host whose plan covers a place. */
+async function placeHost(businessId: string, db: Db = prisma) {
+  const place = await billing.findPlaceHost(db, businessId);
+  if (!place) throw notFound("Business");
+  return place;
 }
 
 /**
- * Refuses adding one more room, experience or team member past the plan's limit. Pass the transaction that adds it:
- * the business is then locked until it commits, so two additions at the same moment cannot both pass the check.
+ * Refuses adding one more room, experience or team member past the host's plan, counted across all their places.
+ * A room added to a place booked whole uses nothing more (the place counts as one room), and neither does a person
+ * who already works in another of the host's places (pass their `userId`). Pass the transaction that adds it: the
+ * host's plan is then locked until it commits, so two additions at the same moment cannot both pass the check.
  */
-export async function assertPlanAllowsAnother(businessId: string, what: Counted, tx?: Tx): Promise<void> {
-  if (tx) await billing.lockBusinessForPlan(tx, businessId);
-  const row = await loadBilling(businessId, tx);
-  const max = PLAN_LIMITS[row.plan][what];
-  const used = what === "members" ? row._count.memberships : row._count[what];
+export async function assertPlanAllowsAnother(
+  businessId: string,
+  what: Counted,
+  tx?: Tx,
+  options: { userId?: string } = {},
+): Promise<void> {
+  const db = tx ?? prisma;
+  const place = await placeHost(businessId, db);
+  if (what === "rooms" && place.bookingUnit === "WHOLE_PLACE") return;
+  if (tx) await billing.lockHostPlan(tx, place.hostId);
+  if (what === "members" && options.userId && (await billing.isOnHostTeam(db, place.hostId, options.userId)))
+    return;
+  const { plan } = await billing.findHostPlan(db, place.hostId);
+  const max = PLAN_LIMITS[plan][what];
+  const used = (await billing.countHostUsage(db, place.hostId))[what];
   if (max !== null && used >= max) throw conflict(LIMIT_MESSAGES[what](max));
 }
 
-/** Whether the place's plan includes a feature that only some plans have (analytics, AI apps). */
+/**
+ * Refuses switching a place to being booked whole or by room when the host's plan has no room for it: by room, its
+ * rooms count one by one instead of as one. Run in the transaction that switches it, which then holds the plan.
+ */
+export async function assertPlanAllowsBookingUnit(
+  tx: Tx,
+  businessId: string,
+  bookingUnit: BookingUnit,
+): Promise<void> {
+  const place = await placeHost(businessId, tx);
+  if (place.bookingUnit === bookingUnit) return;
+  await billing.lockHostPlan(tx, place.hostId);
+  const roomsInPlace = await billing.countPlaceRooms(tx, businessId);
+  const { plan } = await billing.findHostPlan(tx, place.hostId);
+  const max = PLAN_LIMITS[plan].rooms;
+  if (max === null) return;
+  const used = (await billing.countHostUsage(tx, place.hostId)).rooms;
+  const after = bookingUnit === "WHOLE_PLACE" ? used - roomsInPlace + 1 : used - 1 + roomsInPlace;
+  if (after > max) throw conflict(LIMIT_MESSAGES.rooms(max));
+}
+
+/** Whether the plan covering the place includes a feature that only some plans have (analytics, AI apps). */
 export async function planIncludes(businessId: string, feature: PlanFeature): Promise<boolean> {
-  const row = await loadBilling(businessId);
-  return PLAN_LIMITS[row.plan][feature];
+  const place = await placeHost(businessId);
+  const { plan } = await billing.findHostPlan(prisma, place.hostId);
+  return PLAN_LIMITS[plan][feature];
 }
 
 /** Refuses a feature the place's plan doesn't include, naming the smallest plan that does. */
@@ -105,6 +139,35 @@ export async function assertPlanIncludes(businessId: string, feature: PlanFeatur
   throw forbidden(
     `Your plan doesn't include ${FEATURE_NAMES[feature]}. Upgrade to ${plan.charAt(0)}${plan.slice(1).toLowerCase()} or higher.`,
   );
+}
+
+/** Each host's plan, for the admin: when it ends and whether it is paid by card. A host with no row is on Free. */
+export async function getHostPlans(hostIds: string[]) {
+  const rows = await billing.findHostPlans(prisma, hostIds);
+  const found = new Map(rows.map((row) => [row.userId, row]));
+  return new Map(
+    hostIds.map((hostId) => {
+      const row = found.get(hostId);
+      return [
+        hostId,
+        {
+          plan: row?.plan ?? ("FREE" as const satisfies Plan),
+          renewsAt: row?.planRenewsAt ?? null,
+          paysByCard: Boolean(row?.stripeSubscriptionId),
+        },
+      ];
+    }),
+  );
+}
+
+/**
+ * The plan of a person who already hosts places, or null for a new host. A new place joins it: one plan covers all
+ * of a host's places, so opening another is never a second plan to pick or pay for.
+ */
+export async function findHostPlanOf(userId: string) {
+  const places = await billing.listHostedPlaces(prisma, userId);
+  if (places.length === 0) return null;
+  return (await billing.findHostPlan(prisma, userId)).plan;
 }
 
 /**
@@ -121,9 +184,15 @@ export function planPaymentMethods(): Record<PlanPaymentMethod, boolean> {
 /** For the billing page: the plan, what is used against it, which ways to pay are on, and the offers open to it. */
 export async function getBilling(ctx: TenantContext, now = new Date()) {
   requirePermission(ctx, "settings.manage");
-  const row = await loadBilling(ctx.businessId);
+  const { hostId } = await placeHost(ctx.businessId);
+  const [row, usage, places, joinedAt] = await Promise.all([
+    billing.findHostPlan(prisma, hostId),
+    billing.countHostUsage(prisma, hostId),
+    billing.listHostedPlaces(prisma, hostId),
+    billing.findHostJoinedAt(prisma, hostId),
+  ]);
   const methods = planPaymentMethods();
-  const offers = await openOffersFor(ctx.businessId, row.createdAt, now);
+  const offers = await openOffersFor(hostId, joinedAt ?? now, now);
   return {
     offers: offers.map((offer) => ({
       id: offer.id,
@@ -136,16 +205,26 @@ export async function getBilling(ctx: TenantContext, now = new Date()) {
     })),
     plan: row.plan,
     limits: PLAN_LIMITS[row.plan],
-    usage: { rooms: row._count.rooms, offerings: row._count.offerings, members: row._count.memberships },
+    usage,
+    places,
     renewsAt: row.planRenewsAt,
     paysByCard: Boolean(row.stripeSubscriptionId),
     cardEnabled: methods.card,
     whishEnabled: methods.whish,
-    canManage: ctx.isOwner,
+    canManage: ctx.userId === hostId,
   };
 }
 
-const OWNER_ONLY = "Only an owner can change the plan";
+/** The plan is the host's: only they change it or pay for it, for all their places at once. */
+async function requireHost(ctx: TenantContext) {
+  const { hostId } = await placeHost(ctx.businessId);
+  if (ctx.userId !== hostId) throw forbidden("Only the host who owns this place can change the plan");
+  const [row, joinedAt] = await Promise.all([
+    billing.findHostPlan(prisma, hostId),
+    billing.findHostJoinedAt(prisma, hostId),
+  ]);
+  return { hostId, row, joinedAt: joinedAt ?? new Date(0) };
+}
 
 function planForPrice(priceId: string | null | undefined): Plan | null {
   if (!priceId) return null;
@@ -164,14 +243,13 @@ const monthsLeft = (until: Date, now: Date) =>
  * percent-off offer, a one-use coupon takes the share off each invoice for the months the offer has left.
  */
 export async function startCheckout(ctx: TenantContext, plan: PaidPlan, now = new Date()) {
-  requireOwner(ctx, OWNER_ONLY);
   const priceId = priceFor(plan);
   if (!stripeEnabled() || !priceId) throw unavailable("Card payments are not set up yet.");
-  const row = await loadBilling(ctx.businessId);
-  // A paying business changes plan in the billing portal, so it never ends up with two subscriptions.
+  const { hostId, row, joinedAt } = await requireHost(ctx);
+  // A paying host changes plan in the billing portal, so it never ends up with two subscriptions.
   if (row.stripeSubscriptionId)
     throw conflict("You already pay by card. Change your plan from Manage billing.");
-  const discount = await bestDiscountFor(ctx.businessId, row.createdAt, plan, now);
+  const discount = await bestDiscountFor(hostId, joinedAt, plan, now);
   const couponId =
     discount && discount.percentOff !== null
       ? await createPlanCoupon({
@@ -183,7 +261,7 @@ export async function startCheckout(ctx: TenantContext, plan: PaidPlan, now = ne
   const session = await createSubscriptionCheckout({
     couponId,
     priceId,
-    businessId: ctx.businessId,
+    hostId,
     customerId: row.stripeCustomerId,
     email: (await findAccountEmail(ctx.userId)) ?? "",
     successUrl: billingUrl(ctx.businessId, "?checkout=done"),
@@ -195,18 +273,17 @@ export async function startCheckout(ctx: TenantContext, plan: PaidPlan, now = ne
 
 /**
  * Pays one month of a plan with Whish. Whish has no subscriptions, so each payment adds a month; when the month
- * runs out without a new payment, the business goes back to Free. Our row is written first and Whish is called
+ * runs out without a new payment, the host goes back to Free. Our row is written first and Whish is called
  * after: if Whish refuses, the row is marked failed, so no payment is left waiting for a link that never existed.
  */
 export async function startWhishPlanCheckout(ctx: TenantContext, plan: PaidPlan, now = new Date()) {
-  requireOwner(ctx, OWNER_ONLY);
   if (!whishEnabled()) throw unavailable("Whish payments are not set up yet.");
-  const row = await loadBilling(ctx.businessId);
+  const { hostId, row, joinedAt } = await requireHost(ctx);
   if (row.stripeSubscriptionId) throw conflict("You pay by card. Change your plan from Manage billing.");
   // A percent-off offer open now lowers this month's price, and the payment remembers it.
-  const discount = await bestDiscountFor(ctx.businessId, row.createdAt, plan, now);
+  const discount = await bestDiscountFor(hostId, joinedAt, plan, now);
   const payment = await planPayments.createPlanPayment(prisma, {
-    businessId: ctx.businessId,
+    hostId,
     paidById: ctx.userId,
     plan,
     months: 1,
@@ -252,21 +329,21 @@ export async function settlePlanPayment(planPaymentId: string, now = new Date())
   if (status !== "success") return "pending";
   await runInTransaction(async (tx) => {
     if (!(await planPayments.markPlanPaid(tx, payment.id, now))) return;
-    await addPlanMonths(tx, payment.businessId, payment.plan, payment.months, now);
+    await addPlanMonths(tx, payment.hostId, payment.plan, payment.months, now);
   });
   return "paid";
 }
 
 /**
  * Paid months of a plan paid by Whish: they follow on from what is left of the same plan, or start now. When they
- * run out without a new payment, housekeeping puts the business back on Free.
+ * run out without a new payment, housekeeping puts the host back on Free.
  */
-async function addPlanMonths(tx: Tx, businessId: string, plan: Plan, months: number, now: Date) {
-  await lockBusinessMoney(tx, businessId);
-  const current = await billing.findBilling(tx, businessId);
+async function addPlanMonths(tx: Tx, hostId: string, plan: Plan, months: number, now: Date) {
+  await billing.lockHostPlan(tx, hostId);
+  const current = await billing.findHostPlan(tx, hostId);
   const from =
-    current?.plan === plan && current.planRenewsAt && current.planRenewsAt > now ? current.planRenewsAt : now;
-  await planPayments.extendPlan(tx, businessId, plan, new Date(from.getTime() + months * PLAN_MONTH_MS));
+    current.plan === plan && current.planRenewsAt && current.planRenewsAt > now ? current.planRenewsAt : now;
+  await planPayments.setPlan(tx, hostId, plan, new Date(from.getTime() + months * PLAN_MONTH_MS));
 }
 
 /**
@@ -299,26 +376,25 @@ export async function runPlanHousekeeping(now = new Date()) {
 
 /** Stripe's billing portal: change plan, update the card, see invoices, cancel. */
 export async function openBillingPortal(ctx: TenantContext) {
-  requireOwner(ctx, OWNER_ONLY);
-  const row = await loadBilling(ctx.businessId);
+  const { row } = await requireHost(ctx);
   if (!row.stripeCustomerId) throw invalid("Choose a plan first");
   return (await createBillingPortalSession(row.stripeCustomerId, billingUrl(ctx.businessId))).url;
 }
 
 // ---------- Stripe webhooks ----------
 
-/** Statuses in which the business keeps what it pays for. past_due gives the card a chance to be fixed. */
+/** Statuses in which the host keeps what it pays for. past_due gives the card a chance to be fixed. */
 const PAID_STATUSES = new Set(["active", "trialing", "past_due"]);
 
 async function applyEvent(tx: Tx, event: StripeEvent, now: Date): Promise<void> {
   const object = event.data.object;
-  const metaBusiness = object.metadata?.businessId;
+  const metaHost = object.metadata?.hostId;
 
   if (event.type === "checkout.session.completed") {
     if (object.mode !== "subscription") return;
-    const businessId = object.client_reference_id ?? metaBusiness;
-    if (!businessId) return;
-    await billing.setBilling(tx, businessId, {
+    const hostId = object.client_reference_id ?? metaHost;
+    if (!hostId) return;
+    await billing.setHostPlan(tx, hostId, {
       stripeCustomerId: object.customer ?? null,
       stripeSubscriptionId: object.subscription ?? null,
     });
@@ -331,16 +407,16 @@ async function applyEvent(tx: Tx, event: StripeEvent, now: Date): Promise<void> 
   }
 
   if (!event.type.startsWith("customer.subscription.")) return;
-  const byCustomer = object.customer ? await billing.findBusinessIdByCustomer(tx, object.customer) : null;
-  const businessId = metaBusiness ?? byCustomer?.id;
-  if (!businessId) return;
+  const byCustomer = object.customer ? await billing.findHostByCustomer(tx, object.customer) : null;
+  const hostId = metaHost ?? byCustomer?.userId;
+  if (!hostId) return;
 
   if (event.type === "customer.subscription.deleted") {
-    // Only the subscription the business is on can end it; an old one finishing later changes nothing.
+    // Only the subscription the host is on can end it; an old one finishing later changes nothing.
     const current =
-      byCustomer?.stripeSubscriptionId ?? (await billing.findBilling(tx, businessId))?.stripeSubscriptionId;
+      byCustomer?.stripeSubscriptionId ?? (await billing.findHostPlan(tx, hostId)).stripeSubscriptionId;
     if (current && current !== object.id) return;
-    await billing.setBilling(tx, businessId, {
+    await billing.setHostPlan(tx, hostId, {
       plan: "FREE",
       stripeSubscriptionId: null,
       planRenewsAt: null,
@@ -352,7 +428,7 @@ async function applyEvent(tx: Tx, event: StripeEvent, now: Date): Promise<void> 
   const plan = planForPrice(item?.price.id);
   const paid = object.status !== undefined && PAID_STATUSES.has(object.status);
   const periodEnd = object.cancel_at ?? object.current_period_end ?? item?.current_period_end;
-  await billing.setBilling(tx, businessId, {
+  await billing.setHostPlan(tx, hostId, {
     plan: paid && plan ? plan : "FREE",
     stripeCustomerId: object.customer ?? undefined,
     stripeSubscriptionId: object.id,
@@ -364,12 +440,12 @@ async function applyEvent(tx: Tx, event: StripeEvent, now: Date): Promise<void> 
 async function recordInvoice(tx: Tx, event: StripeEvent, now: Date) {
   const invoice = event.data.object;
   if (!invoice.amount_paid || !invoice.customer) return;
-  const business = await billing.findBusinessIdByCustomer(tx, invoice.customer);
-  if (!business) return;
+  const host = await billing.findHostByCustomer(tx, invoice.customer);
+  if (!host) return;
   const line = invoice.lines?.data[0];
   const plan = planForPrice(line?.pricing?.price_details?.price ?? line?.price?.id) ?? "PRO";
   await planPayments.createPlanPayment(tx, {
-    businessId: business.id,
+    hostId: host.userId,
     plan,
     amountCents: invoice.amount_paid,
     currency: (invoice.currency ?? "usd").toUpperCase(),

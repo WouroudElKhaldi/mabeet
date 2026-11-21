@@ -529,6 +529,7 @@
     "haveAccount": "I already have an account",
     "paidSubtitle": "Pick a plan, name your place, then pay the first month. Your plan starts as soon as the payment is confirmed.",
     "payingOff": "Paying online isn't switched on yet, so your workspace starts on Free. You can change plan later.",
+    "sharedPlan": "Your {plan} plan covers this place too: its rooms and team count toward the plan you already have. Name your place, and you can add rooms right after.",
     "payWith": "Pay with",
     "payMethods": {
       "card": "Card",
@@ -1580,7 +1581,7 @@
     },
     "hosts": {
       "title": "Hosts",
-      "intro": "Everyone who owns a place. Open a host for their contacts, profile and places, to open a dashboard, suspend a place or change its plan.",
+      "intro": "Everyone who owns a place. Open a host for their contacts, profile and places, to open a dashboard, suspend a place or change their plan (one for all their places).",
       "host": "Host",
       "phone": "Phone",
       "businesses": "Businesses",
@@ -1596,7 +1597,7 @@
       "hostingSince": "Hosting since",
       "joined": "Joined Mabeet",
       "theirBusinesses": "{count, plural, one {# business} other {# businesses}}",
-      "counts": "{rooms} rooms · {offerings} experiences · {bookings} bookings · {team} in the team",
+      "counts": "{rooms, plural, one {# room} other {# rooms}} · {offerings, plural, one {# experience} other {# experiences}} · {bookings, plural, one {# booking} other {# bookings}} · {team} in the team",
       "openDashboard": "Open dashboard",
       "openPage": "Public page",
       "filters": "Find hosts",
@@ -1614,7 +1615,7 @@
     },
     "offers": {
       "title": "Plan offers",
-      "intro": "Give hosts a plan free, or a share off its price, for every place or one, for a time.",
+      "intro": "Give hosts a plan free, or a share off its price, for every host or one, for a time.",
       "newTitle": "New offer",
       "newIntro": "Hosts see it on their billing page while it runs. A free offer is taken in one click.",
       "name": "Name hosts see",
@@ -1636,7 +1637,7 @@
       "startsOn": "First day",
       "lastDay": "Last day",
       "for": "For",
-      "forEveryPlace": "Every place",
+      "forEveryHost": "Every host",
       "forPlace": "For {name}",
       "create": "Add offer",
       "listTitle": "Offers",
@@ -1657,7 +1658,7 @@
       "endTitle": "End “{name}”?",
       "endBody": "Hosts stop seeing it now. A free plan already taken runs to its end.",
       "filters": "Find offers",
-      "searchPlaceholder": "Offer or place name",
+      "searchPlaceholder": "Offer or host name",
       "noMatch": "No offers match. Try other words or clear the filters.",
       "offer": "Offer",
       "used": "Used"
@@ -1703,7 +1704,7 @@
     "plan": {
       "change": "Change plan",
       "title": "Plan for {name}",
-      "intro": "Set this place's plan by hand. A paid plan runs to the end of its last day, then the place goes back to Free. With no last day, it stays until you change it.",
+      "intro": "Set this host's plan by hand: one plan for all their places. A paid plan runs to the end of its last day, then the host goes back to Free. With no last day, it stays until you change it.",
       "plan": "Plan",
       "lastDay": "Last day",
       "lastDayHint": "Leave empty for no end.",
@@ -2208,7 +2209,8 @@
     "renews": "renews or ends on {date}",
     "thanks": "Thank you! Your plan updates as soon as Stripe confirms the payment, usually within a minute.",
     "notConfigured": "Online payment is not set up yet (Stripe keys missing), so plans cannot be bought here for now.",
-    "ownersOnly": "Only an owner can change the plan.",
+    "ownersOnly": "Only the host who owns this place can change the plan.",
+    "sharedAcross": "One plan covers all your places ({places}). Rooms and team members are counted across them, and a place booked whole counts as one room.",
     "usage": {
       "rooms": "Rooms",
       "offerings": "Experiences and services",
@@ -2221,8 +2223,8 @@
     "cardOff": "Paying by card isn't set up yet. You can pay a month at a time with Whish.",
     "whishFailed": "Whish didn't take the payment, so nothing was charged. You can try again.",
     "offers": {
-      "title": "Offers for your place",
-      "intro": "Offers from Mabeet open to your place right now.",
+      "title": "Offers for you",
+      "intro": "Offers from Mabeet open to you right now, for all your places.",
       "free": "{plan} free until {date}. Nothing to pay.",
       "percent": "{plan} at {percent}% off: {price} a month until {date}. Taken off at checkout, nothing to do.",
       "claim": "Get {plan} free"
@@ -2873,6 +2875,6 @@
     "apply": "Apply",
     "clear": "Clear",
     "count": "{count, plural, one {# in all} other {# in all}}",
-    "matching": "{count, plural, =0 {Nothing matches} one {# matches} other {# match}}"
+    "matching": "{count, plural, =0 {Nothing matches} one {# match} other {# matches}}"
   }
 }

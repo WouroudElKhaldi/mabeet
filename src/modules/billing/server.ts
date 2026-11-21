@@ -2,8 +2,11 @@
 // private to the module.
 export {
   assertPlanAllowsAnother,
+  assertPlanAllowsBookingUnit,
   assertPlanIncludes,
+  findHostPlanOf,
   getBilling,
+  getHostPlans,
   handleStripeWebhook,
   handleWhishCallback,
   openBillingPortal,

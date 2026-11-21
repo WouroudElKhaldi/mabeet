@@ -3,7 +3,15 @@ import { beforeEach, describe, expect, it } from "vitest";
 import * as hostMcpRoute from "@/app/api/mcp/route";
 import * as keyRoute from "@/app/api/workspaces/[businessId]/keys/[keyId]/route";
 import * as keysRoute from "@/app/api/workspaces/[businessId]/keys/route";
-import { addRoom, createPlace, createUser, memberWith, prisma, stay } from "@tests/integration/helpers";
+import {
+  addRoom,
+  createPlace,
+  createUser,
+  memberWith,
+  prisma,
+  putHostOnPlan,
+  stay,
+} from "@tests/integration/helpers";
 import { addBlock, requestBooking } from "@/modules/bookings/server";
 import { removeMember } from "@/modules/team/server";
 import { resolveContext } from "@/server/auth/resolve-context";
@@ -61,11 +69,11 @@ describe("the host MCP", () => {
       message: "Your plan doesn't include connecting AI apps. Upgrade to Pro or higher.",
     });
 
-    const { business, key } = await placeWithKey();
+    const { owner, key } = await placeWithKey();
     expect((await mcp(key.secret, "tools/list")).status).toBe(200);
-    await prisma.business.update({ where: { id: business.id }, data: { plan: "STARTER" } });
+    await putHostOnPlan(owner.id, "STARTER");
     expect((await mcp(key.secret, "tools/list")).status).toBe(403);
-    await prisma.business.update({ where: { id: business.id }, data: { plan: "BUSINESS" } });
+    await putHostOnPlan(owner.id, "BUSINESS");
     expect((await mcp(key.secret, "tools/list")).status).toBe(200);
   });
 
@@ -220,7 +228,7 @@ describe("MCP keys", () => {
   it("are made, listed and revoked through their routes", async () => {
     const owner = await signUp("Nour Haddad");
     const business = await createWorkspace(owner.userId, { name: `Beit ${randomUUID().slice(0, 6)}` });
-    await prisma.business.update({ where: { id: business.id }, data: { plan: "PRO" } });
+    await putHostOnPlan(owner.userId, "PRO");
     const params = { businessId: business.id };
 
     const created = await call(keysRoute.POST, { as: owner, params, body: { name: "Claude" } });

@@ -1,7 +1,7 @@
 import type { BookingUnit } from "@prisma/client";
 import type { z } from "zod";
 import { recordAction } from "@/modules/audit/server";
-import { assertPlanAllowsAnother } from "@/modules/billing/server";
+import { assertPlanAllowsAnother, assertPlanAllowsBookingUnit } from "@/modules/billing/server";
 import { saveBookingUnit } from "@/modules/workspaces/server";
 import { requirePermission, type TenantContext } from "@/server/auth/tenant-context";
 import { type Db, prisma, runInTransaction, type Tx } from "@/server/db/client";
@@ -82,6 +82,8 @@ export async function chooseBookingUnit(ctx: TenantContext, bookingUnit: Booking
   requirePermission(ctx, "settings.manage");
   requirePermission(ctx, "rooms.manage");
   return runInTransaction(async (tx) => {
+    // Booked whole, a place counts as one room of the host's plan; by room, each of its rooms counts.
+    await assertPlanAllowsBookingUnit(tx, ctx.businessId, bookingUnit);
     const placeName = await saveBookingUnit(ctx.businessId, bookingUnit, tx);
     const wholePlaceUnitId =
       bookingUnit === "WHOLE_PLACE" ? await ensureWholePlaceUnit(ctx, placeName, tx) : null;

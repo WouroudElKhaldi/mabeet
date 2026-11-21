@@ -31,10 +31,18 @@ async function contextOf(userId: string, businessId: string): Promise<TenantCont
  */
 export async function createPlace(name = "Beit Test", plan: Plan = "FREE") {
   const owner = await createUser(`${name} owner`);
-  const created = await createWorkspace(owner.id, { name });
-  const business =
-    plan === "FREE" ? created : await prisma.business.update({ where: { id: created.id }, data: { plan } });
+  const business = await createWorkspace(owner.id, { name });
+  if (plan !== "FREE") await putHostOnPlan(owner.id, plan);
   return { owner, business, ctx: await contextOf(owner.id, business.id) };
+}
+
+/** Puts a host on a plan, for all their places, until the end date given or with no end. */
+export function putHostOnPlan(hostId: string, plan: Plan, planRenewsAt: Date | null = null) {
+  return prisma.hostPlan.upsert({
+    where: { userId: hostId },
+    create: { userId: hostId, plan, planRenewsAt },
+    update: { plan, planRenewsAt },
+  });
 }
 
 /** A room in a place, written straight to the database: booking tests need rooms, not the rooms screens. */

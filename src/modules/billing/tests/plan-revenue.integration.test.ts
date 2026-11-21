@@ -9,7 +9,7 @@ import { getPlanRevenue } from "../server";
 const NOW = new Date("2090-06-15T12:00:00Z");
 
 async function planPayment(
-  businessId: string,
+  hostId: string,
   amountCents: number,
   method: "STRIPE" | "WHISH",
   paidAt: Date,
@@ -17,7 +17,7 @@ async function planPayment(
 ) {
   await prisma.planPayment.create({
     data: {
-      businessId,
+      hostId,
       plan: "PRO",
       amountCents,
       currency: "USD",
@@ -31,13 +31,13 @@ async function planPayment(
 
 describe("plan revenue", () => {
   it("adds up paid plans by month and by card or Whish", async () => {
-    const { business } = await createPlace();
+    const { owner } = await createPlace();
     const admin = await createPlatformAdmin();
     const before = await getPlanRevenue(admin, NOW);
-    await planPayment(business.id, 2_900, "STRIPE", new Date("2090-06-02T09:00:00Z"));
-    await planPayment(business.id, 2_900, "WHISH", new Date("2090-06-10T09:00:00Z"));
-    await planPayment(business.id, 2_900, "WHISH", new Date("2090-05-10T09:00:00Z"));
-    await planPayment(business.id, 9_900, "STRIPE", new Date("2090-06-11T09:00:00Z"), "FAILED");
+    await planPayment(owner.id, 2_900, "STRIPE", new Date("2090-06-02T09:00:00Z"));
+    await planPayment(owner.id, 2_900, "WHISH", new Date("2090-06-10T09:00:00Z"));
+    await planPayment(owner.id, 2_900, "WHISH", new Date("2090-05-10T09:00:00Z"));
+    await planPayment(owner.id, 9_900, "STRIPE", new Date("2090-06-11T09:00:00Z"), "FAILED");
 
     const revenue = await getPlanRevenue(admin, NOW);
     // Tests never empty the database, so each figure is compared with what was there before.

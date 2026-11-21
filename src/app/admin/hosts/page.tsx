@@ -93,9 +93,7 @@ export default async function AdminHostsPage({ searchParams }: PageProps) {
                   ))}
                 </ul>
               </DataCell>
-              <DataCell wide>
-                {[...new Set(host.places.map((place) => place.plan))].map((name) => tPlans(name)).join(", ")}
-              </DataCell>
+              <DataCell wide>{tPlans(host.plan)}</DataCell>
               <DataCell wide className="whitespace-nowrap text-muted">
                 {formatDate(toIsoDate(host.createdAt), locale, {
                   day: "numeric",

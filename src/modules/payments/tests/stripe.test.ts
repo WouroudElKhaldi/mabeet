@@ -13,7 +13,7 @@ const signed = (body: string, secret = SECRET, at = Math.floor(Date.now() / 1000
 
 const checkout = {
   priceId: "price_pro",
-  businessId: "biz_1",
+  hostId: "user_1",
   customerId: null,
   email: "owner@guesthouse.lb",
   successUrl: "https://mabeet.example/dashboard/biz_1/billing?checkout=done",
@@ -52,8 +52,8 @@ describe("Stripe client", () => {
     const form = new URLSearchParams(String(init.body));
     expect(form.get("mode")).toBe("subscription");
     expect(form.get("line_items[0][price]")).toBe("price_pro");
-    expect(form.get("client_reference_id")).toBe("biz_1");
-    expect(form.get("subscription_data[metadata][businessId]")).toBe("biz_1");
+    expect(form.get("client_reference_id")).toBe("user_1");
+    expect(form.get("subscription_data[metadata][hostId]")).toBe("user_1");
     // A new customer is found by email; an existing one by id, never both.
     expect(form.get("customer_email")).toBe("owner@guesthouse.lb");
     expect(form.has("customer")).toBe(false);

@@ -9,7 +9,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { StepTrail } from "@/components/ui/step-trail";
 import type { PlanName } from "@/config/plans";
 import { paidPlan } from "@/modules/billing";
-import { planPaymentMethods } from "@/modules/billing/server";
+import { findHostPlanOf, planPaymentMethods } from "@/modules/billing/server";
 import { CreateWorkspaceForm } from "@/modules/workspaces";
 import { getCurrentUser } from "@/server/http/session";
 import { signInUrl, signUpUrl } from "@/utils/sign-in-url";
@@ -25,12 +25,19 @@ const hostUrl = (plan: PlanName) => (plan === "FREE" ? "/host" : `/host?plan=${p
 /**
  * Become a host: why, then the ticket that creates the workspace. The plan comes from /pricing as `?plan=` and can
  * be changed right here; with a paid plan the form goes on to pay for it. Signed out, the plan rides along through
- * sign-up or sign-in and back here.
+ * sign-up or sign-in and back here. A host who already has places opens another under the plan they have: one plan
+ * covers all their places, so there is nothing to pick or pay.
  */
 export default async function HostPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
-  const [t, user, query] = await Promise.all([getTranslations("host"), getCurrentUser(), searchParams]);
+  const [t, planNames, user, query] = await Promise.all([
+    getTranslations("host"),
+    getTranslations("plans.names"),
+    getCurrentUser(),
+    searchParams,
+  ]);
+  const hostPlan = user ? await findHostPlanOf(user.id) : null;
   const chosen = paidPlan.safeParse(query.plan);
-  const plan = chosen.success ? chosen.data : undefined;
+  const plan = chosen.success && hostPlan === null ? chosen.data : undefined;
   const methods = planPaymentMethods();
   const paying = plan !== undefined && Object.values(methods).some(Boolean);
   const steps = paying
@@ -56,9 +63,17 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
       <TicketCard
         sticky
         title={t("formTitle")}
-        intro={plan ? (paying ? t("paidSubtitle") : t("payingOff")) : t("formSubtitle")}
+        intro={
+          hostPlan
+            ? t("sharedPlan", { plan: planNames(hostPlan) })
+            : plan
+              ? paying
+                ? t("paidSubtitle")
+                : t("payingOff")
+              : t("formSubtitle")
+        }
         header={<StepTrail label={t("steps.label")} steps={steps} current={0} />}
-        stub={<PlanPicker current={plan ?? "FREE"} hrefFor={hostUrl} />}
+        stub={hostPlan ? undefined : <PlanPicker current={plan ?? "FREE"} hrefFor={hostUrl} />}
       >
         {user ? (
           <CreateWorkspaceForm plan={paying ? plan : undefined} methods={methods} />

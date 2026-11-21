@@ -9,12 +9,19 @@ import {
 } from "@/server/db/client";
 import { duplicateAsConflict, overlapAsConflict } from "@/server/db/constraint-errors";
 import { parseIsoDate } from "@/utils/dates";
+import { testEmail } from "./helpers";
 import { secureToken } from "@/utils/tokens";
 
 const businessesNamed = (db: Db, name: string) => db.business.count({ where: { name } });
 
 const createPlace = async (db: Db, name: string) => {
-  const business = await db.business.create({ data: { name, slug: `place-${secureToken(6)}` } });
+  const business = await db.business.create({
+    data: {
+      name,
+      slug: `place-${secureToken(6)}`,
+      host: { create: { id: secureToken(), name: `${name} host`, email: testEmail() } },
+    },
+  });
   const room = await db.room.create({
     data: { businessId: business.id, name: "Arched room", baseRateCents: 9_000, exportToken: secureToken() },
   });
@@ -61,7 +68,7 @@ describe("database refusals", () => {
   it("recognises a second copy of something unique", async () => {
     const { business } = await createPlace(prisma, "Beit Batroun");
     const error = await prisma.business
-      .create({ data: { name: "Another place", slug: business.slug } })
+      .create({ data: { name: "Another place", slug: business.slug, hostId: business.hostId } })
       .catch((caught: unknown) => caught);
     expect(isUniqueViolation(error)).toBe(true);
     expect(isOverlapError(error)).toBe(false);
@@ -94,7 +101,7 @@ describe("turning a refusal into a clear answer", () => {
     const { business } = await createPlace(prisma, "Beit El Qamar");
     await expect(
       duplicateAsConflict("This link is taken", () =>
-        prisma.business.create({ data: { name: "Copy", slug: business.slug } }),
+        prisma.business.create({ data: { name: "Copy", slug: business.slug, hostId: business.hostId } }),
       ),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     await expect(
