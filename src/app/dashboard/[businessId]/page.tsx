@@ -7,6 +7,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { channelColor } from "@/modules/analytics";
 import { getBusinessReport, getSavings } from "@/modules/analytics/server";
 import { BookingRow } from "@/modules/bookings";
+import { planIncludes } from "@/modules/billing/server";
 import { listBookings } from "@/modules/bookings/server";
 import { SetupChecklist } from "@/modules/rooms";
 import { getSetupChecklist } from "@/modules/rooms/server";
@@ -34,11 +35,14 @@ export default async function TodayPage({ params }: PageProps) {
   const today = todayUtc(now);
   const period = { checkIn: addDays(today, 1 - REPORT_DAYS), checkOut: addDays(today, 1) };
   const readsNumbers = can(ctx, "analytics.read");
+  // The key numbers and charts are the Analytics page's, so they show only when the plan includes it; the savings
+  // panel and the requests are for every plan.
+  const showsReport = readsNumbers && (ctx.platformAdmin || (await planIncludes(businessId, "analytics")));
   const readsBookings = can(ctx, "bookings.read");
   const [t, locale, report, savings, waiting, setup] = await Promise.all([
     getTranslations("dashboard.overview"),
     getLocale(),
-    readsNumbers ? getBusinessReport(ctx, period) : null,
+    showsReport ? getBusinessReport(ctx, period) : null,
     readsNumbers ? getSavings(ctx) : null,
     readsBookings ? listBookings(ctx, { status: "HELD", take: REQUESTS_SHOWN, skip: 0 }) : [],
     // Until the place is listed, the people who run it see what is left to do first.
